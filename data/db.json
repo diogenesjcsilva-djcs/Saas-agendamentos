@@ -1,0 +1,267 @@
+{
+  "tenants": [
+    {
+      "id": "tenant-1",
+      "name": "Barbearia Imperial",
+      "slug": "barbearia-imperial",
+      "logoUrl": "✂️",
+      "description": "Cortes clássicos, barba feita à navalha e tratamentos modernos para o cavalheiro contemporâneo.",
+      "themeColor": "indigo",
+      "accentColor": "bg-indigo-600 text-white"
+    },
+    {
+      "id": "tenant-2",
+      "name": "Clínica Estética Aura",
+      "slug": "estetica-aura",
+      "logoUrl": "✨",
+      "description": "Tratamentos faciais, massagens relaxantes e cuidados corporais exclusivos para o seu bem-estar.",
+      "themeColor": "emerald",
+      "accentColor": "bg-emerald-600 text-white"
+    }
+  ],
+  "providers": [
+    {
+      "id": "provider-1",
+      "tenantId": "tenant-1",
+      "name": "Carlos Barber",
+      "email": "carlos@imperial.com",
+      "bio": "Especialista em visagismo, barbas vintage e cortes clássicos com tesoura. 12 anos de experiência."
+    },
+    {
+      "id": "provider-2",
+      "tenantId": "tenant-1",
+      "name": "Lucas Faccini",
+      "email": "lucas@imperial.com",
+      "bio": "Jovem talento focado em degradês modernos, texturizações e estilos contemporâneos urbanos."
+    },
+    {
+      "id": "provider-3",
+      "tenantId": "tenant-2",
+      "name": "Dra. Heloísa Barros",
+      "email": "heloisa@aura.com",
+      "bio": "Fisioterapeuta dermatofuncional especializada em rejuvenescimento facial e drenagem linfática."
+    }
+  ],
+  "services": [
+    {
+      "id": "service-1",
+      "providerId": "provider-1",
+      "name": "Corte de Cabelo Clássico",
+      "description": "Corte personalizado de acordo com o formato do rosto, finalizado com pomada premium e massagem capilar rápida.",
+      "durationMinutes": 40,
+      "bufferMinutes": 10,
+      "price": 60
+    },
+    {
+      "id": "service-2",
+      "providerId": "provider-1",
+      "name": "Barba Completa com Toalha Quente",
+      "description": "Barba desenhada com navalha, utilizando óleo pré-shave, toalha quente aromática e pós-barba hidratante.",
+      "durationMinutes": 30,
+      "bufferMinutes": 10,
+      "price": 45
+    },
+    {
+      "id": "service-3",
+      "providerId": "provider-2",
+      "name": "Degradê Moderno (Fade)",
+      "description": "Corte degradê ultra-preciso (Skin Fade, Mid Fade ou High Fade) finalizado com risca ou textura artística.",
+      "durationMinutes": 45,
+      "bufferMinutes": 15,
+      "price": 70
+    },
+    {
+      "id": "service-4",
+      "providerId": "provider-3",
+      "name": "Limpeza de Pele Profunda",
+      "description": "Extração de impurezas, peeling de diamante, aplicação de máscara calmante de LED e hidratação com ácido hialurônico.",
+      "durationMinutes": 60,
+      "bufferMinutes": 15,
+      "price": 150
+    },
+    {
+      "id": "service-5",
+      "providerId": "provider-3",
+      "name": "Massagem Relaxante Aromática",
+      "description": "Massagem de corpo inteiro com óleos essenciais de lavanda para alívio de estresse e tensões musculares.",
+      "durationMinutes": 50,
+      "bufferMinutes": 10,
+      "price": 120
+    }
+  ],
+  "availabilityRules": [
+    {
+      "id": "rule-1",
+      "providerId": "provider-1",
+      "dayOfWeek": 1,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "rule-2",
+      "providerId": "provider-1",
+      "dayOfWeek": 2,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "rule-3",
+      "providerId": "provider-1",
+      "dayOfWeek": 3,
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "rule-4",
+      "providerId": "provider-1",
+      "dayOfWeek": 4,
+      "startTime": "09:00",
+      "endTime": "20:00"
+    },
+    {
+      "id": "rule-5",
+      "providerId": "provider-1",
+      "dayOfWeek": 5,
+      "startTime": "09:00",
+      "endTime": "20:00"
+    },
+    {
+      "id": "rule-6",
+      "providerId": "provider-1",
+      "dayOfWeek": 6,
+      "startTime": "09:00",
+      "endTime": "16:00"
+    },
+    {
+      "id": "rule-7",
+      "providerId": "provider-2",
+      "dayOfWeek": 1,
+      "startTime": "10:00",
+      "endTime": "19:00"
+    },
+    {
+      "id": "rule-8",
+      "providerId": "provider-2",
+      "dayOfWeek": 2,
+      "startTime": "10:00",
+      "endTime": "19:00"
+    },
+    {
+      "id": "rule-9",
+      "providerId": "provider-2",
+      "dayOfWeek": 3,
+      "startTime": "10:00",
+      "endTime": "19:00"
+    },
+    {
+      "id": "rule-10",
+      "providerId": "provider-2",
+      "dayOfWeek": 4,
+      "startTime": "10:00",
+      "endTime": "21:00"
+    },
+    {
+      "id": "rule-11",
+      "providerId": "provider-2",
+      "dayOfWeek": 5,
+      "startTime": "10:00",
+      "endTime": "21:00"
+    },
+    {
+      "id": "rule-12",
+      "providerId": "provider-2",
+      "dayOfWeek": 6,
+      "startTime": "09:00",
+      "endTime": "17:00"
+    },
+    {
+      "id": "rule-13",
+      "providerId": "provider-3",
+      "dayOfWeek": 1,
+      "startTime": "08:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "rule-14",
+      "providerId": "provider-3",
+      "dayOfWeek": 2,
+      "startTime": "08:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "rule-15",
+      "providerId": "provider-3",
+      "dayOfWeek": 3,
+      "startTime": "08:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "rule-16",
+      "providerId": "provider-3",
+      "dayOfWeek": 4,
+      "startTime": "08:00",
+      "endTime": "18:00"
+    },
+    {
+      "id": "rule-17",
+      "providerId": "provider-3",
+      "dayOfWeek": 5,
+      "startTime": "08:00",
+      "endTime": "18:00"
+    }
+  ],
+  "availabilityExceptions": [
+    {
+      "id": "except-1",
+      "providerId": "provider-1",
+      "date": "2026-07-04",
+      "isBlocked": true
+    },
+    {
+      "id": "except-2",
+      "providerId": "provider-3",
+      "date": "2026-07-08",
+      "isBlocked": false,
+      "startTime": "08:00",
+      "endTime": "13:00"
+    }
+  ],
+  "bookings": [
+    {
+      "id": "booking-1",
+      "providerId": "provider-1",
+      "serviceId": "service-1",
+      "startsAt": "2026-07-02T10:00:00.000Z",
+      "endsAt": "2026-07-02T10:40:00.000Z",
+      "clientName": "Alexandre Silva",
+      "clientEmail": "alexandre@gmail.com",
+      "clientPhone": "(11) 98888-7777",
+      "status": "confirmed",
+      "notes": "Prefere café expresso sem açúcar"
+    },
+    {
+      "id": "booking-2",
+      "providerId": "provider-1",
+      "serviceId": "service-2",
+      "startsAt": "2026-07-02T11:30:00.000Z",
+      "endsAt": "2026-07-02T12:00:00.000Z",
+      "clientName": "Roberto Albuquerque",
+      "clientEmail": "roberto@uol.com.br",
+      "clientPhone": "(11) 97777-6666",
+      "status": "confirmed",
+      "notes": "Primeira vez na barbearia."
+    },
+    {
+      "id": "booking-3",
+      "providerId": "provider-3",
+      "serviceId": "service-4",
+      "startsAt": "2026-07-03T14:00:00.000Z",
+      "endsAt": "2026-07-03T15:00:00.000Z",
+      "clientName": "Mariana Souza",
+      "clientEmail": "mariana.souza@yahoo.com",
+      "clientPhone": "(11) 96666-5555",
+      "status": "confirmed",
+      "notes": "Pele muito sensível"
+    }
+  ]
+}

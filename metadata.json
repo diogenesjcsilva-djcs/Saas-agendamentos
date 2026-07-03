@@ -1,0 +1,6 @@
+{
+  "name": "SaaS Scheduler",
+  "description": "A multi-tenant SaaS scheduling application for service providers and clients, with availability rules, exceptions, and booking management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
