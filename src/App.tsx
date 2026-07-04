@@ -219,21 +219,21 @@ export default function App() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           
           {/* Logo & Subdomain info */}
-          <div className="flex items-center gap-3">
-            <span className="text-xl bg-indigo-600/20 p-2 rounded-xl text-indigo-400 border border-indigo-500/10 shadow-inner leading-none">
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-xl bg-indigo-605/20 p-2 rounded-xl text-indigo-450 border border-indigo-500/10 shadow-inner leading-none select-none">
               🗓️
             </span>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-sm font-bold tracking-tight text-white leading-none">Scheduler SaaS</h1>
-                <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-5xs font-bold px-1.5 py-0.5 rounded uppercase leading-none tracking-wider">
+                <h1 className="text-sm font-bold tracking-tight text-white leading-none whitespace-nowrap">Scheduler SaaS</h1>
+                <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[9px] font-extrabold px-1.5 py-0.5 rounded-md uppercase leading-none tracking-wider whitespace-nowrap">
                   Multi-Tenant
                 </span>
               </div>
-              <p className="text-5xs text-slate-400 font-mono mt-1">
+              <p className="text-[10px] text-slate-400 font-mono mt-1.5 whitespace-nowrap">
                 {viewMode === "client" 
-                  ? `Subdomínio simulado: https://${selectedTenant?.slug}.schedulersaas.com`
-                  : `Admin Portal: https://admin.schedulersaas.com/dashboard`
+                  ? `${selectedTenant?.slug}.schedulersaas.com`
+                  : `admin.schedulersaas.com`
                 }
               </p>
             </div>
@@ -243,41 +243,41 @@ export default function App() {
           <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
             <button
               onClick={() => setViewMode("client")}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                 viewMode === "client"
                   ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/10"
                   : "text-slate-400 hover:text-white"
               }`}
             >
               <Compass className="w-3.5 h-3.5" />
-              🌍 Ver Portal Cliente
+              Ver Portal Cliente
             </button>
             <button
               onClick={() => setViewMode("provider")}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                 viewMode === "provider"
                   ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/10"
                   : "text-slate-400 hover:text-white"
               }`}
             >
               <Users className="w-3.5 h-3.5" />
-              💼 Ver Painel Prestador
+              Ver Painel Prestador
             </button>
           </div>
 
           {/* User Session Area */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 shrink-0 flex-wrap sm:flex-nowrap">
             {/* Tenant selector (only visible for client portal view when not locked) */}
             {viewMode === "client" && (
-              <div className="flex items-center gap-2 bg-slate-950/60 py-1.5 px-3 rounded-lg border border-slate-800 text-xs">
-                <span className="text-slate-500 text-5xs font-semibold uppercase tracking-wider">Empresa:</span>
+              <div className="flex items-center gap-2 bg-slate-950/60 py-1.5 px-3 rounded-lg border border-slate-800 text-xs whitespace-nowrap">
+                <span className="text-slate-500 text-[10px] font-semibold uppercase tracking-wider">Empresa:</span>
                 <select
                   value={selectedTenant?.slug || ""}
                   onChange={(e) => handleTenantChange(e.target.value)}
-                  className="bg-transparent text-white font-semibold focus:outline-none border-none py-0 pr-6 pl-0 cursor-pointer"
+                  className="bg-transparent text-white font-semibold focus:outline-none border-none py-0 pr-6 pl-0 cursor-pointer text-xs"
                 >
                   {tenants.map(t => (
-                    <option key={t.id} value={t.slug} className="bg-slate-900 text-white">
+                    <option key={t.id} value={t.slug} className="bg-slate-900 text-white text-xs">
                       {t.name}
                     </option>
                   ))}
@@ -287,8 +287,8 @@ export default function App() {
 
             {/* Provider selector (only visible for provider portal when logged in as provider) */}
             {viewMode === "provider" && currentUser?.role === "provider" && (
-              <div className="flex items-center gap-2 bg-slate-950/60 py-1.5 px-3 rounded-lg border border-slate-800 text-xs">
-                <span className="text-slate-500 text-5xs font-semibold uppercase tracking-wider">Prestador:</span>
+              <div className="flex items-center gap-2 bg-slate-950/60 py-1.5 px-3 rounded-lg border border-slate-800 text-xs whitespace-nowrap">
+                <span className="text-slate-500 text-[10px] font-semibold uppercase tracking-wider">Prestador:</span>
                 <span className="text-white font-semibold">
                   {selectedProvider?.name}
                 </span>
@@ -297,7 +297,7 @@ export default function App() {
 
             {/* Session Action */}
             {currentUser ? (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 whitespace-nowrap shrink-0">
                 {currentUser.avatarUrl ? (
                   <img 
                     src={currentUser.avatarUrl} 
@@ -305,18 +305,18 @@ export default function App() {
                     className="w-7 h-7 rounded-full border border-slate-700 shadow-sm shrink-0" 
                   />
                 ) : (
-                  <span className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                  <span className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 select-none">
                     {currentUser.name.charAt(0)}
                   </span>
                 )}
                 <span className="text-slate-300 text-xs hidden sm:inline">
-                  Olá, <strong className="text-white">{currentUser.name}</strong>
+                  Olá, <strong className="text-white">{currentUser.name.replace(/\s*\((instagram|google)\)/i, "")}</strong>
                 </span>
                 <button
                   onClick={handleLogout}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
+                  <LogOut className="w-3.5 h-3.5 shrink-0" />
                   Sair
                 </button>
               </div>
@@ -326,9 +326,9 @@ export default function App() {
                   setAuthMode("login");
                   setAuthModalOpen(true);
                 }}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-md shadow-indigo-600/10"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-md shadow-indigo-600/10 whitespace-nowrap shrink-0"
               >
-                <LogIn className="w-3.5 h-3.5" />
+                <LogIn className="w-3.5 h-3.5 shrink-0" />
                 Entrar / Cadastrar
               </button>
             )}
