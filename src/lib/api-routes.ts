@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { query } from './db.js';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import { authMiddleware, AuthenticatedRequest } from './auth-middleware.js';
 import { 
   Tenant, 
   Provider, 
@@ -593,13 +596,38 @@ router.post('/bookings', async (req, res) => {
 });
 
 // 11. Update booking status
-router.patch('/bookings/:id', async (req, res) => {
+router.patch('/bookings/:id', authMiddleware, async (req: AuthenticatedRequest, res) => {
   const { status } = req.body;
   if (!status) {
     return res.status(400).json({ error: "status is required" });
   }
 
+  const user = req.user;
+  if (!user) {
+    return res.status(401).json({ error: "Não autorizado." });
+  }
+
   try {
+    const bookingRows = await query<any>(
+      `SELECT provider_id AS "providerId", client_email AS "clientEmail" FROM bookings WHERE id = $1`,
+      [req.params.id]
+    );
+    if (bookingRows.length === 0) {
+      return res.status(404).json({ error: "Agendamento não encontrado." });
+    }
+    const booking = bookingRows[0];
+
+    // Authorization checks
+    if (user.role === 'client') {
+      if (user.email !== booking.clientEmail || status !== 'cancelled') {
+        return res.status(403).json({ error: "Não autorizado a alterar este agendamento." });
+      }
+    } else if (user.role === 'provider') {
+      if (user.providerId !== booking.providerId) {
+        return res.status(403).json({ error: "Não autorizado a alterar este agendamento." });
+      }
+    }
+
     const rows = await query<Booking>(
       `UPDATE bookings SET status = $1 WHERE id = $2 
        RETURNING id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes`,
@@ -628,6 +656,270 @@ router.delete('/bookings/:id', async (req, res) => {
   } catch (error) {
     console.error("Error deleting booking:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// --- Authentication Endpoints ---
+
+// Auth: Register Client
+router.post('/auth/register', async (req, res) => {
+  const { email, password, name } = req.body;
+  if (!email || !password || !name) {
+    return res.status(400).json({ error: "E-mail, senha e nome são obrigatórios." });
+  }
+
+  try {
+    const existing = await query(`SELECT id FROM users WHERE email = $1`, [email.toLowerCase()]);
+    if (existing.length > 0) {
+      return res.status(409).json({ error: "Este e-mail já está cadastrado." });
+    }
+
+    const id = "user-" + Date.now();
+    const passwordHash = await bcrypt.hash(password, 10);
+    
+    await query(
+      `INSERT INTO users (id, email, password_hash, name, role) VALUES ($1, $2, $3, $4, $5)`,
+      [id, email.toLowerCase(), passwordHash, name, 'client']
+    );
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error("JWT_SECRET is missing");
+    
+    const token = jwt.sign(
+      { userId: id, email: email.toLowerCase(), name, role: 'client' },
+      secret,
+      { expiresIn: '30d' }
+    );
+
+    res.status(201).json({
+      token,
+      user: { id, email: email.toLowerCase(), name, role: 'client' }
+    });
+  } catch (error) {
+    console.error("Register error:", error);
+    res.status(500).json({ error: "Erro interno no servidor." });
+  }
+});
+
+// Auth: Login
+router.post('/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: "E-mail e senha são obrigatórios." });
+  }
+
+  try {
+    const users = await query(
+      `SELECT id, email, password_hash AS "passwordHash", name, role, tenant_id AS "tenantId", provider_id AS "providerId" 
+       FROM users WHERE email = $1 LIMIT 1`,
+      [email.toLowerCase()]
+    );
+    if (users.length === 0) {
+      return res.status(401).json({ error: "Credenciais inválidas." });
+    }
+
+    const user = users[0];
+    const match = await bcrypt.compare(password, user.passwordHash);
+    if (!match) {
+      return res.status(401).json({ error: "Credenciais inválidas." });
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error("JWT_SECRET is missing");
+
+    const payload = {
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      tenantId: user.tenantId,
+      providerId: user.providerId
+    };
+
+    const token = jwt.sign(payload, secret, { expiresIn: '30d' });
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        tenantId: user.tenantId,
+        providerId: user.providerId
+      }
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ error: "Erro interno no servidor." });
+  }
+});
+
+// Auth: Get Profile
+router.get('/auth/me', authMiddleware, (req: AuthenticatedRequest, res) => {
+  res.json({ user: req.user });
+});
+
+// --- Protected Booking Management Endpoints ---
+
+// Get My Bookings (for Client or Provider)
+router.get('/bookings/my', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  const user = req.user;
+  if (!user) {
+    return res.status(401).json({ error: "Não autorizado." });
+  }
+
+  try {
+    let bookings;
+    if (user.role === 'client') {
+      bookings = await query<any>(
+        `SELECT b.id, b.provider_id AS "providerId", b.service_id AS "serviceId", b.starts_at AS "startsAt", b.ends_at AS "endsAt", 
+                b.client_name AS "clientName", b.client_email AS "clientEmail", b.client_phone AS "clientPhone", b.status, b.notes,
+                s.name AS "serviceName", p.name AS "providerName"
+         FROM bookings b
+         LEFT JOIN services s ON b.service_id = s.id
+         LEFT JOIN providers p ON b.provider_id = p.id
+         WHERE b.client_email = $1
+         ORDER BY b.starts_at DESC`,
+        [user.email]
+      );
+    } else {
+      bookings = await query<any>(
+        `SELECT b.id, b.provider_id AS "providerId", b.service_id AS "serviceId", b.starts_at AS "startsAt", b.ends_at AS "endsAt", 
+                b.client_name AS "clientName", b.client_email AS "clientEmail", b.client_phone AS "clientPhone", b.status, b.notes,
+                s.name AS "serviceName", p.name AS "providerName"
+         FROM bookings b
+         LEFT JOIN services s ON b.service_id = s.id
+         LEFT JOIN providers p ON b.provider_id = p.id
+         WHERE b.provider_id = $1
+         ORDER BY b.starts_at DESC`,
+        [user.providerId]
+      );
+    }
+
+    const mapped = bookings.map(b => ({
+      ...b,
+      startsAt: toISOString(b.startsAt),
+      endsAt: toISOString(b.endsAt)
+    }));
+    res.json(mapped);
+  } catch (error) {
+    console.error("Error fetching my bookings:", error);
+    res.status(500).json({ error: "Erro interno no servidor." });
+  }
+});
+
+// Reschedule Booking
+router.patch('/bookings/:id/reschedule', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  const { startsAt } = req.body;
+  const bookingId = req.params.id;
+  const user = req.user;
+
+  if (!startsAt) {
+    return res.status(400).json({ error: "Data/hora de início é obrigatória." });
+  }
+  if (!user) {
+    return res.status(401).json({ error: "Não autorizado." });
+  }
+
+  try {
+    // Fetch booking
+    const bookings = await query<any>(
+      `SELECT id, provider_id AS "providerId", service_id AS "serviceId", client_email AS "clientEmail" 
+       FROM bookings WHERE id = $1 LIMIT 1`,
+      [bookingId]
+    );
+    if (bookings.length === 0) {
+      return res.status(404).json({ error: "Agendamento não encontrado." });
+    }
+    const booking = bookings[0];
+
+    // Auth validation
+    if (user.role === 'client' && user.email !== booking.clientEmail) {
+      return res.status(403).json({ error: "Você não tem permissão para alterar este agendamento." });
+    }
+    if (user.role === 'provider' && user.providerId !== booking.providerId) {
+      return res.status(403).json({ error: "Você não tem permissão para alterar este agendamento." });
+    }
+
+    // Fetch Service
+    const services = await query<Service>(
+      `SELECT id, duration_minutes AS "durationMinutes", buffer_minutes AS "bufferMinutes" 
+       FROM services WHERE id = $1 LIMIT 1`,
+      [booking.serviceId]
+    );
+    if (services.length === 0) {
+      return res.status(404).json({ error: "Serviço não encontrado." });
+    }
+    const service = services[0];
+
+    const startObj = new Date(startsAt);
+    const endObj = new Date(startObj.getTime() + service.durationMinutes * 60 * 1000);
+    const endsAt = endObj.toISOString();
+
+    const requestedStartMin = startObj.getUTCHours() * 60 + startObj.getUTCMinutes();
+    const requestedEndMin = requestedStartMin + service.durationMinutes;
+    const dateStr = startsAt.substring(0, 10);
+
+    // Fetch bookings (excluding current)
+    const existingBookings = await query<any>(
+      `SELECT b.id, b.starts_at AS "startsAt", b.ends_at AS "endsAt", s.buffer_minutes AS "bufferMinutes" 
+       FROM bookings b 
+       LEFT JOIN services s ON b.service_id = s.id 
+       WHERE b.provider_id = $1 AND b.status != 'cancelled' AND b.starts_at::date = $2::date AND b.id != $3`,
+      [booking.providerId, dateStr, bookingId]
+    );
+
+    // Check overlap
+    for (const b of existingBookings) {
+      const bStartObj = new Date(b.startsAt);
+      const bEndObj = new Date(b.endsAt);
+      
+      const bStartMin = bStartObj.getUTCHours() * 60 + bStartObj.getUTCMinutes();
+      const bEndMin = bStartMin + (bEndObj.getTime() - bStartObj.getTime()) / (60 * 1000);
+      const bBuffer = Number(b.bufferMinutes) || 0;
+
+      const coreOverlap = Math.max(requestedStartMin, bStartMin) < Math.min(requestedEndMin, bEndMin);
+      if (coreOverlap) {
+        return res.status(409).json({ 
+          error: "slot_unavailable", 
+          message: "O horário selecionado já foi reservado por outro cliente." 
+        });
+      }
+
+      if (requestedStartMin >= bStartMin && requestedStartMin < (bEndMin + bBuffer)) {
+        return res.status(409).json({
+          error: "slot_unavailable",
+          message: "Conflito com o período de preparação/intervalo do agendamento anterior."
+        });
+      }
+
+      if (requestedEndMin > (bStartMin - service.bufferMinutes) && requestedStartMin < bStartMin) {
+        return res.status(409).json({
+          error: "slot_unavailable",
+          message: "Este horário não oferece o intervalo necessário antes da próxima reserva."
+        });
+      }
+    }
+
+    // Update
+    const rows = await query<Booking>(
+      `UPDATE bookings 
+       SET starts_at = $1, ends_at = $2 
+       WHERE id = $3 
+       RETURNING id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes`,
+      [startsAt, endsAt, bookingId]
+    );
+
+    const updated = {
+      ...rows[0],
+      startsAt: toISOString(rows[0].startsAt),
+      endsAt: toISOString(rows[0].endsAt)
+    };
+    res.json(updated);
+  } catch (error) {
+    console.error("Reschedule booking error:", error);
+    res.status(500).json({ error: "Erro interno no servidor." });
   }
 });
 

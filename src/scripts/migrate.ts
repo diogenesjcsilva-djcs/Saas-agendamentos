@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import bcrypt from 'bcryptjs';
 import { pool } from '../lib/db';
 
 async function runMigration() {
@@ -32,6 +33,18 @@ async function runMigration() {
         email TEXT NOT NULL,
         bio TEXT,
         avatar_url TEXT
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        name TEXT NOT NULL,
+        role TEXT NOT NULL,
+        tenant_id TEXT REFERENCES tenants(id) ON DELETE SET NULL,
+        provider_id TEXT REFERENCES providers(id) ON DELETE SET NULL
       )
     `);
 
@@ -120,6 +133,51 @@ async function runMigration() {
              bio = EXCLUDED.bio, 
              avatar_url = EXCLUDED.avatar_url`,
           [provider.id, provider.tenantId, provider.name, provider.email, provider.bio, provider.avatarUrl || null]
+        );
+      }
+
+      // Seed users
+      console.log('Seeding users...');
+      const passwordHash = await bcrypt.hash('12345678', 10);
+      const defaultUsers = [
+        {
+          id: 'user-1',
+          email: 'carlos@imperial.com',
+          name: 'Carlos Barber',
+          role: 'provider',
+          tenantId: 'tenant-1',
+          providerId: 'provider-1'
+        },
+        {
+          id: 'user-2',
+          email: 'lucas@imperial.com',
+          name: 'Lucas Faccini',
+          role: 'provider',
+          tenantId: 'tenant-1',
+          providerId: 'provider-2'
+        },
+        {
+          id: 'user-3',
+          email: 'heloisa@aura.com',
+          name: 'Dra. Heloísa Barros',
+          role: 'provider',
+          tenantId: 'tenant-2',
+          providerId: 'provider-3'
+        }
+      ];
+
+      for (const u of defaultUsers) {
+        await client.query(
+          `INSERT INTO users (id, email, password_hash, name, role, tenant_id, provider_id) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7) 
+           ON CONFLICT (id) DO UPDATE SET 
+             email = EXCLUDED.email, 
+             password_hash = EXCLUDED.password_hash, 
+             name = EXCLUDED.name, 
+             role = EXCLUDED.role, 
+             tenant_id = EXCLUDED.tenant_id, 
+             provider_id = EXCLUDED.provider_id`,
+          [u.id, u.email, passwordHash, u.name, u.role, u.tenantId, u.providerId]
         );
       }
 
