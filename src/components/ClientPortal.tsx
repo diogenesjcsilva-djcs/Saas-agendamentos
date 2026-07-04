@@ -406,22 +406,7 @@ export default function ClientPortal({
   if (!currentUser) {
     return (
       <div id="client-portal-root" className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-        {/* Brand Header */}
-        <div className={`p-8 bg-gradient-to-r from-gray-900 via-gray-800 to-slate-900 text-white relative`}>
-          <div className="absolute top-4 right-4 text-4xl opacity-15">
-            {tenant.logoUrl === "✂️" ? <Scissors className="w-16 h-16" /> : <Sparkles className="w-16 h-16" />}
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-4xl bg-white/10 p-3 rounded-xl backdrop-blur-sm border border-white/10 shadow-inner">
-              {tenant.logoUrl || "🗓️"}
-            </span>
-            <div>
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Portal de Agendamentos</span>
-              <h1 className="text-2xl font-bold tracking-tight">{tenant.name}</h1>
-              <p className="text-sm text-gray-300 mt-1 max-w-xl">{tenant.description}</p>
-            </div>
-          </div>
-        </div>
+
 
         {/* Auth Required Screen */}
         <div className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
@@ -601,22 +586,7 @@ export default function ClientPortal({
 
   return (
     <div id="client-portal-root" className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-      {/* Brand Header */}
-      <div className={`p-8 bg-gradient-to-r from-gray-900 via-gray-800 to-slate-900 text-white relative`}>
-        <div className="absolute top-4 right-4 text-4xl opacity-15">
-          {tenant.logoUrl === "✂️" ? <Scissors className="w-16 h-16" /> : <Sparkles className="w-16 h-16" />}
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-4xl bg-white/10 p-3 rounded-xl backdrop-blur-sm border border-white/10 shadow-inner">
-            {tenant.logoUrl || "🗓️"}
-          </span>
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Portal de Agendamentos</span>
-            <h1 className="text-2xl font-bold tracking-tight">{tenant.name}</h1>
-            <p className="text-sm text-gray-300 mt-1 max-w-xl">{tenant.description}</p>
-          </div>
-        </div>
-      </div>
+
 
       {/* Tabs Switcher for Authenticated Clients */}
       {currentUser && currentUser.role === "client" && (
