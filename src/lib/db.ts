@@ -21,17 +21,20 @@ if (fs.existsSync(envLocalPath)) {
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error("DATABASE_URL environment variable is missing!");
+  console.error("CRITICAL: DATABASE_URL environment variable is missing!");
 }
 
 export const pool = new pg.Pool({
-  connectionString,
+  connectionString: connectionString || undefined,
   ssl: {
     rejectUnauthorized: false // Neon requires SSL
   }
 });
 
 export async function query<T = any>(text: string, params?: any[]): Promise<T[]> {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL environment variable is missing in the serverless environment!");
+  }
   const start = Date.now();
   const res = await pool.query(text, params);
   const duration = Date.now() - start;
