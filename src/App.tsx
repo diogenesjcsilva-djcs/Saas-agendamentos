@@ -225,15 +225,12 @@ export default function App() {
             </span>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-sm font-bold tracking-tight text-white leading-none whitespace-nowrap">Scheduler SaaS</h1>
-                <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[9px] font-extrabold px-1.5 py-0.5 rounded-md uppercase leading-none tracking-wider whitespace-nowrap">
-                  Multi-Tenant
-                </span>
+                <h1 className="text-sm font-bold tracking-tight text-white leading-none whitespace-nowrap">portalagendeai</h1>
               </div>
               <p className="text-[10px] text-slate-400 font-mono mt-1.5 whitespace-nowrap">
                 {viewMode === "client" 
-                  ? `${selectedTenant?.slug}.schedulersaas.com`
-                  : `admin.schedulersaas.com`
+                  ? `portalagendeai.app.br`
+                  : `admin.portalagendeai.app.br`
                 }
               </p>
             </div>
