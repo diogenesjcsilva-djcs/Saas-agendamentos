@@ -262,6 +262,17 @@
       "clientPhone": "(11) 96666-5555",
       "status": "confirmed",
       "notes": "Pele muito sensível"
+    },
+    {
+      "id": "booking-1783164597330",
+      "providerId": "provider-1",
+      "serviceId": "service-1",
+      "startsAt": "2026-07-06T09:00:00.000Z",
+      "endsAt": "2026-07-06T09:40:00.000Z",
+      "clientName": "Teste Local",
+      "clientEmail": "teste@teste.com",
+      "clientPhone": "(11) 99999-9999",
+      "status": "confirmed"
     }
   ]
 }
