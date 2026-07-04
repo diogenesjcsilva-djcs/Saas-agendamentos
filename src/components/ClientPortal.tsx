@@ -41,9 +41,63 @@ import { motion, AnimatePresence } from "motion/react";
 interface ClientPortalProps {
   tenant: Tenant;
   currentUser?: any;
+  // Auth state & handlers passed from App.tsx
+  authMode: "login" | "register";
+  setAuthMode: (mode: "login" | "register") => void;
+  authEmail: string;
+  setAuthEmail: (email: string) => void;
+  authPassword: string;
+  setAuthPassword: (password: string) => void;
+  authName: string;
+  setAuthName: (name: string) => void;
+  authError: string | null;
+  setAuthError: (err: string | null) => void;
+  authLoading: boolean;
+  setAuthLoading: (loading: boolean) => void;
+  handleLogin: (e: React.FormEvent) => Promise<void>;
+  handleRegister: (e: React.FormEvent) => Promise<void>;
+  setSocialAuthOpen: (provider: "google" | "instagram" | null) => void;
 }
 
-export default function ClientPortal({ tenant, currentUser }: ClientPortalProps) {
+const getServiceIcon = (name: string) => {
+  const lower = name.toLowerCase();
+  if (lower.includes("corte") || lower.includes("cabelo") || lower.includes("barba") || lower.includes("aparar") || lower.includes("penteado")) {
+    return "✂️";
+  }
+  if (lower.includes("facial") || lower.includes("pele") || lower.includes("limpeza") || lower.includes("estética") || lower.includes("laser") || lower.includes("peeling")) {
+    return "✨";
+  }
+  if (lower.includes("massagem") || lower.includes("corporal") || lower.includes("relaxante") || lower.includes("drenagem") || lower.includes("spa")) {
+    return "💆‍♀️";
+  }
+  if (lower.includes("unha") || lower.includes("manicure") || lower.includes("pedicure") || lower.includes("esmalte")) {
+    return "💅";
+  }
+  if (lower.includes("maquiagem") || lower.includes("makeup") || lower.includes("sobrancelha") || lower.includes("cílios")) {
+    return "💄";
+  }
+  return "🗓️";
+};
+
+export default function ClientPortal({ 
+  tenant, 
+  currentUser,
+  authMode,
+  setAuthMode,
+  authEmail,
+  setAuthEmail,
+  authPassword,
+  setAuthPassword,
+  authName,
+  setAuthName,
+  authError,
+  setAuthError,
+  authLoading,
+  setAuthLoading,
+  handleLogin,
+  handleRegister,
+  setSocialAuthOpen
+}: ClientPortalProps) {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   
@@ -349,6 +403,202 @@ export default function ClientPortal({ tenant, currentUser }: ClientPortalProps)
     return date.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
   };
 
+  if (!currentUser) {
+    return (
+      <div id="client-portal-root" className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        {/* Brand Header */}
+        <div className={`p-8 bg-gradient-to-r from-gray-900 via-gray-800 to-slate-900 text-white relative`}>
+          <div className="absolute top-4 right-4 text-4xl opacity-15">
+            {tenant.logoUrl === "✂️" ? <Scissors className="w-16 h-16" /> : <Sparkles className="w-16 h-16" />}
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-4xl bg-white/10 p-3 rounded-xl backdrop-blur-sm border border-white/10 shadow-inner">
+              {tenant.logoUrl || "🗓️"}
+            </span>
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Portal de Agendamentos</span>
+              <h1 className="text-2xl font-bold tracking-tight">{tenant.name}</h1>
+              <p className="text-sm text-gray-300 mt-1 max-w-xl">{tenant.description}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Auth Required Screen */}
+        <div className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+          <div className="md:col-span-6 space-y-6">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-extrabold text-slate-950 tracking-tight">Faça login para agendar</h2>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                Para garantir uma experiência segura, rápida e possibilitar o reagendamento ou cancelamento online, solicitamos o login antes de escolher os serviços.
+              </p>
+            </div>
+
+            <div className="space-y-4 text-xs font-semibold text-slate-700">
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-650 flex items-center justify-center font-bold">⚡</span>
+                <span>Agendamento rápido em menos de 1 minuto</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-650 flex items-center justify-center font-bold">🔄</span>
+                <span>Reagende ou cancele de forma 100% online</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-650 flex items-center justify-center font-bold">🔔</span>
+                <span>Histórico completo de visitas no seu portal</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="md:col-span-6 bg-white border border-gray-150 rounded-2xl p-6 md:p-8 shadow-sm space-y-5">
+            <div className="text-center space-y-1">
+              <h3 className="font-extrabold text-slate-900 text-base">
+                {authMode === "login" ? "Entrar na sua Conta" : "Criar sua Conta"}
+              </h3>
+              <p className="text-4xs text-gray-500">
+                {authMode === "login" 
+                  ? "Entre para ver seus agendamentos e agendar mais rápido." 
+                  : "Cadastre-se para acompanhar seu histórico de reservas."
+                }
+              </p>
+            </div>
+
+            <form onSubmit={authMode === "login" ? handleLogin : handleRegister} className="space-y-3.5">
+              {authError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-xs font-semibold">
+                  {authError}
+                </div>
+              )}
+
+              {authMode === "register" && (
+                <div className="space-y-1">
+                  <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider">Nome Completo</label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      required
+                      value={authName}
+                      onChange={(e) => setAuthName(e.target.value)}
+                      placeholder="Seu nome"
+                      className="w-full bg-gray-50 border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider">E-mail</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                  <input
+                    type="email"
+                    required
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    placeholder="seuemail@provedor.com"
+                    className="w-full bg-gray-50 border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider">Senha</label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                  <input
+                    type="password"
+                    required
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-gray-50 border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={authLoading}
+                className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition-colors flex items-center justify-center gap-2 shadow-indigo-600/10"
+              >
+                {authLoading ? (
+                  <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                ) : (
+                  <>{authMode === "login" ? "Entrar" : "Criar Conta"}</>
+                )}
+              </button>
+            </form>
+
+            {/* Social Dividers & Intuitive Buttons */}
+            <div className="relative flex items-center justify-center my-3">
+              <div className="border-t border-gray-150 w-full"></div>
+              <span className="absolute bg-white px-2 text-5xs text-gray-400 font-bold uppercase tracking-wider">ou</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setSocialAuthOpen("google")}
+                className="py-2 bg-white hover:bg-gray-50 border border-gray-250 text-gray-700 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.57h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.48C21.68,11.75 21.56,11.4 21.35,11.1z" fill="#4285F4" />
+                  <path d="M12,20.62c2.6,0 4.78,-0.86 6.37,-2.33l-3.3,-2.57c-0.91,0.61 -2.07,0.98 -3.07,0.98 -2.37,0 -4.38,-1.6 -5.1,-3.75H3.5v2.66C5.09,18.88 8.35,20.62 12,20.62z" fill="#34A853" />
+                  <path d="M6.9,13.06c-0.18,-0.54 -0.28,-1.11 -0.28,-1.7s0.1,-1.16 0.28,-1.7V7H3.5c-0.6,1.19 -0.94,2.53 -0.94,3.96S2.9,13.7 3.5,14.88L6.9,13.06z" fill="#FBBC05" />
+                  <path d="M12,6.08c1.41,0 2.69,0.49 3.69,1.44l2.76,-2.76C16.78,3.2 14.6,2.38 12,2.38c-3.65,0 -6.91,1.74 -8.5,4.62l3.4,2.66C7.62,7.68 9.63,6.08 12,6.08z" fill="#EA4335" />
+                </svg>
+                Google
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSocialAuthOpen("instagram")}
+                className="py-2 bg-gradient-to-r from-purple-600 via-pink-500 to-yellow-500 hover:opacity-90 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center justify-center gap-1.5"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                </svg>
+                Instagram
+              </button>
+            </div>
+
+            <div className="text-center text-xs border-t border-gray-100 pt-3">
+              {authMode === "login" ? (
+                <p className="text-gray-500">
+                  Ainda não tem conta?{" "}
+                  <button
+                    onClick={() => {
+                      setAuthMode("register");
+                      setAuthError(null);
+                    }}
+                    className="text-indigo-600 font-bold hover:underline"
+                  >
+                    Cadastre-se
+                  </button>
+                </p>
+              ) : (
+                <p className="text-gray-500">
+                  Já tem uma conta?{" "}
+                  <button
+                    onClick={() => {
+                      setAuthMode("login");
+                      setAuthError(null);
+                    }}
+                    className="text-indigo-600 font-bold hover:underline"
+                  >
+                    Faça Login
+                  </button>
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div id="client-portal-root" className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
       {/* Brand Header */}
@@ -445,10 +695,11 @@ export default function ClientPortal({ tenant, currentUser }: ClientPortalProps)
                     <p className="text-sm text-gray-500 mt-1">Selecione uma das opções abaixo para iniciar seu agendamento.</p>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredServices.map(service => {
                       const isSelected = selectedService?.id === service.id;
                       const serviceProvider = providers.find(p => p.id === service.providerId);
+                      const icon = getServiceIcon(service.name);
                       
                       return (
                         <div
@@ -458,30 +709,35 @@ export default function ClientPortal({ tenant, currentUser }: ClientPortalProps)
                             if (serviceProvider) setSelectedProvider(serviceProvider);
                             setStep(2);
                           }}
-                          className={`p-5 rounded-xl border-2 transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                          className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex gap-4 items-start ${
                             isSelected 
                               ? `border-${currentTheme.accent} ${currentTheme.bg} shadow-md` 
-                              : "border-gray-100 hover:border-gray-200 hover:shadow-sm"
+                              : "border-gray-100 hover:border-gray-200 hover:shadow-sm hover:translate-y-[-2px]"
                           }`}
                         >
-                          <div className="space-y-1 max-w-xl">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-semibold text-gray-900 text-base">{service.name}</h3>
-                              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-mono">
+                          <span className="text-3xl p-3 bg-gray-50 rounded-xl border border-gray-100 shrink-0 select-none shadow-sm">
+                            {icon}
+                          </span>
+                          <div className="space-y-1.5 flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-bold text-slate-900 text-sm leading-snug truncate">{service.name}</h3>
+                              <span className="text-5xs bg-gray-100 text-gray-605 px-2 py-0.5 rounded-full font-mono font-bold shrink-0">
                                 {service.durationMinutes} min
                               </span>
                             </div>
-                            <p className="text-sm text-gray-500 leading-relaxed">{service.description}</p>
-                            {serviceProvider && (
-                              <p className="text-xs text-gray-400 flex items-center gap-1.5 pt-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                Realizado por: <strong>{serviceProvider.name}</strong>
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex md:flex-col items-baseline md:items-end justify-between md:justify-center shrink-0 border-t md:border-t-0 pt-3 md:pt-0 border-gray-100">
-                            <span className="text-xs text-gray-400 md:hidden">Preço:</span>
-                            <span className="text-lg font-bold text-gray-900 font-mono">{formatPrice(service.price)}</span>
+                            <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{service.description}</p>
+                            <div className="flex justify-between items-center pt-2">
+                              {serviceProvider ? (
+                                <p className="text-5xs text-gray-400 font-semibold truncate max-w-[140px]">
+                                  👤 {serviceProvider.name}
+                                </p>
+                              ) : (
+                                <div></div>
+                              )}
+                              <span className={`text-xs font-extrabold font-mono text-${currentTheme.accent}`}>
+                                {formatPrice(service.price)}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       );
@@ -737,34 +993,30 @@ export default function ClientPortal({ tenant, currentUser }: ClientPortalProps)
                   <form onSubmit={handleBookingSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-8">
                     <div className="md:col-span-7 space-y-4">
                       <div className="space-y-1.5">
-                        <label htmlFor="client-name" className="text-xs font-semibold text-gray-700 block">Nome Completo *</label>
+                        <label htmlFor="client-name" className="text-xs font-semibold text-gray-700 block">Nome Completo</label>
                         <div className="relative">
                           <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                           <input
                             id="client-name"
                             type="text"
-                            required
+                            disabled
                             value={clientName}
-                            onChange={(e) => setClientName(e.target.value)}
-                            placeholder="Ex: Diógenes Silva"
-                            className="w-full py-2.5 pl-10 pr-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all font-semibold"
+                            className="w-full py-2.5 pl-10 pr-4 bg-gray-50 border border-gray-150 rounded-xl text-sm text-gray-500 font-semibold cursor-not-allowed"
                           />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <label htmlFor="client-email" className="text-xs font-semibold text-gray-700 block">E-mail *</label>
+                          <label htmlFor="client-email" className="text-xs font-semibold text-gray-700 block">E-mail</label>
                           <div className="relative">
                             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input
                               id="client-email"
                               type="email"
-                              required
+                              disabled
                               value={clientEmail}
-                              onChange={(e) => setClientEmail(e.target.value)}
-                              placeholder="nome@email.com"
-                              className="w-full py-2.5 pl-10 pr-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all font-semibold"
+                              className="w-full py-2.5 pl-10 pr-4 bg-gray-50 border border-gray-150 rounded-xl text-sm text-gray-500 font-semibold cursor-not-allowed"
                             />
                           </div>
                         </div>

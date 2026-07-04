@@ -465,7 +465,25 @@ export default function App() {
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.25 }}
               >
-                <ClientPortal tenant={selectedTenant} currentUser={currentUser} />
+                <ClientPortal 
+                  tenant={selectedTenant} 
+                  currentUser={currentUser}
+                  authMode={authMode}
+                  setAuthMode={setAuthMode}
+                  authEmail={authEmail}
+                  setAuthEmail={setAuthEmail}
+                  authPassword={authPassword}
+                  setAuthPassword={setAuthPassword}
+                  authName={authName}
+                  setAuthName={setAuthName}
+                  authError={authError}
+                  setAuthError={setAuthError}
+                  authLoading={authLoading}
+                  setAuthLoading={setAuthLoading}
+                  handleLogin={handleLogin}
+                  handleRegister={handleRegister}
+                  setSocialAuthOpen={setSocialAuthOpen}
+                />
               </motion.div>
             ) : viewMode === "provider" && selectedProvider ? (
               <motion.div
