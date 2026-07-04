@@ -29,7 +29,7 @@ router.get('/tenants', async (req, res) => {
     res.json(tenants);
   } catch (error) {
     console.error("Error fetching tenants:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error", details: (error as Error).message });
   }
 });
 
@@ -71,7 +71,7 @@ router.get('/providers', async (req, res) => {
     res.json(providers);
   } catch (error) {
     console.error("Error fetching providers:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error", details: (error as Error).message });
   }
 });
 
