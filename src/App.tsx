@@ -258,23 +258,7 @@ export default function App() {
                 </>
               )}
             </button>
-            {/* Tenant selector (only visible for client portal view when not locked) */}
-            {viewMode === "client" && (
-              <div className="flex items-center gap-2 bg-slate-950/60 py-1.5 px-3 rounded-lg border border-slate-800 text-xs whitespace-nowrap">
-                <span className="text-slate-500 text-[10px] font-semibold uppercase tracking-wider">Empresa:</span>
-                <select
-                  value={selectedTenant?.slug || ""}
-                  onChange={(e) => handleTenantChange(e.target.value)}
-                  className="bg-transparent text-white font-semibold focus:outline-none border-none py-0 pr-6 pl-0 cursor-pointer text-xs"
-                >
-                  {tenants.map(t => (
-                    <option key={t.id} value={t.slug} className="bg-slate-900 text-white text-xs">
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+
 
             {/* Provider selector (only visible for provider portal when logged in as provider) */}
             {viewMode === "provider" && currentUser?.role === "provider" && (
