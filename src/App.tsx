@@ -239,34 +239,25 @@ export default function App() {
             </div>
           </div>
 
-          {/* Core Visual Toggle (Persona Mode Switcher) */}
-          <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
-            <button
-              onClick={() => setViewMode("client")}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
-                viewMode === "client"
-                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/10"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <Compass className="w-3.5 h-3.5" />
-              Ver Portal Cliente
-            </button>
-            <button
-              onClick={() => setViewMode("provider")}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
-                viewMode === "provider"
-                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/10"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              Ver Painel Prestador
-            </button>
-          </div>
-
           {/* User Session Area */}
           <div className="flex items-center gap-4 shrink-0 flex-wrap sm:flex-nowrap">
+            {/* Discreet Provider / Client Switcher */}
+            <button
+              onClick={() => setViewMode(viewMode === "client" ? "provider" : "client")}
+              className="text-slate-400 hover:text-slate-205 text-xs font-semibold flex items-center gap-1.5 transition-colors mr-2 whitespace-nowrap"
+            >
+              {viewMode === "client" ? (
+                <>
+                  <Users className="w-3.5 h-3.5 shrink-0" />
+                  <span>Área do Prestador</span>
+                </>
+              ) : (
+                <>
+                  <Compass className="w-3.5 h-3.5 shrink-0" />
+                  <span>Voltar ao Portal</span>
+                </>
+              )}
+            </button>
             {/* Tenant selector (only visible for client portal view when not locked) */}
             {viewMode === "client" && (
               <div className="flex items-center gap-2 bg-slate-950/60 py-1.5 px-3 rounded-lg border border-slate-800 text-xs whitespace-nowrap">
