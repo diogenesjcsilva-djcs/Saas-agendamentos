@@ -1,20 +1,11 @@
 import express from 'express';
+import apiRouter from '../src/lib/api-routes.js';
+
 const app = express();
 app.use(express.json());
 
-// Dynamic import handler to catch startup and module loading errors
-app.use(async (req, res, next) => {
-  try {
-    const { default: apiRouter } = await import('../src/lib/api-routes.js');
-    apiRouter(req, res, next);
-  } catch (error) {
-    console.error("Vercel Serverless Function Startup Crash:", error);
-    res.status(500).json({
-      error: "FUNCTION_INVOCATION_FAILED_PREVENTED",
-      message: (error as Error).message,
-      stack: (error as Error).stack
-    });
-  }
-});
+// Mount the API Router under /api
+app.use('/api', apiRouter);
 
+// Export the app as the default handler for Vercel Serverless Functions
 export default app;
