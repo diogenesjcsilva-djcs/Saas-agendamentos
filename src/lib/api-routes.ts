@@ -753,6 +753,70 @@ router.post('/auth/login', async (req, res) => {
   }
 });
 
+// Auth: Social Login
+router.post('/auth/social-login', async (req, res) => {
+  const { email, name, provider } = req.body;
+  if (!email || !name || !provider) {
+    return res.status(400).json({ error: "E-mail, nome e provedor são obrigatórios." });
+  }
+
+  try {
+    const emailLower = email.toLowerCase();
+    let users = await query<any>(
+      `SELECT id, email, name, role, tenant_id AS "tenantId", provider_id AS "providerId" 
+       FROM users WHERE email = $1 LIMIT 1`,
+      [emailLower]
+    );
+
+    let user;
+    if (users.length === 0) {
+      const id = "user-" + Date.now();
+      const passwordHash = await bcrypt.hash("social-oauth-token-" + Date.now(), 10);
+      
+      await query(
+        `INSERT INTO users (id, email, password_hash, name, role) VALUES ($1, $2, $3, $4, $5)`,
+        [id, emailLower, passwordHash, name, 'client']
+      );
+
+      user = {
+        id,
+        email: emailLower,
+        name,
+        role: 'client'
+      };
+    } else {
+      user = users[0];
+    }
+
+    const secret = process.env.JWT_SECRET || "pulse-saas-secret-key-12345678";
+    const payload = {
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      tenantId: user.tenantId,
+      providerId: user.providerId
+    };
+
+    const token = jwt.sign(payload, secret, { expiresIn: '30d' });
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        tenantId: user.tenantId,
+        providerId: user.providerId
+      }
+    });
+  } catch (error) {
+    console.error("Social login error:", error);
+    res.status(500).json({ error: "Erro interno no servidor." });
+  }
+});
+
 // Auth: Get Profile
 router.get('/auth/me', authMiddleware, (req: AuthenticatedRequest, res) => {
   res.json({ user: req.user });

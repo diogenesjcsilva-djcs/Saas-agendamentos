@@ -232,3 +232,16 @@ export async function rescheduleBooking(id: string, startsAt: string): Promise<B
   }
   return res.json();
 }
+
+export async function socialLogin(email: string, name: string, provider: string): Promise<{ token: string; user: any }> {
+  const res = await fetch(`${API_BASE}/auth/social-login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, name, provider }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Erro no login social");
+  }
+  return res.json();
+}
