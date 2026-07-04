@@ -340,38 +340,7 @@ export default function App() {
       {/* Main Container Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8 space-y-8 flex flex-col justify-start">
         
-        {/* Real-time Interaction Guide Banner (Aesthetic Explainer) */}
-        {!isProviderViewLocked && (
-          <div className="bg-gradient-to-r from-indigo-50 to-indigo-100/50 border border-indigo-100 p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <h3 className="font-bold text-indigo-950 text-sm flex items-center gap-1.5">
-                <PlayCircle className="w-4 h-4 text-indigo-600" />
-                Agendamentos com Autenticação e Gestão Reativa
-              </h3>
-              <p className="text-xs text-indigo-800 leading-relaxed max-w-3xl">
-                {currentUser?.role === "client" ? (
-                  <>Você está logado como <strong>Cliente ({currentUser.name})</strong>. Seus agendamentos serão preenchidos automaticamente. Acesse a aba <strong>"Meus Agendamentos"</strong> no portal para cancelar ou reagendar suas reservas em tempo real!</>
-                ) : currentUser?.role === "provider" ? (
-                  <>Você está logado como <strong>Prestador ({currentUser.name})</strong>. Seu painel de controle está aberto. Você pode gerenciar seus serviços, bloquear datas e reagendar reservas de forma privada.</>
-                ) : (
-                  <>Navegue como cliente ou prestador. Crie uma conta de cliente ou faça login com um prestador padrão (ex: <code>carlos@imperial.com</code> / senha <code>12345678</code>) para ver a gestão em funcionamento.</>
-                )}
-              </p>
-            </div>
-            {viewMode === "client" && (
-              <a
-                href="#client-portal-root"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById("client-portal-root")?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-3xs font-bold rounded-lg shrink-0 transition-colors shadow-sm shadow-indigo-600/10"
-              >
-                Ir para aplicação ↓
-              </a>
-            )}
-          </div>
-        )}
+
 
         {error && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 font-medium text-xs">
