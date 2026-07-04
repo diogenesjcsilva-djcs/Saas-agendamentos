@@ -763,7 +763,7 @@ router.post('/auth/social-login', async (req, res) => {
   try {
     const emailLower = email.toLowerCase();
     let users = await query<any>(
-      `SELECT id, email, name, role, tenant_id AS "tenantId", provider_id AS "providerId" 
+      `SELECT id, email, name, role, tenant_id AS "tenantId", provider_id AS "providerId", avatar_url AS "avatarUrl" 
        FROM users WHERE email = $1 LIMIT 1`,
       [emailLower]
     );
@@ -773,16 +773,21 @@ router.post('/auth/social-login', async (req, res) => {
       const id = "user-" + Date.now();
       const passwordHash = await bcrypt.hash("social-oauth-token-" + Date.now(), 10);
       
+      const avatarUrl = provider === 'instagram' 
+        ? "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&h=80&q=80" 
+        : "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&h=80&q=80";
+
       await query(
-        `INSERT INTO users (id, email, password_hash, name, role) VALUES ($1, $2, $3, $4, $5)`,
-        [id, emailLower, passwordHash, name, 'client']
+        `INSERT INTO users (id, email, password_hash, name, role, avatar_url) VALUES ($1, $2, $3, $4, $5, $6)`,
+        [id, emailLower, passwordHash, name, 'client', avatarUrl]
       );
 
       user = {
         id,
         email: emailLower,
         name,
-        role: 'client'
+        role: 'client',
+        avatarUrl
       };
     } else {
       user = users[0];
@@ -795,7 +800,8 @@ router.post('/auth/social-login', async (req, res) => {
       name: user.name,
       role: user.role,
       tenantId: user.tenantId,
-      providerId: user.providerId
+      providerId: user.providerId,
+      avatarUrl: user.avatarUrl
     };
 
     const token = jwt.sign(payload, secret, { expiresIn: '30d' });
@@ -808,7 +814,8 @@ router.post('/auth/social-login', async (req, res) => {
         name: user.name,
         role: user.role,
         tenantId: user.tenantId,
-        providerId: user.providerId
+        providerId: user.providerId,
+        avatarUrl: user.avatarUrl
       }
     });
   } catch (error) {

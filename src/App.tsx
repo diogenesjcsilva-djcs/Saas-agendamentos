@@ -298,6 +298,17 @@ export default function App() {
             {/* Session Action */}
             {currentUser ? (
               <div className="flex items-center gap-3">
+                {currentUser.avatarUrl ? (
+                  <img 
+                    src={currentUser.avatarUrl} 
+                    alt={currentUser.name} 
+                    className="w-7 h-7 rounded-full border border-slate-700 shadow-sm shrink-0" 
+                  />
+                ) : (
+                  <span className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                    {currentUser.name.charAt(0)}
+                  </span>
+                )}
                 <span className="text-slate-300 text-xs hidden sm:inline">
                   Olá, <strong className="text-white">{currentUser.name}</strong>
                 </span>

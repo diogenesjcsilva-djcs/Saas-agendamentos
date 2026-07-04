@@ -49,6 +49,10 @@ async function runMigration() {
     `);
 
     await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT
+    `);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS services (
         id TEXT PRIMARY KEY,
         provider_id TEXT REFERENCES providers(id) ON DELETE CASCADE,
