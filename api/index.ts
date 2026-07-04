@@ -5,7 +5,7 @@ app.use(express.json());
 // Dynamic import handler to catch startup and module loading errors
 app.use(async (req, res, next) => {
   try {
-    const { default: apiRouter } = await import('../src/lib/api-routes');
+    const { default: apiRouter } = await import('../src/lib/api-routes.js');
     apiRouter(req, res, next);
   } catch (error) {
     console.error("Vercel Serverless Function Startup Crash:", error);

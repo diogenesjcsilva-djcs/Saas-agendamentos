@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import apiRouter from "./src/lib/api-routes";
+import apiRouter from "./src/lib/api-routes.js";
 
 // Setup ports and paths
 const PORT = 3000;
