@@ -27,6 +27,7 @@ import {
   Clock, 
   User, 
   Mail, 
+  Lock,
   Phone, 
   CheckCircle, 
   ArrowLeft, 
