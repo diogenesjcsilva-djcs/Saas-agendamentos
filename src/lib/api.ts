@@ -5,7 +5,8 @@ import {
   AvailabilityRule, 
   AvailabilityException, 
   Booking, 
-  TimeSlot 
+  TimeSlot,
+  Category
 } from "../types";
 
 const API_BASE = "/api";
@@ -24,6 +25,12 @@ const getHeaders = (headers: HeadersInit = {}): HeadersInit => {
 export async function getTenants(): Promise<Tenant[]> {
   const res = await fetch(`${API_BASE}/tenants`);
   if (!res.ok) throw new Error("Failed to fetch tenants");
+  return res.json();
+}
+
+export async function getCategories(): Promise<Category[]> {
+  const res = await fetch(`${API_BASE}/categories`);
+  if (!res.ok) throw new Error("Failed to fetch categories");
   return res.json();
 }
 
@@ -191,11 +198,19 @@ export async function login(email: string, password: string): Promise<{ token: s
   return res.json();
 }
 
-export async function register(email: string, password: string, name: string): Promise<{ token: string; user: any }> {
+export async function register(
+  email: string, 
+  password: string, 
+  name: string,
+  role?: string,
+  tenantId?: string,
+  categoryId?: string,
+  bio?: string
+): Promise<{ token: string; user: any }> {
   const res = await fetch(`${API_BASE}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, name }),
+    body: JSON.stringify({ email, password, name, role, tenantId, categoryId, bio }),
   });
   if (!res.ok) {
     const err = await res.json();

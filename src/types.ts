@@ -13,9 +13,17 @@ export interface Tenant {
   accentColor: string; // Tailwind class
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  imageUrl?: string;
+}
+
 export interface Provider {
   id: string;
   tenantId: string;
+  categoryId?: string;
   name: string;
   email: string;
   bio: string;

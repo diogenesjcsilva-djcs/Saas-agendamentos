@@ -26,9 +26,19 @@ async function runMigration() {
     `);
 
     await client.query(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        slug TEXT UNIQUE NOT NULL,
+        image_url TEXT
+      )
+    `);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS providers (
         id TEXT PRIMARY KEY,
         tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+        category_id TEXT REFERENCES categories(id) ON DELETE SET NULL,
         name TEXT NOT NULL,
         email TEXT NOT NULL,
         bio TEXT,
@@ -50,6 +60,10 @@ async function runMigration() {
 
     await client.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT
+    `);
+
+    await client.query(`
+      ALTER TABLE providers ADD COLUMN IF NOT EXISTS category_id TEXT REFERENCES categories(id) ON DELETE SET NULL
     `);
 
     await client.query(`
@@ -124,19 +138,41 @@ async function runMigration() {
         );
       }
 
+      // Seed categories
+      console.log('Seeding categories...');
+      const categories = [
+        { id: 'category-1', name: 'Barbearia & Cabelo', slug: 'barba-cabelo', imageUrl: '✂️' },
+        { id: 'category-2', name: 'Estética & Beleza', slug: 'estetica-beleza', imageUrl: '✨' },
+        { id: 'category-3', name: 'Massagem & Relax', slug: 'massagem-relax', imageUrl: '💆‍♀️' },
+        { id: 'category-4', name: 'Unhas & Manicure', slug: 'unhas-manicure', imageUrl: '💅' }
+      ];
+      for (const cat of categories) {
+        await client.query(
+          `INSERT INTO categories (id, name, slug, image_url)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (id) DO UPDATE SET
+             name = EXCLUDED.name,
+             slug = EXCLUDED.slug,
+             image_url = EXCLUDED.image_url`,
+          [cat.id, cat.name, cat.slug, cat.imageUrl]
+        );
+      }
+
       // Seed providers
       console.log('Seeding providers...');
       for (const provider of data.providers) {
+        const categoryId = provider.id === 'provider-1' ? 'category-1' : 'category-2';
         await client.query(
-          `INSERT INTO providers (id, tenant_id, name, email, bio, avatar_url) 
-           VALUES ($1, $2, $3, $4, $5, $6) 
+          `INSERT INTO providers (id, tenant_id, category_id, name, email, bio, avatar_url) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7) 
            ON CONFLICT (id) DO UPDATE SET 
              tenant_id = EXCLUDED.tenant_id, 
+             category_id = EXCLUDED.category_id, 
              name = EXCLUDED.name, 
              email = EXCLUDED.email, 
              bio = EXCLUDED.bio, 
              avatar_url = EXCLUDED.avatar_url`,
-          [provider.id, provider.tenantId, provider.name, provider.email, provider.bio, provider.avatarUrl || null]
+          [provider.id, provider.tenantId, categoryId, provider.name, provider.email, provider.bio, provider.avatarUrl || null]
         );
       }
 

@@ -150,19 +150,25 @@ export default function App() {
     }
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = async (
+    e: React.FormEvent,
+    role?: string,
+    tenantId?: string,
+    categoryId?: string,
+    bio?: string
+  ) => {
     e.preventDefault();
     setAuthLoading(true);
     setAuthError(null);
     try {
-      const res = await register(authEmail, authPassword, authName);
+      const res = await register(authEmail, authPassword, authName, role, tenantId, categoryId, bio);
       localStorage.setItem("token", res.token);
       setCurrentUser(res.user);
       setAuthModalOpen(false);
       setAuthEmail("");
       setAuthPassword("");
       setAuthName("");
-      setViewMode("client");
+      setViewMode(res.user.role === "provider" ? "provider" : "client");
     } catch (err: any) {
       setAuthError(err.message || "Erro ao realizar o cadastro.");
     } finally {

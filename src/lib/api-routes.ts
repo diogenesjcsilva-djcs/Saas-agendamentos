@@ -54,6 +54,17 @@ router.get('/tenants/:slug', async (req, res) => {
   }
 });
 
+// 2.5 Get Categories
+router.get('/categories', async (req, res) => {
+  try {
+    const categories = await query("SELECT id, name, slug, image_url AS \"imageUrl\" FROM categories ORDER BY name ASC");
+    res.json(categories);
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    res.status(500).json({ error: "Internal server error", details: (error as Error).message });
+  }
+});
+
 // 3. Get Providers for a Tenant
 router.get('/providers', async (req, res) => {
   const { tenantId } = req.query;
@@ -61,13 +72,13 @@ router.get('/providers', async (req, res) => {
     let providers;
     if (tenantId) {
       providers = await query<Provider>(
-        `SELECT id, tenant_id AS "tenantId", name, email, bio, avatar_url AS "avatarUrl" 
+        `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, email, bio, avatar_url AS "avatarUrl" 
          FROM providers WHERE tenant_id = $1`,
         [tenantId]
       );
     } else {
       providers = await query<Provider>(
-        `SELECT id, tenant_id AS "tenantId", name, email, bio, avatar_url AS "avatarUrl" 
+        `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, email, bio, avatar_url AS "avatarUrl" 
          FROM providers`
       );
     }
@@ -661,9 +672,9 @@ router.delete('/bookings/:id', async (req, res) => {
 
 // --- Authentication Endpoints ---
 
-// Auth: Register Client
+// Auth: Register Client / Provider
 router.post('/auth/register', async (req, res) => {
-  const { email, password, name } = req.body;
+  const { email, password, name, role, tenantId, categoryId, bio } = req.body;
   if (!email || !password || !name) {
     return res.status(400).json({ error: "E-mail, senha e nome são obrigatórios." });
   }
@@ -676,23 +687,34 @@ router.post('/auth/register', async (req, res) => {
 
     const id = "user-" + Date.now();
     const passwordHash = await bcrypt.hash(password, 10);
+    const userRole = role === 'provider' ? 'provider' : 'client';
+    let providerId: string | null = null;
+
+    if (userRole === 'provider') {
+      providerId = "provider-" + Date.now();
+      await query(
+        `INSERT INTO providers (id, tenant_id, category_id, name, email, bio) 
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [providerId, tenantId || 'tenant-1', categoryId || null, name, email.toLowerCase(), bio || '']
+      );
+    }
     
     await query(
-      `INSERT INTO users (id, email, password_hash, name, role) VALUES ($1, $2, $3, $4, $5)`,
-      [id, email.toLowerCase(), passwordHash, name, 'client']
+      `INSERT INTO users (id, email, password_hash, name, role, tenant_id, provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [id, email.toLowerCase(), passwordHash, name, userRole, tenantId || null, providerId]
     );
 
     const secret = process.env.JWT_SECRET || "pulse-saas-secret-key-12345678";
     
     const token = jwt.sign(
-      { userId: id, email: email.toLowerCase(), name, role: 'client' },
+      { userId: id, email: email.toLowerCase(), name, role: userRole, tenantId: tenantId || null, providerId },
       secret,
       { expiresIn: '30d' }
     );
 
     res.status(201).json({
       token,
-      user: { id, email: email.toLowerCase(), name, role: 'client' }
+      user: { id, email: email.toLowerCase(), name, role: userRole, tenantId: tenantId || null, providerId }
     });
   } catch (error) {
     console.error("Register error:", error);
