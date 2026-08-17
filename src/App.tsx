@@ -227,6 +227,7 @@ export default function App() {
   
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+  const [isNewProviderOnboarding, setIsNewProviderOnboarding] = useState<boolean>(false);
 
   const [pathname, setPathname] = useState<string>(window.location.pathname);
   const [is404, setIs404] = useState<boolean>(false);
@@ -403,7 +404,18 @@ export default function App() {
       setAuthEmail("");
       setAuthPassword("");
       setAuthName("");
-      setViewMode(res.user.role === "provider" ? "provider" : "client");
+      if (res.user.role === "provider") {
+        const loadedProviders = await getProviders(tenantId);
+        setProviders(loadedProviders);
+        const matchingProv = loadedProviders.find(p => p.id === res.user.providerId);
+        if (matchingProv) {
+          setSelectedProvider(matchingProv);
+        }
+        setIsNewProviderOnboarding(true);
+        setViewMode("provider");
+      } else {
+        setViewMode("client");
+      }
     } catch (err: any) {
       setAuthError(err.message || "Erro ao realizar o cadastro.");
     } finally {
@@ -813,7 +825,11 @@ export default function App() {
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.25 }}
               >
-                <ProviderDashboard provider={selectedProvider} />
+                <ProviderDashboard 
+                  provider={selectedProvider} 
+                  isNewOnboarding={isNewProviderOnboarding}
+                  onOnboardingComplete={() => setIsNewProviderOnboarding(false)}
+                />
               </motion.div>
             ) : (
               <div className="text-center py-20 text-gray-400 text-xs">

@@ -63,11 +63,13 @@ import { motion } from "motion/react";
 
 interface ProviderDashboardProps {
   provider: Provider;
+  isNewOnboarding?: boolean;
+  onOnboardingComplete?: () => void;
 }
 
 type TabType = "overview" | "bookings" | "services" | "availability";
 
-export default function ProviderDashboard({ provider }: ProviderDashboardProps) {
+export default function ProviderDashboard({ provider, isNewOnboarding, onOnboardingComplete }: ProviderDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   
   // Dynamic Data
@@ -123,39 +125,35 @@ export default function ProviderDashboard({ provider }: ProviderDashboardProps) 
           getAvailabilityRules(provider.id),
           getExceptions(provider.id)
         ]);
-        
+
         setServices(servs);
         setBookings(bks);
         setRules(rls);
         setExceptions(exps);
-
-        // Map server availability rules to local workingDays state
-        const updatedWorkingDays = {
-          0: { active: false, start: "09:00", end: "18:00" },
-          1: { active: false, start: "09:00", end: "18:00" },
-          2: { active: false, start: "09:00", end: "18:00" },
-          3: { active: false, start: "09:00", end: "18:00" },
-          4: { active: false, start: "09:00", end: "18:00" },
-          5: { active: false, start: "09:00", end: "18:00" },
-          6: { active: false, start: "09:00", end: "18:00" },
-        };
-        
+        const newWorkingDays = { ...workingDays };
         rls.forEach(rule => {
-          updatedWorkingDays[rule.dayOfWeek as keyof typeof updatedWorkingDays] = {
+          newWorkingDays[rule.dayOfWeek] = {
             active: true,
             start: rule.startTime,
             end: rule.endTime
           };
         });
-        setWorkingDays(updatedWorkingDays);
+        setWorkingDays(newWorkingDays);
 
+        if (isNewOnboarding || servs.length === 0) {
+          setActiveTab("services");
+          setShowServiceModal(true);
+          if (isNewOnboarding && onOnboardingComplete) {
+            onOnboardingComplete();
+          }
+        }
       } catch (err) {
-        console.error("Error loading dashboard data:", err);
-        setError("Não foi possível carregar as informações do prestador.");
+        setError("Erro ao carregar dados do painel.");
       } finally {
         setLoading(false);
       }
     }
+
     loadDashboardData();
   }, [provider]);
 
