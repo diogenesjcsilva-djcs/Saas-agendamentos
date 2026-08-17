@@ -41,6 +41,25 @@ export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
   return res.json();
 }
 
+export async function createTenant(data: {
+  name: string;
+  slug: string;
+  description: string;
+  logoUrl: string;
+  themeColor: string;
+}): Promise<Tenant> {
+  const res = await fetch(`${API_BASE}/tenants`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to create tenant");
+  }
+  return res.json();
+}
+
 export async function getProviders(tenantId?: string): Promise<Provider[]> {
   const url = tenantId ? `${API_BASE}/providers?tenantId=${tenantId}` : `${API_BASE}/providers`;
   const res = await fetch(url);

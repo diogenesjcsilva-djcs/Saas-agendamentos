@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Tenant, Provider } from "./types";
-import { getTenants, getProviders, login, register, getMe, socialLogin } from "./lib/api.js";
+import { getTenants, getProviders, login, register, getMe, socialLogin, getTenantBySlug, createTenant } from "./lib/api.js";
 import ClientPortal from "./components/ClientPortal.js";
 import ProviderDashboard from "./components/ProviderDashboard.js";
 import { 
@@ -20,6 +20,206 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
+interface TenantRegistrationFormProps {
+  onCancel: () => void;
+  onSuccess: (slug: string) => void;
+  tenants: Tenant[];
+}
+
+function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistrationFormProps) {
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [description, setDescription] = useState("");
+  const [logoUrl, setLogoUrl] = useState("✂️");
+  const [themeColor, setThemeColor] = useState("indigo");
+  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Suggested emojis for logo
+  const emojis = ["✂️", "✨", "💆‍♀️", "💅", "💄", "💈", "🦷", "🩺", "🏋️‍♂️", "🎨", "🐾", "🍰", "🚗", "💼"];
+
+  // Suggested themes
+  const themes = [
+    { value: "indigo", label: "Azul Indigo", preview: "bg-indigo-600" },
+    { value: "emerald", label: "Verde Esmeralda", preview: "bg-emerald-600" },
+    { value: "rose", label: "Rosa Quartzo", preview: "bg-rose-600" },
+    { value: "amber", label: "Laranja Âmbar", preview: "bg-amber-600" },
+  ];
+
+  // Auto-generate slug from name
+  const handleNameChange = (val: string) => {
+    setName(val);
+    const generated = val
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9-_ ]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-");
+    setSlug(generated);
+  };
+
+  // Check if slug is already taken
+  const cleanSlug = slug
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9-_]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  const isSlugTaken = cleanSlug && tenants.some(t => t.slug === cleanSlug);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSlugTaken) {
+      setError("Este link de estabelecimento já está sendo utilizado.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      await createTenant({
+        name,
+        slug: cleanSlug,
+        description,
+        logoUrl,
+        themeColor
+      });
+      onSuccess(cleanSlug);
+    } catch (err: any) {
+      setError(err.message || "Ocorreu um erro ao criar o estabelecimento.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-xl w-full mx-auto bg-white border border-gray-100 shadow-xl rounded-3xl p-8 space-y-6">
+      <div className="space-y-2">
+        <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">Cadastrar Novo Estabelecimento</h3>
+        <p className="text-xs text-gray-500">
+          Preencha os dados abaixo para gerar a sua página de agendamentos personalizada.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-xs font-semibold">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-1">
+          <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left">Nome do Estabelecimento</label>
+          <input
+            type="text"
+            required
+            value={name}
+            onChange={(e) => handleNameChange(e.target.value)}
+            placeholder="Ex: Barbearia Imperial, Clínica Sorella..."
+            className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left">Link de Acesso (Slug)</label>
+          <div className="flex rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-600 transition-all">
+            <span className="bg-gray-100/80 px-3 py-2.5 border-r border-gray-200 text-gray-400 text-2xs font-semibold select-none flex items-center">
+              portalagendeai.app.br/
+            </span>
+            <input
+              type="text"
+              required
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              placeholder="barbearia-imperial"
+              className="w-full bg-transparent px-3 py-2.5 text-xs focus:outline-none font-semibold"
+            />
+          </div>
+          {isSlugTaken && (
+            <p className="text-3xs text-red-600 font-semibold mt-1 text-left">⚠️ Este link de acesso já está em uso por outro parceiro.</p>
+          )}
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left">Descrição das Atividades</label>
+          <textarea
+            required
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Ex: Oferecemos cortes clássicos, estética masculina e cuidados com a barba."
+            rows={3}
+            className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold resize-none"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left font-sans">Escolha o Logo (Emoji)</label>
+          <div className="flex flex-wrap gap-2.5 p-3.5 bg-gray-50 rounded-2xl border border-gray-100 justify-start">
+            {emojis.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => setLogoUrl(emoji)}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all border shrink-0 select-none cursor-pointer ${
+                  logoUrl === emoji
+                    ? "bg-white border-indigo-600 shadow-md scale-105"
+                    : "border-transparent hover:bg-white hover:border-gray-200"
+                }`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left">Tema de Cores da Marca</label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {themes.map((t) => (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => setThemeColor(t.value)}
+                className={`p-3 rounded-2xl flex items-center gap-2 border text-2xs font-bold transition-all cursor-pointer ${
+                  themeColor === t.value
+                    ? "bg-indigo-50/20 border-indigo-600 shadow-sm"
+                    : "bg-white border-gray-100 hover:border-gray-200"
+                }`}
+              >
+                <span className={`w-3.5 h-3.5 rounded-full ${t.preview} shrink-0`}></span>
+                <span className="text-slate-800 truncate">{t.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-4 pt-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-slate-800 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={loading || !!isSlugTaken}
+            className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+            ) : (
+              "Criar Estabelecimento"
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 export default function App() {
   const [viewMode, setViewMode] = useState<"client" | "provider">("client");
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -27,6 +227,15 @@ export default function App() {
   
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+
+  const [pathname, setPathname] = useState<string>(window.location.pathname);
+  const [is404, setIs404] = useState<boolean>(false);
+
+  const navigateTo = (path: string) => {
+    window.history.pushState(null, "", path);
+    setPathname(path);
+    setIs404(false);
+  };
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,46 +256,83 @@ export default function App() {
   const [socialName, setSocialName] = useState<string>("");
   const [socialError, setSocialError] = useState<string | null>(null);
   const [socialLoading, setSocialLoading] = useState<boolean>(false);
+  // Browser history routing sync
+  useEffect(() => {
+    const handlePopState = () => {
+      setPathname(window.location.pathname);
+      setIs404(false);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   useEffect(() => {
     async function initApp() {
+      setLoading(true);
+      setError(null);
       try {
         const loadedTenants = await getTenants();
         setTenants(loadedTenants);
-        if (loadedTenants.length > 0) {
-          setSelectedTenant(loadedTenants[0]);
-        }
-
-        const loadedProviders = await getProviders();
-        setProviders(loadedProviders);
-        if (loadedProviders.length > 0) {
-          setSelectedProvider(loadedProviders[0]);
-        }
 
         // Check authentication session
         const token = localStorage.getItem("token");
-        if (token) {
+        let activeUser = currentUser;
+        if (token && !currentUser) {
           try {
             const res = await getMe();
             setCurrentUser(res.user);
-            
-            // If provider is logged in, auto-select their provider profile
-            if (res.user.role === "provider") {
-              const matchingProv = loadedProviders.find(p => p.id === res.user.providerId);
-              if (matchingProv) {
-                setSelectedProvider(matchingProv);
-                const matchingTenant = loadedTenants.find(t => t.id === matchingProv.tenantId);
-                if (matchingTenant) setSelectedTenant(matchingTenant);
-              }
-            }
+            activeUser = res.user;
           } catch (err) {
             console.error("Session verification failed, logging out:", err);
             localStorage.removeItem("token");
             setCurrentUser(null);
           }
         }
+
+        // Parse path
+        const slug = pathname.substring(1); // Remove leading slash
+
+        if (slug && slug !== "cadastrar") {
+          // It's a tenant slug
+          let tenant = loadedTenants.find(t => t.slug === slug);
+          if (!tenant) {
+            // Try fetching by slug directly in case it's newly created
+            tenant = await getTenantBySlug(slug) || undefined;
+          }
+
+          if (tenant) {
+            setSelectedTenant(tenant);
+            setIs404(false);
+            
+            // Load providers for this tenant only
+            const loadedProviders = await getProviders(tenant.id);
+            setProviders(loadedProviders);
+            
+            // If logged-in user is a provider for this tenant, auto-select them
+            if (activeUser && activeUser.role === "provider" && activeUser.providerId) {
+              const matchingProv = loadedProviders.find(p => p.id === activeUser.providerId);
+              if (matchingProv) {
+                setSelectedProvider(matchingProv);
+              } else if (loadedProviders.length > 0) {
+                setSelectedProvider(loadedProviders[0]);
+              }
+            } else if (loadedProviders.length > 0) {
+              setSelectedProvider(loadedProviders[0]);
+            } else {
+              setSelectedProvider(null);
+            }
+          } else {
+            // Tenant not found -> 404
+            setSelectedTenant(null);
+            setIs404(true);
+          }
+        } else {
+          // Home '/' or '/cadastrar'
+          setSelectedTenant(null);
+          setIs404(false);
+        }
       } catch (err: any) {
-        setError("Erro ao carregar dados do servidor. Certifique-se de que o backend está ativo.");
+        setError("Erro ao carregar dados do servidor. Certifique-se de que o backend e o banco estão ativos.");
         console.error(err);
       } finally {
         setLoading(false);
@@ -94,18 +340,7 @@ export default function App() {
     }
 
     initApp();
-  }, []);
-
-  const handleTenantChange = (slug: string) => {
-    const tenant = tenants.find(t => t.slug === slug);
-    if (tenant) {
-      setSelectedTenant(tenant);
-      const tenantProviders = providers.filter(p => p.tenantId === tenant.id);
-      if (tenantProviders.length > 0) {
-        setSelectedProvider(tenantProviders[0]);
-      }
-    }
-  };
+  }, [pathname]);
 
   const handleProviderChange = (id: string) => {
     const provider = providers.find(p => p.id === id);
@@ -223,20 +458,22 @@ export default function App() {
       {/* Top Interactive Banner / Demo Switcher */}
       <div className="bg-slate-900 border-b border-slate-800 text-white py-3 px-6 shadow-md z-10 sticky top-0 backdrop-blur-md bg-slate-900/95">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          
           {/* Logo & Subdomain info */}
-          <div className="flex items-center gap-3 shrink-0">
-            <span className="text-xl bg-indigo-605/20 p-2 rounded-xl text-indigo-450 border border-indigo-500/10 shadow-inner leading-none select-none">
+          <div 
+            onClick={() => navigateTo("/")} 
+            className="flex items-center gap-3 shrink-0 cursor-pointer group"
+          >
+            <span className="text-xl bg-indigo-600/20 p-2 rounded-xl text-indigo-400 border border-indigo-500/10 shadow-inner leading-none select-none group-hover:scale-105 transition-transform">
               🗓️
             </span>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-sm font-bold tracking-tight text-white leading-none whitespace-nowrap">portalagendeai</h1>
+                <h1 className="text-sm font-bold tracking-tight text-white leading-none whitespace-nowrap group-hover:text-indigo-400 transition-colors">portalagendeai</h1>
               </div>
               <p className="text-[10px] text-slate-400 font-mono mt-1.5 whitespace-nowrap">
-                {viewMode === "client" 
-                  ? `portalagendeai.app.br`
-                  : `admin.portalagendeai.app.br`
+                {selectedTenant 
+                  ? `${selectedTenant.slug}.portalagendeai.app.br`
+                  : `portalagendeai.app.br`
                 }
               </p>
             </div>
@@ -245,24 +482,24 @@ export default function App() {
           {/* User Session Area */}
           <div className="flex items-center gap-4 shrink-0 flex-wrap sm:flex-nowrap">
             {/* Discreet Provider / Client Switcher */}
-            <button
-              onClick={() => setViewMode(viewMode === "client" ? "provider" : "client")}
-              className="text-slate-400 hover:text-slate-205 text-xs font-semibold flex items-center gap-1.5 transition-colors mr-2 whitespace-nowrap"
-            >
-              {viewMode === "client" ? (
-                <>
-                  <Users className="w-3.5 h-3.5 shrink-0" />
-                  <span>Área do Prestador</span>
-                </>
-              ) : (
-                <>
-                  <Compass className="w-3.5 h-3.5 shrink-0" />
-                  <span>Voltar ao Portal</span>
-                </>
-              )}
-            </button>
-
-
+            {selectedTenant && (
+              <button
+                onClick={() => setViewMode(viewMode === "client" ? "provider" : "client")}
+                className="text-slate-400 hover:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors mr-2 whitespace-nowrap"
+              >
+                {viewMode === "client" ? (
+                  <>
+                    <Users className="w-3.5 h-3.5 shrink-0" />
+                    <span>Área do Prestador</span>
+                  </>
+                ) : (
+                  <>
+                    <Compass className="w-3.5 h-3.5 shrink-0" />
+                    <span>Voltar ao Portal</span>
+                  </>
+                )}
+              </button>
+            )}
             {/* Provider selector (only visible for provider portal when logged in as provider) */}
             {viewMode === "provider" && currentUser?.role === "provider" && (
               <div className="flex items-center gap-2 bg-slate-950/60 py-1.5 px-3 rounded-lg border border-slate-800 text-xs whitespace-nowrap">
@@ -329,7 +566,143 @@ export default function App() {
         {/* Dynamic Display of components */}
         <div className="flex-1 flex flex-col justify-start min-h-[500px]">
           <AnimatePresence mode="wait">
-            {isProviderViewLocked ? (
+            {is404 ? (
+              // 404 - ESTABELECIMENTO NÃO ENCONTRADO
+              <motion.div
+                key="error-404"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                className="max-w-md w-full mx-auto bg-white border border-gray-100 shadow-xl rounded-3xl p-8 text-center space-y-6 mt-10"
+              >
+                <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto text-3xl select-none font-bold">
+                  ⚠️
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-xl font-bold text-gray-900">Estabelecimento não encontrado</h2>
+                  <p className="text-xs text-gray-500">
+                    O link digitado não corresponde a nenhuma empresa ativa na plataforma. Certifique-se de que digitou o endereço corretamente.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => navigateTo("/")}
+                    className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
+                  >
+                    Voltar para a Página Inicial
+                  </button>
+                  <button
+                    onClick={() => navigateTo("/cadastrar")}
+                    className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Cadastrar Novo Estabelecimento
+                  </button>
+                </div>
+              </motion.div>
+            ) : pathname === "/" ? (
+              // LANDING PAGE - PORTALAGENDEAI
+              <motion.div
+                key="landing-page"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                className="space-y-12"
+              >
+                {/* Hero Section */}
+                <div className="text-center space-y-6 py-8">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold rounded-full select-none">
+                    ✨ Nova Plataforma Multi-Estabelecimentos
+                  </span>
+                  <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-tight max-w-2xl mx-auto">
+                    Agendamentos Inteligentes <br />
+                    <span className="bg-gradient-to-r from-indigo-600 to-indigo-500 bg-clip-text text-transparent">para o seu negócio</span>
+                  </h2>
+                  <p className="text-sm text-gray-505 max-w-lg mx-auto leading-relaxed">
+                    Crie a página de agendamentos da sua barbearia, clínica, salão ou estúdio em segundos. Ofereça reservas online aos seus clientes e gerencie tudo em um painel unificado.
+                  </p>
+                  <div className="flex justify-center gap-4">
+                    <button
+                      onClick={() => navigateTo("/cadastrar")}
+                      className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-505 hover:from-indigo-700 hover:to-indigo-600 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 hover:-translate-y-0.5 cursor-pointer"
+                    >
+                      Cadastrar Estabelecimento
+                    </button>
+                  </div>
+                </div>
+
+                {/* Grid of existing tenants */}
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">
+                      Estabelecimentos Parceiros
+                    </h3>
+                    <span className="text-xs text-slate-500 font-semibold">{tenants.length} cadastrados</span>
+                  </div>
+
+                  {tenants.length === 0 ? (
+                    <div className="text-center py-12 bg-white rounded-2xl border border-gray-100 text-gray-400 text-xs">
+                      Nenhum estabelecimento cadastrado. Seja o primeiro!
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {tenants.map(tenant => {
+                        const theme = tenant.themeColor || "indigo";
+                        const themeColorClass = 
+                          theme === "emerald" ? "emerald" :
+                          theme === "rose" ? "rose" :
+                          theme === "amber" ? "amber" : "indigo";
+                        
+                        return (
+                          <div
+                            key={tenant.id}
+                            className="bg-white rounded-3xl border border-gray-100 p-6 flex flex-col justify-between hover:shadow-xl hover:border-gray-200/60 hover:-translate-y-1 transition-all group duration-300"
+                          >
+                            <div className="space-y-4">
+                              <span className="text-4xl p-3 bg-slate-50 rounded-2xl border border-slate-100/50 inline-block shadow-sm select-none">
+                                {tenant.logoUrl || "🗓️"}
+                              </span>
+                              <div>
+                                <h4 className="font-extrabold text-slate-900 text-base group-hover:text-indigo-600 transition-colors text-left">
+                                  {tenant.name}
+                                </h4>
+                                <p className="text-4xs text-slate-450 font-mono mt-1 text-left">
+                                  portalagendeai.app.br/{tenant.slug}
+                                </p>
+                              </div>
+                              <p className="text-xs text-gray-500 leading-relaxed font-medium line-clamp-3 text-left">
+                                {tenant.description}
+                              </p>
+                            </div>
+
+                            <button
+                              onClick={() => navigateTo(`/${tenant.slug}`)}
+                              className={`w-full mt-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm border border-transparent ${
+                                themeColorClass === "emerald" ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white" :
+                                themeColorClass === "rose" ? "bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white" :
+                                themeColorClass === "amber" ? "bg-amber-50 text-amber-700 hover:bg-amber-600 hover:text-white" :
+                                "bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white"
+                              } cursor-pointer`}
+                            >
+                              Acessar Agendamentos
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ) : pathname === "/cadastrar" ? (
+              // TENANT REGISTRATION FORM
+              <motion.div
+                key="register-tenant"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+              >
+                <TenantRegistrationForm onCancel={() => navigateTo("/")} onSuccess={(slug) => navigateTo(`/${slug}`)} tenants={tenants} />
+              </motion.div>
+            ) : isProviderViewLocked ? (
               // locked Provider view (show login form inline)
               <motion.div
                 key="provider-login-lock"
@@ -356,7 +729,7 @@ export default function App() {
                     </div>
                   )}
                   <div className="space-y-1">
-                    <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider">E-mail Corporativo</label>
+                    <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left">E-mail Corporativo</label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
                       <input
@@ -365,12 +738,12 @@ export default function App() {
                         value={authEmail}
                         onChange={(e) => setAuthEmail(e.target.value)}
                         placeholder="nome@empresa.com"
-                        className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
+                        className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-505/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
                       />
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider">Senha</label>
+                    <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left">Senha</label>
                     <div className="relative">
                       <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
                       <input
@@ -379,7 +752,7 @@ export default function App() {
                         value={authPassword}
                         onChange={(e) => setAuthPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
+                        className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-505/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
                       />
                     </div>
                   </div>
@@ -387,7 +760,7 @@ export default function App() {
                   <button
                     type="submit"
                     disabled={authLoading}
-                    className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {authLoading ? (
                       <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>

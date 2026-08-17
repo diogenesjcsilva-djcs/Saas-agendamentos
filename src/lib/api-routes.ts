@@ -54,6 +54,62 @@ router.get('/tenants/:slug', async (req, res) => {
   }
 });
 
+// 2.1 Create New Tenant
+router.post('/tenants', async (req, res) => {
+  try {
+    const { name, slug, description, logoUrl, themeColor } = req.body;
+
+    if (!name || !slug || !description || !themeColor) {
+      return res.status(400).json({ error: "Todos os campos obrigatórios devem ser preenchidos." });
+    }
+
+    // Sanitizar slug
+    const cleanSlug = slug
+      .toLowerCase()
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // remove acentos
+      .replace(/[^a-z0-9-_]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, ""); // remove traços no início e fim
+
+    if (!cleanSlug) {
+      return res.status(400).json({ error: "O link do estabelecimento é inválido." });
+    }
+
+    // Verificar se slug já existe
+    const existing = await query("SELECT id FROM tenants WHERE slug = $1 LIMIT 1", [cleanSlug]);
+    if (existing.length > 0) {
+      return res.status(400).json({ error: "Este link já está sendo utilizado por outro estabelecimento." });
+    }
+
+    // Definir accent color com base no theme color
+    let accentColor = "bg-indigo-600 text-white";
+    if (themeColor === "emerald") {
+      accentColor = "bg-emerald-600 text-white";
+    } else if (themeColor === "rose") {
+      accentColor = "bg-rose-600 text-white";
+    } else if (themeColor === "amber") {
+      accentColor = "bg-amber-600 text-white";
+    }
+
+    const tenantId = `tenant-${Date.now()}`;
+
+    const newTenants = await query<Tenant>(
+      `INSERT INTO tenants (id, name, slug, logo_url, description, theme_color, accent_color)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, name, slug, logo_url AS "logoUrl", description, theme_color AS "themeColor", accent_color AS "accentColor"`,
+      [tenantId, name.trim(), cleanSlug, logoUrl || "🗓️", description.trim(), themeColor, accentColor]
+    );
+
+    res.status(201).json(newTenants[0]);
+  } catch (error) {
+    console.error("Error creating tenant:", error);
+    res.status(500).json({ error: "Internal server error", details: (error as Error).message });
+  }
+});
+
+
 // 2.5 Get Categories
 router.get('/categories', async (req, res) => {
   try {
