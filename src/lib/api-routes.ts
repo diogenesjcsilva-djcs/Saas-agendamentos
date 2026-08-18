@@ -57,9 +57,9 @@ router.get('/tenants/:slug', async (req, res) => {
 // 2.1 Create New Tenant
 router.post('/tenants', async (req, res) => {
   try {
-    const { name, slug, description, logoUrl, themeColor } = req.body;
+    const { name, slug, description, logoUrl, themeColor, ownerName, email, password } = req.body;
 
-    if (!name || !slug || !description || !themeColor) {
+    if (!name || !slug || !description || !themeColor || !ownerName || !email || !password) {
       return res.status(400).json({ error: "Todos os campos obrigatórios devem ser preenchidos." });
     }
 
@@ -83,6 +83,12 @@ router.post('/tenants', async (req, res) => {
       return res.status(400).json({ error: "Este link já está sendo utilizado por outro estabelecimento." });
     }
 
+    // Verificar se usuário com este e-mail já existe
+    const existingUser = await query("SELECT id FROM users WHERE email = $1 LIMIT 1", [email.toLowerCase().trim()]);
+    if (existingUser.length > 0) {
+      return res.status(400).json({ error: "Este e-mail de administrador já está cadastrado no sistema." });
+    }
+
     // Definir accent color com base no theme color
     let accentColor = "bg-indigo-600 text-white";
     if (themeColor === "emerald") {
@@ -95,6 +101,7 @@ router.post('/tenants', async (req, res) => {
 
     const tenantId = `tenant-${Date.now()}`;
 
+    // 1. Criar Tenant
     const newTenants = await query<Tenant>(
       `INSERT INTO tenants (id, name, slug, logo_url, description, theme_color, accent_color)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -102,9 +109,39 @@ router.post('/tenants', async (req, res) => {
       [tenantId, name.trim(), cleanSlug, logoUrl || "🗓️", description.trim(), themeColor, accentColor]
     );
 
-    res.status(201).json(newTenants[0]);
+    const tenant = newTenants[0];
+
+    // 2. Criar Provider (Profissional)
+    const providerId = `provider-${Date.now()}`;
+    await query(
+      `INSERT INTO providers (id, tenant_id, category_id, name, email, bio) 
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [providerId, tenantId, null, ownerName.trim(), email.toLowerCase().trim(), "Administrador / Proprietário"]
+    );
+
+    // 3. Criar Usuário (com hash de senha)
+    const userId = `user-${Date.now()}`;
+    const passwordHash = await bcrypt.hash(password, 10);
+    await query(
+      `INSERT INTO users (id, email, password_hash, name, role, tenant_id, provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [userId, email.toLowerCase().trim(), passwordHash, ownerName.trim(), 'provider', tenantId, providerId]
+    );
+
+    // 4. Gerar Token de Acesso JWT
+    const secret = process.env.JWT_SECRET || "pulse-saas-secret-key-12345678";
+    const token = jwt.sign(
+      { userId, email: email.toLowerCase().trim(), name: ownerName.trim(), role: 'provider', tenantId, providerId },
+      secret,
+      { expiresIn: '30d' }
+    );
+
+    res.status(201).json({
+      tenant,
+      token,
+      user: { id: userId, email: email.toLowerCase().trim(), name: ownerName.trim(), role: 'provider', tenantId, providerId }
+    });
   } catch (error) {
-    console.error("Error creating tenant:", error);
+    console.error("Error creating tenant and provider:", error);
     res.status(500).json({ error: "Internal server error", details: (error as Error).message });
   }
 });

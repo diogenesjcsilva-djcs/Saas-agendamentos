@@ -47,7 +47,14 @@ export async function createTenant(data: {
   description: string;
   logoUrl: string;
   themeColor: string;
-}): Promise<Tenant> {
+  ownerName: string;
+  email: string;
+  password: string;
+}): Promise<{
+  tenant: Tenant;
+  token: string;
+  user: any;
+}> {
   const res = await fetch(`${API_BASE}/tenants`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

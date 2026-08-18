@@ -22,7 +22,7 @@ import { motion, AnimatePresence } from "motion/react";
 
 interface TenantRegistrationFormProps {
   onCancel: () => void;
-  onSuccess: (slug: string) => void;
+  onSuccess: (slug: string, token: string, user: any) => void;
   tenants: Tenant[];
 }
 
@@ -32,6 +32,10 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
   const [description, setDescription] = useState("");
   const [logoUrl, setLogoUrl] = useState("✂️");
   const [themeColor, setThemeColor] = useState("indigo");
+  
+  const [ownerName, setOwnerName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,14 +83,17 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
     setLoading(true);
     setError(null);
     try {
-      await createTenant({
+      const res = await createTenant({
         name,
         slug: cleanSlug,
         description,
         logoUrl,
-        themeColor
+        themeColor,
+        ownerName,
+        email,
+        password
       });
-      onSuccess(cleanSlug);
+      onSuccess(cleanSlug, res.token, res.user);
     } catch (err: any) {
       setError(err.message || "Ocorreu um erro ao criar o estabelecimento.");
     } finally {
@@ -192,6 +199,55 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
                 <span className="text-slate-800 truncate">{t.label}</span>
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Divider and Admin credentials section */}
+        <div className="border-t border-gray-100 pt-5 space-y-4">
+          <div>
+            <h4 className="text-xs font-extrabold text-slate-900 text-left">Acesso do Administrador</h4>
+            <p className="text-4xs text-gray-500 text-left">
+              Crie as credenciais de login e senha para gerenciar a agenda deste estabelecimento.
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left">Nome Completo do Responsável</label>
+            <input
+              type="text"
+              required
+              value={ownerName}
+              onChange={(e) => setOwnerName(e.target.value)}
+              placeholder="Ex: Carlos Augusto Silva, Dra. Heloísa..."
+              className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left font-semibold">E-mail / Login de Acesso</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="nome@empresa.com"
+                className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left font-semibold">Senha de Acesso</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                minLength={6}
+                className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
+              />
+            </div>
           </div>
         </div>
 
@@ -420,6 +476,34 @@ export default function App() {
       setAuthError(err.message || "Erro ao realizar o cadastro.");
     } finally {
       setAuthLoading(false);
+    }
+  };
+
+  const handleTenantCreated = async (slug: string, token: string, user: any) => {
+    localStorage.setItem("token", token);
+    setCurrentUser(user);
+    
+    try {
+      const loadedTenants = await getTenants();
+      setTenants(loadedTenants);
+      const newTenant = loadedTenants.find(t => t.slug === slug);
+      if (newTenant) {
+        setSelectedTenant(newTenant);
+        
+        const loadedProviders = await getProviders(newTenant.id);
+        setProviders(loadedProviders);
+        const matchingProv = loadedProviders.find(p => p.id === user.providerId);
+        if (matchingProv) {
+          setSelectedProvider(matchingProv);
+        }
+      }
+      setIsNewProviderOnboarding(true);
+      setViewMode("provider");
+      navigateTo(`/${slug}`);
+    } catch (err) {
+      console.error("Error setting up new tenant onboarding session:", err);
+      // Fallback redirect
+      navigateTo(`/${slug}`);
     }
   };
 
@@ -712,7 +796,7 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
               >
-                <TenantRegistrationForm onCancel={() => navigateTo("/")} onSuccess={(slug) => navigateTo(`/${slug}`)} tenants={tenants} />
+                <TenantRegistrationForm onCancel={() => navigateTo("/")} onSuccess={handleTenantCreated} tenants={tenants} />
               </motion.div>
             ) : isProviderViewLocked ? (
               // locked Provider view (show login form inline)

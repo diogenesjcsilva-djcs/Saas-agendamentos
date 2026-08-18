@@ -572,8 +572,10 @@ export default function ClientPortal({
                 </>
               )}
 
-              <div className="space-y-1">
-                <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider">E-mail</label>
+               <div className="space-y-1">
+                <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider block text-left">
+                  {authMode === "register" && registerRole === "provider" ? "E-mail / Login de Acesso" : "E-mail"}
+                </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                   <input
@@ -581,14 +583,16 @@ export default function ClientPortal({
                     required
                     value={authEmail}
                     onChange={(e) => setAuthEmail(e.target.value)}
-                    placeholder="seuemail@provedor.com"
+                    placeholder={authMode === "register" && registerRole === "provider" ? "nome@empresa.com" : "seuemail@provedor.com"}
                     className="w-full bg-gray-50 border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider">Senha</label>
+                <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider block text-left">
+                  {authMode === "register" && registerRole === "provider" ? "Senha de Acesso" : "Senha"}
+                </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                   <input
@@ -596,7 +600,8 @@ export default function ClientPortal({
                     required
                     value={authPassword}
                     onChange={(e) => setAuthPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder={authMode === "register" && registerRole === "provider" ? "Mínimo 6 caracteres" : "••••••••"}
+                    minLength={authMode === "register" && registerRole === "provider" ? 6 : undefined}
                     className="w-full bg-gray-50 border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
                   />
                 </div>
