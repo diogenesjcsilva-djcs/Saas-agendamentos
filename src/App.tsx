@@ -447,13 +447,14 @@ export default function App() {
     role?: string,
     tenantId?: string,
     categoryId?: string,
-    bio?: string
+    bio?: string,
+    serviceLocationType?: 'own_space' | 'at_client' | 'both'
   ) => {
     e.preventDefault();
     setAuthLoading(true);
     setAuthError(null);
     try {
-      const res = await register(authEmail, authPassword, authName, role, tenantId, categoryId, bio);
+      const res = await register(authEmail, authPassword, authName, role, tenantId, categoryId, bio, serviceLocationType);
       localStorage.setItem("token", res.token);
       setCurrentUser(res.user);
       setAuthModalOpen(false);

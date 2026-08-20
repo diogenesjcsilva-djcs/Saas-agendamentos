@@ -186,13 +186,15 @@ router.get('/providers', async (req, res) => {
     let providers;
     if (tenantId) {
       providers = await query<Provider>(
-        `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, email, bio, avatar_url AS "avatarUrl" 
+        `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, email, bio, avatar_url AS "avatarUrl", 
+                COALESCE(service_location_type, 'own_space') AS "serviceLocationType"
          FROM providers WHERE tenant_id = $1`,
         [tenantId]
       );
     } else {
       providers = await query<Provider>(
-        `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, email, bio, avatar_url AS "avatarUrl" 
+        `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, email, bio, avatar_url AS "avatarUrl",
+                COALESCE(service_location_type, 'own_space') AS "serviceLocationType"
          FROM providers`
       );
     }
@@ -516,13 +518,17 @@ router.get('/bookings', async (req, res) => {
     let bookings;
     if (providerId) {
       bookings = await query<any>(
-        `SELECT id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes 
+        `SELECT id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", 
+                client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes,
+                client_address AS "clientAddress", service_location_type AS "serviceLocationType"
          FROM bookings WHERE provider_id = $1`,
         [providerId]
       );
     } else {
       bookings = await query<any>(
-        `SELECT id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes 
+        `SELECT id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", 
+                client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes,
+                client_address AS "clientAddress", service_location_type AS "serviceLocationType"
          FROM bookings`
       );
     }
@@ -709,7 +715,7 @@ router.get('/slots', async (req, res) => {
 
 // 10. POST a booking (includes concurrency prevention constraint check)
 router.post('/bookings', bookingRateLimiter, async (req, res) => {
-  const { providerId, serviceId, startsAt, clientName, clientEmail, clientPhone, notes } = req.body;
+  const { providerId, serviceId, startsAt, clientName, clientEmail, clientPhone, notes, clientAddress, serviceLocationType } = req.body;
   
   if (!providerId || !serviceId || !startsAt || !clientName || !clientEmail || !clientPhone) {
     return res.status(400).json({ error: "Todos os campos obrigatórios devem ser preenchidos." });
@@ -730,7 +736,19 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
   }
 
   try {
-    // 1. Fetch Service
+    // 1. Fetch Provider to check serviceLocationType
+    const providerRows = await query<any>(
+      `SELECT id, COALESCE(service_location_type, 'own_space') AS "serviceLocationType" FROM providers WHERE id = $1 LIMIT 1`,
+      [providerId]
+    );
+    const provider = providerRows.length > 0 ? providerRows[0] : null;
+    
+    // If provider only attends at client, clientAddress is mandatory
+    if (provider?.serviceLocationType === 'at_client' && (!clientAddress || String(clientAddress).trim().length < 5)) {
+      return res.status(400).json({ error: "O endereço completo de atendimento é obrigatório para este profissional." });
+    }
+
+    // 2. Fetch Service
     const services = await query<Service>(
       `SELECT id, provider_id AS "providerId", name, duration_minutes AS "durationMinutes", buffer_minutes AS "bufferMinutes", price 
        FROM services WHERE id = $1 LIMIT 1`,
@@ -754,7 +772,7 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
     const requestedEndMin = requestedStartMin + service.durationMinutes;
     const dateStr = startsAt.substring(0, 10);
 
-    // 2. Fetch existing active bookings on the same day to prevent overlaps
+    // 3. Fetch existing active bookings on the same day to prevent overlaps
     const existingBookings = await query<any>(
       `SELECT b.id, b.starts_at AS "startsAt", b.ends_at AS "endsAt", s.buffer_minutes AS "bufferMinutes" 
        FROM bookings b 
@@ -798,12 +816,14 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
       }
     }
 
-    // 3. Insert new booking
+    // 4. Insert new booking
     const newId = "booking-" + Date.now();
     const rows = await query<Booking>(
-      `INSERT INTO bookings (id, provider_id, service_id, starts_at, ends_at, client_name, client_email, client_phone, status, notes) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
-       RETURNING id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes`,
+      `INSERT INTO bookings (id, provider_id, service_id, starts_at, ends_at, client_name, client_email, client_phone, status, notes, client_address, service_location_type) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
+       RETURNING id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", 
+                 client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes,
+                 client_address AS "clientAddress", service_location_type AS "serviceLocationType"`,
       [
         newId,
         providerId,
@@ -814,7 +834,9 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
         clientEmail.toLowerCase().trim(),
         trimmedPhone,
         'confirmed', // confirmed automatically
-        notes ? String(notes).trim().slice(0, 500) : null
+        notes ? String(notes).trim().slice(0, 500) : null,
+        clientAddress ? String(clientAddress).trim().slice(0, 300) : null,
+        serviceLocationType || provider?.serviceLocationType || 'own_space'
       ]
     );
 
@@ -920,7 +942,7 @@ router.delete('/bookings/:id', authMiddleware, async (req: AuthenticatedRequest,
 
 // Auth: Register Client / Provider
 router.post('/auth/register', authRateLimiter, async (req, res) => {
-  const { email, password, name, role, tenantId, categoryId, bio } = req.body;
+  const { email, password, name, role, tenantId, categoryId, bio, serviceLocationType } = req.body;
   if (!email || !password || !name) {
     return res.status(400).json({ error: "E-mail, senha e nome são obrigatórios." });
   }
@@ -932,6 +954,10 @@ router.post('/auth/register', authRateLimiter, async (req, res) => {
   if (typeof password !== 'string' || password.length < 6) {
     return res.status(400).json({ error: "A senha deve ter no mínimo 6 caracteres." });
   }
+
+  const validLocationType = ['own_space', 'at_client', 'both'].includes(serviceLocationType) 
+    ? serviceLocationType 
+    : 'own_space';
 
   try {
     const cleanEmail = email.toLowerCase().trim();
@@ -948,9 +974,9 @@ router.post('/auth/register', authRateLimiter, async (req, res) => {
     if (userRole === 'provider') {
       providerId = "provider-" + Date.now();
       await query(
-        `INSERT INTO providers (id, tenant_id, category_id, name, email, bio) 
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [providerId, tenantId || 'tenant-1', categoryId || null, String(name).trim(), cleanEmail, bio ? String(bio).trim() : '']
+        `INSERT INTO providers (id, tenant_id, category_id, name, email, bio, service_location_type) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [providerId, tenantId || 'tenant-1', categoryId || null, String(name).trim(), cleanEmail, bio ? String(bio).trim() : '', validLocationType]
       );
     }
     
@@ -1130,6 +1156,7 @@ router.get('/bookings/my', authMiddleware, async (req: AuthenticatedRequest, res
       bookings = await query<any>(
         `SELECT b.id, b.provider_id AS "providerId", b.service_id AS "serviceId", b.starts_at AS "startsAt", b.ends_at AS "endsAt", 
                 b.client_name AS "clientName", b.client_email AS "clientEmail", b.client_phone AS "clientPhone", b.status, b.notes,
+                b.client_address AS "clientAddress", b.service_location_type AS "serviceLocationType",
                 s.name AS "serviceName", p.name AS "providerName"
          FROM bookings b
          LEFT JOIN services s ON b.service_id = s.id
@@ -1142,6 +1169,7 @@ router.get('/bookings/my', authMiddleware, async (req: AuthenticatedRequest, res
       bookings = await query<any>(
         `SELECT b.id, b.provider_id AS "providerId", b.service_id AS "serviceId", b.starts_at AS "startsAt", b.ends_at AS "endsAt", 
                 b.client_name AS "clientName", b.client_email AS "clientEmail", b.client_phone AS "clientPhone", b.status, b.notes,
+                b.client_address AS "clientAddress", b.service_location_type AS "serviceLocationType",
                 s.name AS "serviceName", p.name AS "providerName"
          FROM bookings b
          LEFT JOIN services s ON b.service_id = s.id

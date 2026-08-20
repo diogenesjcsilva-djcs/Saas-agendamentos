@@ -572,6 +572,9 @@ export default function ProviderDashboard({ provider, isNewOnboarding, onOnboard
                             <span>📱 {b.clientPhone}</span>
                             <span>📧 {b.clientEmail}</span>
                           </div>
+                          {b.clientAddress && (
+                            <p className="text-4xs text-blue-300 font-medium">📍 {b.clientAddress}</p>
+                          )}
                           {b.notes && <p className="text-4xs text-slate-500 italic">Obs: "{b.notes}"</p>}
                         </div>
                         <div className="flex sm:flex-col items-baseline sm:items-end justify-between shrink-0">
@@ -662,6 +665,16 @@ export default function ProviderDashboard({ provider, isNewOnboarding, onOnboard
                           <div>📱 {b.clientPhone}</div>
                           <div>💅 {serv?.name || "Serviço excluído"}</div>
                         </div>
+
+                        {b.clientAddress ? (
+                          <div className="p-2.5 bg-blue-950/40 border border-blue-800/40 rounded-lg text-blue-300 text-xs flex items-center gap-1.5">
+                            <span>🚗 <strong>Atendimento no Cliente:</strong> {b.clientAddress}</span>
+                          </div>
+                        ) : (
+                          <div className="text-4xs text-slate-500 flex items-center gap-1">
+                            <span>🏢 Atendimento no estabelecimento</span>
+                          </div>
+                        )}
 
                         {b.notes && (
                           <div className="p-2.5 bg-slate-900/50 rounded-lg text-slate-400 text-4xs italic border-l-2 border-slate-700">

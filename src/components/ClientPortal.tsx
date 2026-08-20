@@ -8,36 +8,42 @@ import {
   Tenant, 
   Provider, 
   Service, 
+  Booking, 
   TimeSlot, 
-  Booking,
-  Category 
-} from "../types";
+  Category,
+  ServiceLocationType
+} from "../types.js";
 import { 
-  getProviders, 
+  getProviders,
   getServices, 
+  getBookings, 
   getSlots, 
-  createBooking,
-  getMyBookings,
-  updateBookingStatus,
-  rescheduleBooking,
-  getCategories
+  createBooking, 
+  getMyBookings, 
+  updateBookingStatus, 
+  rescheduleBooking, 
+  getCategories 
 } from "../lib/api.js";
 import { 
   Calendar as CalendarIcon, 
   Clock, 
   User, 
   Mail, 
-  Lock,
+  Lock, 
   Phone, 
   CheckCircle, 
   ArrowLeft, 
   AlertCircle, 
   ChevronLeft, 
-  ChevronRight,
-  Sparkles,
-  Scissors,
-  CalendarDays,
-  FileText
+  ChevronRight, 
+  Sparkles, 
+  Scissors, 
+  CalendarDays, 
+  FileText,
+  MapPin,
+  Building,
+  Home,
+  Navigation
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -50,7 +56,7 @@ interface ClientPortalProps {
   authEmail: string;
   setAuthEmail: (email: string) => void;
   authPassword: string;
-  setAuthPassword: (password: string) => void;
+  setAuthPassword: (pass: string) => void;
   authName: string;
   setAuthName: (name: string) => void;
   authError: string | null;
@@ -63,7 +69,8 @@ interface ClientPortalProps {
     role?: string,
     tenantId?: string,
     categoryId?: string,
-    bio?: string
+    bio?: string,
+    serviceLocationType?: ServiceLocationType
   ) => Promise<void>;
   setSocialAuthOpen: (provider: "google" | "instagram" | null) => void;
 }
@@ -113,6 +120,7 @@ export default function ClientPortal({
   const [registerRole, setRegisterRole] = useState<"client" | "provider">("client");
   const [registerCategoryId, setRegisterCategoryId] = useState<string>("");
   const [registerBio, setRegisterBio] = useState<string>("");
+  const [registerServiceLocationType, setRegisterServiceLocationType] = useState<ServiceLocationType>("own_space");
 
   const [providers, setProviders] = useState<Provider[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -135,9 +143,11 @@ export default function ClientPortal({
   const [clientEmail, setClientEmail] = useState<string>("");
   const [clientPhone, setClientPhone] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [clientAddress, setClientAddress] = useState<string>("");
+  const [bookingLocationChoice, setBookingLocationChoice] = useState<"own_space" | "at_client">("own_space");
   
   // Flow/Status States
-  const [step, setStep] = useState<number>(1); // 1: Service, 2: Provider, 3: Date/Time, 4: Client Info, 5: Success
+  const [step, setStep] = useState<number>(1); // 1: Service, 2: Provider, 3: Date/Time, 4: Client Info, 5: Success, 4: Client Info, 5: Success
   const [bookingLoading, setBookingLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successBooking, setSuccessBooking] = useState<Booking | null>(null);
@@ -339,6 +349,17 @@ export default function ClientPortal({
       return;
     }
 
+    const effectiveLocation = selectedProvider.serviceLocationType === "at_client" 
+      ? "at_client" 
+      : selectedProvider.serviceLocationType === "both" 
+        ? bookingLocationChoice 
+        : "own_space";
+
+    if (effectiveLocation === "at_client" && (!clientAddress || clientAddress.trim().length < 5)) {
+      setError("Por favor, informe o endereço completo onde o serviço será realizado.");
+      return;
+    }
+
     setBookingLoading(true);
     setError(null);
 
@@ -350,7 +371,9 @@ export default function ClientPortal({
         clientName,
         clientEmail,
         clientPhone,
-        notes
+        notes,
+        clientAddress: effectiveLocation === "at_client" ? clientAddress.trim() : undefined,
+        serviceLocationType: effectiveLocation
       });
       setSuccessBooking(b);
       setStep(6);
@@ -437,7 +460,8 @@ export default function ClientPortal({
       registerRole,
       tenant.id,
       registerRole === "provider" ? registerCategoryId : undefined,
-      registerRole === "provider" ? registerBio : undefined
+      registerRole === "provider" ? registerBio : undefined,
+      registerRole === "provider" ? registerServiceLocationType : undefined
     );
   };
 
@@ -555,6 +579,58 @@ export default function ClientPortal({
                             </option>
                           ))}
                         </select>
+                      </div>
+
+                      {/* Local de Execução dos Serviços (3 Situações) */}
+                      <div className="space-y-1.5">
+                        <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider block">
+                          Local de Atendimento / Execução
+                        </label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setRegisterServiceLocationType("own_space")}
+                            className={`p-2 rounded-xl border text-left flex flex-col items-center justify-center gap-1 transition-all ${
+                              registerServiceLocationType === "own_space"
+                                ? "border-indigo-600 bg-indigo-50/70 text-indigo-900 shadow-sm"
+                                : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100"
+                            }`}
+                          >
+                            <Building className="w-4 h-4 text-indigo-600 shrink-0" />
+                            <span className="text-[10px] font-bold text-center leading-tight">1. Espaço Próprio</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setRegisterServiceLocationType("at_client")}
+                            className={`p-2 rounded-xl border text-left flex flex-col items-center justify-center gap-1 transition-all ${
+                              registerServiceLocationType === "at_client"
+                                ? "border-indigo-600 bg-indigo-50/70 text-indigo-900 shadow-sm"
+                                : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100"
+                            }`}
+                          >
+                            <Home className="w-4 h-4 text-indigo-600 shrink-0" />
+                            <span className="text-[10px] font-bold text-center leading-tight">2. No Cliente</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setRegisterServiceLocationType("both")}
+                            className={`p-2 rounded-xl border text-left flex flex-col items-center justify-center gap-1 transition-all ${
+                              registerServiceLocationType === "both"
+                                ? "border-indigo-600 bg-indigo-50/70 text-indigo-900 shadow-sm"
+                                : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100"
+                            }`}
+                          >
+                            <Navigation className="w-4 h-4 text-indigo-600 shrink-0" />
+                            <span className="text-[10px] font-bold text-center leading-tight">3. Ambos</span>
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-gray-400">
+                          {registerServiceLocationType === "own_space" && "🏢 Atendimentos realizados exclusivamente em seu estabelecimento/estúdio."}
+                          {registerServiceLocationType === "at_client" && "🚗 Atendimentos realizados no endereço indicado pelo cliente no agendamento."}
+                          {registerServiceLocationType === "both" && "🔄 O cliente escolhe no agendamento se prefere no seu espaço ou a domicílio."}
+                        </p>
                       </div>
 
                       <div className="space-y-1">
@@ -833,11 +909,17 @@ export default function ClientPortal({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredProviders.map(provider => {
                       const isSelected = selectedProvider?.id === provider.id;
+                      const locationType = provider.serviceLocationType || 'own_space';
                       return (
                         <div
                           key={provider.id}
                           onClick={() => {
                             setSelectedProvider(provider);
+                            if (locationType === 'at_client') {
+                              setBookingLocationChoice('at_client');
+                            } else {
+                              setBookingLocationChoice('own_space');
+                            }
                             setStep(3);
                           }}
                           className={`p-5 rounded-xl border-2 transition-all cursor-pointer flex gap-4 items-start ${
@@ -857,10 +939,27 @@ export default function ClientPortal({
                               {provider.name.charAt(0)}
                             </div>
                           )}
-                          <div className="space-y-1">
-                            <h3 className="font-semibold text-gray-900">{provider.name}</h3>
-                            <p className="text-xs text-gray-405">{provider.email}</p>
-                            <p className="text-xs text-gray-500 leading-relaxed mt-1 line-clamp-3">{provider.bio}</p>
+                          <div className="space-y-1.5 flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <h3 className="font-semibold text-gray-900">{provider.name}</h3>
+                              {locationType === 'at_client' && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                  🚗 A Domicílio
+                                </span>
+                              )}
+                              {locationType === 'both' && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                                  🔄 No Local / A Domicílio
+                                </span>
+                              )}
+                              {locationType === 'own_space' && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  🏢 No Local
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-400">{provider.email}</p>
+                            <p className="text-xs text-gray-500 leading-relaxed mt-1 line-clamp-2">{provider.bio}</p>
                           </div>
                         </div>
                       );
@@ -1127,6 +1226,66 @@ export default function ClientPortal({
 
                   <form onSubmit={handleBookingSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-8">
                     <div className="md:col-span-7 space-y-4">
+                      {/* Service Location Banner / Choice */}
+                      {selectedProvider?.serviceLocationType === "both" && (
+                        <div className="space-y-2 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                          <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                            <Navigation className="w-4 h-4 text-indigo-600" />
+                            Onde você deseja receber o atendimento?
+                          </label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setBookingLocationChoice("own_space")}
+                              className={`p-3 rounded-xl border text-left flex items-center gap-2.5 transition-all ${
+                                bookingLocationChoice === "own_space"
+                                  ? "border-indigo-600 bg-white text-indigo-900 shadow-sm ring-2 ring-indigo-500/20"
+                                  : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-white"
+                              }`}
+                            >
+                              <Building className="w-4 h-4 text-indigo-600 shrink-0" />
+                              <div>
+                                <div className="text-xs font-bold">No Estabelecimento</div>
+                                <div className="text-[10px] text-gray-500">Espaço do profissional</div>
+                              </div>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setBookingLocationChoice("at_client")}
+                              className={`p-3 rounded-xl border text-left flex items-center gap-2.5 transition-all ${
+                                bookingLocationChoice === "at_client"
+                                  ? "border-indigo-600 bg-white text-indigo-900 shadow-sm ring-2 ring-indigo-500/20"
+                                  : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-white"
+                              }`}
+                            >
+                              <Home className="w-4 h-4 text-indigo-600 shrink-0" />
+                              <div>
+                                <div className="text-xs font-bold">No meu endereço</div>
+                                <div className="text-[10px] text-gray-500">A domicílio</div>
+                              </div>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedProvider?.serviceLocationType === "at_client" && (
+                        <div className="bg-blue-50 border border-blue-200 p-3.5 rounded-xl flex items-start gap-2.5">
+                          <Home className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-bold text-blue-900">Atendimento a Domicílio</p>
+                            <p className="text-xs text-blue-700 mt-0.5">Este profissional atende exclusivamente no endereço indicado por você abaixo.</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {(!selectedProvider?.serviceLocationType || selectedProvider?.serviceLocationType === "own_space") && (
+                        <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex items-center gap-2.5">
+                          <Building className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <p className="text-xs text-emerald-800 font-medium">Atendimento presencial no estabelecimento / espaço do profissional.</p>
+                        </div>
+                      )}
+
                       <div className="space-y-1.5">
                         <label htmlFor="client-name" className="text-xs font-semibold text-gray-700 block">Nome Completo</label>
                         <div className="relative">
@@ -1173,6 +1332,25 @@ export default function ClientPortal({
                         </div>
                       </div>
 
+                      {/* Address input if at_client or chosen both->at_client */}
+                      {(selectedProvider?.serviceLocationType === "at_client" || (selectedProvider?.serviceLocationType === "both" && bookingLocationChoice === "at_client")) && (
+                        <div className="space-y-1.5">
+                          <label htmlFor="client-address" className="text-xs font-semibold text-gray-700 block flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-indigo-600" />
+                            Endereço Completo de Atendimento *
+                          </label>
+                          <input
+                            id="client-address"
+                            type="text"
+                            required
+                            value={clientAddress}
+                            onChange={(e) => setClientAddress(e.target.value)}
+                            placeholder="Rua, Número, Bairro, Cidade, Complemento / Ponto de Referência"
+                            className="w-full py-2.5 px-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all font-semibold"
+                          />
+                        </div>
+                      )}
+
                       <div className="space-y-1.5">
                         <label htmlFor="client-notes" className="text-xs font-semibold text-gray-700 block">Observações (Opcional)</label>
                         <textarea
@@ -1198,6 +1376,14 @@ export default function ClientPortal({
                         <div className="flex justify-between items-start gap-4">
                           <span className="text-gray-400">Profissional:</span>
                           <span className="text-gray-900 font-semibold text-right">{selectedProvider?.name}</span>
+                        </div>
+                        <div className="flex justify-between items-start gap-4">
+                          <span className="text-gray-400">Local:</span>
+                          <span className="text-gray-900 font-semibold text-right">
+                            {selectedProvider?.serviceLocationType === "at_client" || (selectedProvider?.serviceLocationType === "both" && bookingLocationChoice === "at_client") 
+                              ? "🚗 No seu endereço (a domicílio)" 
+                              : "🏢 No estabelecimento"}
+                          </span>
                         </div>
                         <div className="flex justify-between items-start gap-4 border-t border-gray-200 pt-2">
                           <span className="text-gray-400">Horário:</span>
@@ -1263,6 +1449,13 @@ export default function ClientPortal({
                     <div className="space-y-1.5 pt-1">
                       <p className="text-gray-800">💅 Serviço: <strong className="text-gray-900">{selectedService?.name}</strong></p>
                       <p className="text-gray-800">👤 Profissional: <strong>{selectedProvider?.name}</strong></p>
+                      <p className="text-gray-800">
+                        📍 Local: <strong>
+                          {successBooking.clientAddress 
+                            ? `🚗 A domicílio: ${successBooking.clientAddress}` 
+                            : '🏢 No estabelecimento do profissional'}
+                        </strong>
+                      </p>
                       <p className="text-gray-800">📅 Data: <strong>{formatDateHuman(selectedDate)}</strong></p>
                       <p className="text-gray-800">⏰ Horário: <strong className={`text-${currentTheme.accent} font-mono text-sm`}>{selectedSlot?.time}</strong></p>
                       <p className="text-gray-800">💰 Preço: <strong className="font-mono">{selectedService ? formatPrice(selectedService.price) : ""}</strong></p>

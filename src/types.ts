@@ -20,6 +20,8 @@ export interface Category {
   imageUrl?: string;
 }
 
+export type ServiceLocationType = 'own_space' | 'at_client' | 'both';
+
 export interface Provider {
   id: string;
   tenantId: string;
@@ -28,6 +30,7 @@ export interface Provider {
   email: string;
   bio: string;
   avatarUrl?: string;
+  serviceLocationType?: ServiceLocationType; // 'own_space' | 'at_client' | 'both'
 }
 
 export interface Service {
@@ -68,6 +71,8 @@ export interface Booking {
   clientPhone: string;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   notes?: string;
+  clientAddress?: string;
+  serviceLocationType?: 'own_space' | 'at_client';
 }
 
 export interface TimeSlot {

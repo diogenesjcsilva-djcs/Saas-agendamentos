@@ -172,6 +172,8 @@ export async function createBooking(data: {
   clientEmail: string;
   clientPhone: string;
   notes?: string;
+  clientAddress?: string;
+  serviceLocationType?: 'own_space' | 'at_client';
 }): Promise<Booking> {
   const res = await fetch(`${API_BASE}/bookings`, {
     method: "POST",
@@ -185,7 +187,8 @@ export async function createBooking(data: {
   }
   
   if (!res.ok) {
-    throw new Error("Não foi possível processar o agendamento. Verifique se os dados estão corretos.");
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || "Não foi possível processar o agendamento. Verifique se os dados estão corretos.");
   }
   
   return res.json();
@@ -231,12 +234,13 @@ export async function register(
   role?: string,
   tenantId?: string,
   categoryId?: string,
-  bio?: string
+  bio?: string,
+  serviceLocationType?: 'own_space' | 'at_client' | 'both'
 ): Promise<{ token: string; user: any }> {
   const res = await fetch(`${API_BASE}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, name, role, tenantId, categoryId, bio }),
+    body: JSON.stringify({ email, password, name, role, tenantId, categoryId, bio, serviceLocationType }),
   });
   if (!res.ok) {
     const err = await res.json();

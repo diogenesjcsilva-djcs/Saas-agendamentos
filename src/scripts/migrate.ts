@@ -63,7 +63,13 @@ async function runMigration() {
     `);
 
     await client.query(`
-      ALTER TABLE providers ADD COLUMN IF NOT EXISTS category_id TEXT REFERENCES categories(id) ON DELETE SET NULL
+      ALTER TABLE providers ADD COLUMN IF NOT EXISTS category_id TEXT REFERENCES categories(id) ON DELETE SET NULL;
+      ALTER TABLE providers ADD COLUMN IF NOT EXISTS service_location_type TEXT DEFAULT 'own_space';
+    `);
+
+    await client.query(`
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_address TEXT;
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_location_type TEXT;
     `);
 
     await client.query(`
