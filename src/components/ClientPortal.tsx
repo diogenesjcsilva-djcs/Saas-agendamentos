@@ -34,8 +34,6 @@ import {
   AlertCircle, 
   ChevronLeft, 
   ChevronRight,
-  Sparkles,
-  Scissors,
   CalendarDays,
   FileText,
   Search,
@@ -109,10 +107,10 @@ export default function ClientPortal({
   handleRegister,
   setSocialAuthOpen
 }: ClientPortalProps) {
-  // Categories and professional register states
+  // Categories and search state
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
-  const [providerSearchTerm, setProviderSearchTerm] = useState<string>("");
+  const [serviceSearchTerm, setServiceSearchTerm] = useState<string>("");
   
   const [registerRole, setRegisterRole] = useState<"client" | "provider">("client");
   const [registerCategoryId, setRegisterCategoryId] = useState<string>("");
@@ -141,7 +139,7 @@ export default function ClientPortal({
   const [notes, setNotes] = useState<string>("");
   
   // Flow/Status States
-  // 1: Provider Card Selection, 2: Service Selection, 3: Date/Time Selection, 4: Client Info, 5: Success
+  // 1: Service Selection, 2: Date/Time Selection, 3: Client Info, 4: Success
   const [step, setStep] = useState<number>(1);
   const [bookingLoading, setBookingLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -189,17 +187,6 @@ export default function ClientPortal({
         if (cats.length > 0) {
           setRegisterCategoryId(cats[0].id);
         }
-
-        // Support direct provider link via URL query param (?provider=ID or ?providerId=ID)
-        const urlParams = new URLSearchParams(window.location.search);
-        const directProviderId = urlParams.get("providerId") || urlParams.get("provider");
-        if (directProviderId && provs.length > 0) {
-          const directProv = provs.find(p => p.id === directProviderId || p.name.toLowerCase().includes(directProviderId.toLowerCase()));
-          if (directProv) {
-            setSelectedProvider(directProv);
-            setStep(2); // Jump straight to Service selection for this provider
-          }
-        }
       } catch (err) {
         console.error("Error loading portal data", err);
         setError("Não foi possível carregar as informações do agendamento.");
@@ -217,17 +204,30 @@ export default function ClientPortal({
     setActiveTab("new");
   }, [tenant]);
 
-  // Filter providers by category and search term
-  const filteredProviders = providers.filter(p => {
-    const matchesCategory = selectedCategoryFilter === "all" ? true : p.categoryId === selectedCategoryFilter;
-    const matchesSearch = providerSearchTerm.trim() === "" ? true : p.name.toLowerCase().includes(providerSearchTerm.toLowerCase()) || (p.bio && p.bio.toLowerCase().includes(providerSearchTerm.toLowerCase()));
+  // Filter services by category and search term
+  const filteredServices = services.filter(s => {
+    const provider = providers.find(p => p.id === s.providerId);
+    const matchesCategory = selectedCategoryFilter === "all" 
+      ? true 
+      : provider?.categoryId === selectedCategoryFilter;
+      
+    const searchLower = serviceSearchTerm.trim().toLowerCase();
+    const matchesSearch = searchLower === "" 
+      ? true 
+      : s.name.toLowerCase().includes(searchLower) || 
+        (s.description && s.description.toLowerCase().includes(searchLower)) ||
+        (provider && provider.name.toLowerCase().includes(searchLower));
+
     return matchesCategory && matchesSearch;
   });
 
-  // Services offered strictly by the selected provider
-  const filteredServices = services.filter(s => 
-    selectedProvider ? s.providerId === selectedProvider.id : false
-  );
+  // Select service and resolve provider automatically
+  const handleSelectService = (service: Service) => {
+    setSelectedService(service);
+    const matchingProvider = providers.find(p => p.id === service.providerId) || null;
+    setSelectedProvider(matchingProvider);
+    setStep(2); // Jump directly to Date and Time selection
+  };
 
   // Load slots when service and date are selected
   useEffect(() => {
@@ -374,7 +374,7 @@ export default function ClientPortal({
         notes
       });
       setSuccessBooking(b);
-      setStep(5); // Step 5 is Success / Confirmation
+      setStep(4); // Step 4 is Success / Confirmation
     } catch (err: any) {
       if (err.message === "slot_unavailable" || err.message.includes("já foi reservado")) {
         setError("O horário selecionado não está mais disponível. Por favor, volte ao passo de horários e escolha outra vaga.");
@@ -738,27 +738,22 @@ export default function ClientPortal({
         </div>
       )}
 
-      {/* Progress Steps Indicator */}
-      {activeTab === "new" && step < 5 && (
+      {/* Progress Steps Indicator (4-Step Streamlined Flow) */}
+      {activeTab === "new" && step < 4 && (
         <div className="px-8 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between text-xs font-medium text-gray-400">
           <div className="flex items-center gap-4 w-full justify-center md:justify-start flex-wrap">
             <span className={`pb-1 flex items-center gap-1.5 ${step === 1 ? `text-${currentTheme.accent} font-bold border-b-2 border-${currentTheme.accent}` : step > 1 ? "text-gray-900 font-semibold" : ""}`}>
               {step > 1 ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : null}
-              1. Profissional
+              1. Serviço
             </span>
             <span className="text-gray-300">/</span>
             <span className={`pb-1 flex items-center gap-1.5 ${step === 2 ? `text-${currentTheme.accent} font-bold border-b-2 border-${currentTheme.accent}` : step > 2 ? "text-gray-900 font-semibold" : ""}`}>
               {step > 2 ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : null}
-              2. Serviço
+              2. Data e Hora
             </span>
             <span className="text-gray-300">/</span>
-            <span className={`pb-1 flex items-center gap-1.5 ${step === 3 ? `text-${currentTheme.accent} font-bold border-b-2 border-${currentTheme.accent}` : step > 3 ? "text-gray-900 font-semibold" : ""}`}>
-              {step > 3 ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : null}
-              3. Data e Hora
-            </span>
-            <span className="text-gray-300">/</span>
-            <span className={`pb-1 flex items-center gap-1.5 ${step === 4 ? `text-${currentTheme.accent} font-bold border-b-2 border-${currentTheme.accent}` : ""}`}>
-              4. Seus Dados
+            <span className={`pb-1 flex items-center gap-1.5 ${step === 3 ? `text-${currentTheme.accent} font-bold border-b-2 border-${currentTheme.accent}` : ""}`}>
+              3. Seus Dados
             </span>
           </div>
         </div>
@@ -777,7 +772,7 @@ export default function ClientPortal({
           {activeTab === "new" ? (
             <div key="tab-new">
               
-              {/* STEP 1: SELECT PROVIDER (CARDS) */}
+              {/* STEP 1: DIRECT SERVICE SELECTION */}
               {step === 1 && (
                 <motion.div
                   key="step-1"
@@ -787,8 +782,8 @@ export default function ClientPortal({
                   className="space-y-6"
                 >
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900">Escolha o Profissional</h2>
-                    <p className="text-sm text-gray-500 mt-1">Selecione o profissional com quem você deseja agendar seu atendimento.</p>
+                    <h2 className="text-xl font-bold text-gray-900">Escolha o Serviço</h2>
+                    <p className="text-sm text-gray-500 mt-1">Selecione o procedimento que deseja realizar para prosseguir com o agendamento.</p>
                   </div>
 
                   {/* Search and Category Filters */}
@@ -797,9 +792,9 @@ export default function ClientPortal({
                       <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
-                        value={providerSearchTerm}
-                        onChange={(e) => setProviderSearchTerm(e.target.value)}
-                        placeholder="Buscar profissional..."
+                        value={serviceSearchTerm}
+                        onChange={(e) => setServiceSearchTerm(e.target.value)}
+                        placeholder="Buscar serviço..."
                         className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
                       />
                     </div>
@@ -832,124 +827,52 @@ export default function ClientPortal({
                     </div>
                   </div>
 
-                  {/* Providers Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {filteredProviders.length === 0 ? (
-                      <div className="col-span-full py-12 border border-dashed border-gray-200 rounded-2xl text-center text-gray-400 space-y-2">
-                        <User className="w-10 h-10 stroke-1 mx-auto" />
-                        <p className="text-xs font-semibold">Nenhum profissional encontrado.</p>
-                      </div>
-                    ) : (
-                      filteredProviders.map(provider => {
-                        const providerCategory = categories.find(c => c.id === provider.categoryId);
-                        return (
-                          <div
-                            key={provider.id}
-                            onClick={() => {
-                              setSelectedProvider(provider);
-                              setStep(2);
-                            }}
-                            className="p-5 rounded-2xl border border-gray-150 hover:border-indigo-600 hover:shadow-md transition-all cursor-pointer flex gap-4 items-start bg-white group"
-                          >
-                            {provider.avatarUrl ? (
-                              <img 
-                                src={provider.avatarUrl} 
-                                alt={provider.name} 
-                                className="w-14 h-14 rounded-2xl border border-gray-200 object-cover shrink-0 group-hover:scale-105 transition-transform" 
-                              />
-                            ) : (
-                              <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-650 flex items-center justify-center font-bold text-xl border border-indigo-100 shrink-0 font-sans group-hover:scale-105 transition-transform">
-                                {provider.name.charAt(0)}
-                              </div>
-                            )}
-                            <div className="space-y-1.5 flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-2">
-                                <h3 className="font-bold text-slate-900 text-sm truncate group-hover:text-indigo-600 transition-colors">{provider.name}</h3>
-                                {providerCategory && (
-                                  <span className="text-5xs bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 rounded-full font-bold shrink-0">
-                                    {providerCategory.imageUrl} {providerCategory.name}
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-xs text-gray-450 truncate">{provider.email}</p>
-                              <p className="text-xs text-gray-500 leading-relaxed line-clamp-2 mt-1">{provider.bio || "Profissional especialista pronto para te atender."}</p>
-                              
-                              <div className="pt-2 flex justify-end">
-                                <span className="text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                                  Ver Serviços &rarr;
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </motion.div>
-              )}
-
-              {/* STEP 2: SELECT SERVICE (BY SELECTED PROVIDER) */}
-              {step === 2 && selectedProvider && (
-                <motion.div
-                  key="step-2"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-6"
-                >
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => {
-                        setSelectedProvider(null);
-                        setStep(1);
-                      }}
-                      className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors cursor-pointer"
-                    >
-                      <ArrowLeft className="w-5 h-5" />
-                    </button>
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-900">Escolha o Serviço</h2>
-                      <p className="text-sm text-gray-500 mt-0.5">Serviços oferecidos por <strong className="text-slate-900 font-bold">{selectedProvider.name}</strong>.</p>
-                    </div>
-                  </div>
-
+                  {/* Services Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredServices.length === 0 ? (
                       <div className="col-span-full py-12 border border-dashed border-gray-200 rounded-2xl text-center text-gray-400 space-y-2">
                         <AlertCircle className="w-10 h-10 stroke-1 mx-auto text-amber-500" />
-                        <p className="text-xs font-semibold">Este profissional ainda não possui serviços cadastrados.</p>
+                        <p className="text-xs font-semibold">Nenhum serviço encontrado.</p>
                       </div>
                     ) : (
                       filteredServices.map(service => {
                         const isSelected = selectedService?.id === service.id;
                         const icon = getServiceIcon(service.name);
+                        const provider = providers.find(p => p.id === service.providerId);
                         
                         return (
                           <div
                             key={service.id}
-                            onClick={() => {
-                              setSelectedService(service);
-                              setStep(3);
-                            }}
+                            onClick={() => handleSelectService(service)}
                             className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex gap-4 items-start ${
                               isSelected 
                                 ? `border-${currentTheme.accent} ${currentTheme.bg} shadow-md` 
-                                : "border-gray-150 hover:border-indigo-600 hover:shadow-sm hover:translate-y-[-2px] bg-white"
+                                : "border-gray-150 hover:border-indigo-600 hover:shadow-md hover:translate-y-[-2px] bg-white group"
                             }`}
                           >
-                            <span className="text-3xl p-3 bg-gray-50 rounded-xl border border-gray-100 shrink-0 select-none shadow-sm">
+                            <span className="text-3xl p-3 bg-gray-50 rounded-xl border border-gray-100 shrink-0 select-none shadow-sm group-hover:scale-105 transition-transform">
                               {icon}
                             </span>
                             <div className="space-y-1.5 flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap justify-between">
-                                <h3 className="font-bold text-slate-900 text-sm leading-snug truncate">{service.name}</h3>
+                                <h3 className="font-bold text-slate-900 text-sm leading-snug truncate group-hover:text-indigo-600 transition-colors">{service.name}</h3>
                                 <span className="text-5xs bg-gray-100 text-gray-650 px-2 py-0.5 rounded-full font-mono font-bold shrink-0">
                                   {service.durationMinutes} min
                                 </span>
                               </div>
+
+                              {provider && (
+                                <p className="text-4xs font-semibold text-gray-400">
+                                  Profissional: <strong className="text-gray-700">{provider.name}</strong>
+                                </p>
+                              )}
+
                               <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{service.description || "Atendimento especializado com horário reservado."}</p>
+                              
                               <div className="flex justify-between items-center pt-2">
-                                <span className="text-4xs text-gray-400">Clique para selecionar</span>
+                                <span className="text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition-transform">
+                                  Agendar Horário &rarr;
+                                </span>
                                 <span className={`text-xs font-extrabold font-mono text-${currentTheme.accent}`}>
                                   {formatPrice(service.price)}
                                 </span>
@@ -963,10 +886,10 @@ export default function ClientPortal({
                 </motion.div>
               )}
 
-              {/* STEP 3: SELECT DATE & TIME */}
-              {step === 3 && selectedService && selectedProvider && (
+              {/* STEP 2: SELECT DATE & TIME */}
+              {step === 2 && selectedService && (
                 <motion.div
-                  key="step-3"
+                  key="step-2"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
@@ -976,7 +899,8 @@ export default function ClientPortal({
                     <button 
                       onClick={() => {
                         setSelectedService(null);
-                        setStep(2);
+                        setSelectedProvider(null);
+                        setStep(1);
                       }}
                       className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors cursor-pointer"
                     >
@@ -984,7 +908,10 @@ export default function ClientPortal({
                     </button>
                     <div>
                       <h2 className="text-xl font-bold text-gray-900">Selecione Data e Horário</h2>
-                      <p className="text-sm text-gray-500 mt-0.5">Disponibilidades para <strong className="text-slate-900 font-bold">{selectedService.name}</strong> com <strong className="text-slate-900 font-bold">{selectedProvider.name}</strong>.</p>
+                      <p className="text-sm text-gray-500 mt-0.5">
+                        Disponibilidades para <strong className="text-slate-900 font-bold">{selectedService.name}</strong>
+                        {selectedProvider ? <> com <strong className="text-slate-900 font-bold">{selectedProvider.name}</strong></> : null}.
+                      </p>
                     </div>
                   </div>
 
@@ -1112,7 +1039,7 @@ export default function ClientPortal({
                               className="pt-4 border-t border-gray-100"
                             >
                               <button
-                                onClick={() => setStep(4)}
+                                onClick={() => setStep(3)}
                                 className={`w-full py-3 px-4 bg-${currentTheme.accent} hover:bg-opacity-95 text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer`}
                               >
                                 Avançar para Seus Dados &rarr;
@@ -1126,10 +1053,10 @@ export default function ClientPortal({
                 </motion.div>
               )}
 
-              {/* STEP 4: CLIENT INFO FORM */}
-              {step === 4 && selectedService && selectedProvider && selectedSlot && (
+              {/* STEP 3: CLIENT INFO FORM */}
+              {step === 3 && selectedService && selectedSlot && (
                 <motion.div
-                  key="step-4"
+                  key="step-3"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
@@ -1138,7 +1065,7 @@ export default function ClientPortal({
                   <div className="flex items-center gap-3">
                     <button 
                       onClick={() => {
-                        setStep(3);
+                        setStep(2);
                       }}
                       className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors cursor-pointer"
                     >
@@ -1221,13 +1148,15 @@ export default function ClientPortal({
                       
                       <div className="space-y-3 text-xs">
                         <div className="flex justify-between items-start gap-4">
-                          <span className="text-gray-400">Profissional:</span>
-                          <span className="text-gray-900 font-bold text-right">{selectedProvider.name}</span>
-                        </div>
-                        <div className="flex justify-between items-start gap-4">
                           <span className="text-gray-400">Serviço:</span>
-                          <span className="text-gray-900 font-semibold text-right">{selectedService.name}</span>
+                          <span className="text-gray-900 font-bold text-right">{selectedService.name}</span>
                         </div>
+                        {selectedProvider && (
+                          <div className="flex justify-between items-start gap-4">
+                            <span className="text-gray-400">Profissional:</span>
+                            <span className="text-gray-900 font-semibold text-right">{selectedProvider.name}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between items-start gap-4 border-t border-gray-200 pt-2">
                           <span className="text-gray-400">Data e Hora:</span>
                           <span className={`text-${currentTheme.accent} font-extrabold font-mono text-right`}>
@@ -1264,10 +1193,10 @@ export default function ClientPortal({
                 </motion.div>
               )}
 
-              {/* STEP 5: SUCCESS & SUMMARY SCREEN */}
-              {step === 5 && successBooking && (
+              {/* STEP 4: SUCCESS & SUMMARY SCREEN */}
+              {step === 4 && successBooking && (
                 <motion.div
-                  key="step-5"
+                  key="step-4"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   className="text-center py-10 px-4 max-w-lg mx-auto space-y-6"
@@ -1279,7 +1208,7 @@ export default function ClientPortal({
                   <div className="space-y-2">
                     <h2 className="text-2xl font-extrabold text-slate-900">Agendamento Realizado!</h2>
                     <p className="text-sm text-gray-500 leading-relaxed">
-                      Seu horário está confirmado e reservado com sucesso na agenda de <strong>{selectedProvider?.name}</strong>.
+                      Seu horário está confirmado e reservado com sucesso.
                     </p>
                   </div>
 
@@ -1290,8 +1219,8 @@ export default function ClientPortal({
                     </div>
 
                     <div className="space-y-1.5 pt-1">
-                      <p className="text-gray-800">👤 Profissional: <strong>{selectedProvider?.name}</strong></p>
                       <p className="text-gray-800">💅 Serviço: <strong>{selectedService?.name}</strong></p>
+                      {selectedProvider && <p className="text-gray-800">👤 Profissional: <strong>{selectedProvider.name}</strong></p>}
                       <p className="text-gray-800">📅 Data: <strong>{formatDateHuman(selectedDate)}</strong></p>
                       <p className="text-gray-800">⏰ Horário: <strong className={`text-${currentTheme.accent} font-mono text-sm`}>{selectedSlot?.time}</strong></p>
                       <p className="text-gray-800">💰 Valor: <strong className="font-mono">{selectedService ? formatPrice(selectedService.price) : ""}</strong></p>
@@ -1386,7 +1315,7 @@ export default function ClientPortal({
                           </div>
 
                           <div className="text-xs text-gray-500 space-y-0.5">
-                            <p>👤 Profissional: <strong>{booking.providerName}</strong></p>
+                            {booking.providerName && <p>👤 Profissional: <strong>{booking.providerName}</strong></p>}
                             <p className="font-mono">📅 Horário: {formattedDate} às {formattedTime}</p>
                           </div>
                         </div>
