@@ -1,9 +1,8 @@
 import { Router } from 'express';
-import { query } from './db.js';
+import { query, pool } from './db.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { authMiddleware, AuthenticatedRequest } from './auth-middleware.js';
-import { createRateLimiter } from './rate-limiter.js';
 import { 
   Tenant, 
   Provider, 
@@ -16,23 +15,11 @@ import {
 
 const router = Router();
 
-// Rate Limiters for sensitive actions
-const authRateLimiter = createRateLimiter(60 * 1000, 20, "Muitas tentativas de autenticação. Por favor, aguarde um minuto.");
-const bookingRateLimiter = createRateLimiter(60 * 1000, 30, "Muitas solicitações de agendamento. Por favor, aguarde um momento.");
-const tenantRateLimiter = createRateLimiter(60 * 1000, 10, "Muitas tentativas de criação de estabelecimento. Por favor, aguarde.");
-
 // Helper to convert Date object or string to UTC ISO string
 const toISOString = (val: any): string => {
   if (!val) return '';
   const d = val instanceof Date ? val : new Date(val);
   return d.toISOString();
-};
-
-// Email validation helper
-const isValidEmail = (email: any): boolean => {
-  if (typeof email !== 'string') return false;
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return regex.test(email.trim());
 };
 
 // 1. Get all Tenants
@@ -45,7 +32,7 @@ router.get('/tenants', async (req, res) => {
     res.json(tenants);
   } catch (error) {
     console.error("Error fetching tenants:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error", details: (error as Error).message });
   }
 });
 
@@ -67,107 +54,6 @@ router.get('/tenants/:slug', async (req, res) => {
   }
 });
 
-// 2.1 Create New Tenant
-router.post('/tenants', tenantRateLimiter, async (req, res) => {
-  try {
-    const { name, slug, description, logoUrl, themeColor, ownerName, email, password } = req.body;
-
-    if (!name || !slug || !description || !themeColor || !ownerName || !email || !password) {
-      return res.status(400).json({ error: "Todos os campos obrigatórios devem ser preenchidos." });
-    }
-
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ error: "Formato de e-mail inválido." });
-    }
-
-    if (typeof password !== 'string' || password.length < 6) {
-      return res.status(400).json({ error: "A senha deve ter no mínimo 6 caracteres." });
-    }
-
-    // Sanitizar slug
-    const cleanSlug = slug
-      .toLowerCase()
-      .trim()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "") // remove acentos
-      .replace(/[^a-z0-9-_]/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, ""); // remove traços no início e fim
-
-    if (!cleanSlug) {
-      return res.status(400).json({ error: "O link do estabelecimento é inválido." });
-    }
-
-    // Verificar se slug já existe
-    const existing = await query("SELECT id FROM tenants WHERE slug = $1 LIMIT 1", [cleanSlug]);
-    if (existing.length > 0) {
-      return res.status(400).json({ error: "Este link já está sendo utilizado por outro estabelecimento." });
-    }
-
-    // Verificar se usuário com este e-mail já existe
-    const existingUser = await query("SELECT id FROM users WHERE email = $1 LIMIT 1", [email.toLowerCase().trim()]);
-    if (existingUser.length > 0) {
-      return res.status(400).json({ error: "Este e-mail de administrador já está cadastrado no sistema." });
-    }
-
-    // Definir accent color com base no theme color
-    let accentColor = "bg-indigo-600 text-white";
-    if (themeColor === "emerald") {
-      accentColor = "bg-emerald-600 text-white";
-    } else if (themeColor === "rose") {
-      accentColor = "bg-rose-600 text-white";
-    } else if (themeColor === "amber") {
-      accentColor = "bg-amber-600 text-white";
-    }
-
-    const tenantId = `tenant-${Date.now()}`;
-
-    // 1. Criar Tenant
-    const newTenants = await query<Tenant>(
-      `INSERT INTO tenants (id, name, slug, logo_url, description, theme_color, accent_color)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, name, slug, logo_url AS "logoUrl", description, theme_color AS "themeColor", accent_color AS "accentColor"`,
-      [tenantId, name.trim(), cleanSlug, logoUrl || "🗓️", description.trim(), themeColor, accentColor]
-    );
-
-    const tenant = newTenants[0];
-
-    // 2. Criar Provider (Profissional)
-    const providerId = `provider-${Date.now()}`;
-    await query(
-      `INSERT INTO providers (id, tenant_id, category_id, name, email, bio) 
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [providerId, tenantId, null, ownerName.trim(), email.toLowerCase().trim(), "Administrador / Proprietário"]
-    );
-
-    // 3. Criar Usuário (com hash de senha)
-    const userId = `user-${Date.now()}`;
-    const passwordHash = await bcrypt.hash(password, 10);
-    await query(
-      `INSERT INTO users (id, email, password_hash, name, role, tenant_id, provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [userId, email.toLowerCase().trim(), passwordHash, ownerName.trim(), 'provider', tenantId, providerId]
-    );
-
-    // 4. Gerar Token de Acesso JWT
-    const secret = process.env.JWT_SECRET || "pulse-saas-secret-key-12345678";
-    const token = jwt.sign(
-      { userId, email: email.toLowerCase().trim(), name: ownerName.trim(), role: 'provider', tenantId, providerId },
-      secret,
-      { expiresIn: '30d' }
-    );
-
-    res.status(201).json({
-      tenant,
-      token,
-      user: { id: userId, email: email.toLowerCase().trim(), name: ownerName.trim(), role: 'provider', tenantId, providerId }
-    });
-  } catch (error) {
-    console.error("Error creating tenant and provider:", error);
-    res.status(500).json({ error: "Internal server error", details: (error as Error).message });
-  }
-});
-
-
 // 2.5 Get Categories
 router.get('/categories', async (req, res) => {
   try {
@@ -186,15 +72,13 @@ router.get('/providers', async (req, res) => {
     let providers;
     if (tenantId) {
       providers = await query<Provider>(
-        `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, email, bio, avatar_url AS "avatarUrl", 
-                COALESCE(service_location_type, 'own_space') AS "serviceLocationType"
+        `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, email, bio, avatar_url AS "avatarUrl" 
          FROM providers WHERE tenant_id = $1`,
         [tenantId]
       );
     } else {
       providers = await query<Provider>(
-        `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, email, bio, avatar_url AS "avatarUrl",
-                COALESCE(service_location_type, 'own_space') AS "serviceLocationType"
+        `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, email, bio, avatar_url AS "avatarUrl" 
          FROM providers`
       );
     }
@@ -232,39 +116,9 @@ router.get('/services', async (req, res) => {
 });
 
 // 5. Add Service
-router.post('/services', authMiddleware, async (req: AuthenticatedRequest, res) => {
-  const user = req.user;
-  if (!user || user.role !== 'provider') {
-    return res.status(403).json({ error: "Apenas profissionais autenticados podem cadastrar serviços." });
-  }
-
-  const { providerId, name, description, durationMinutes, bufferMinutes, price } = req.body;
-  const targetProviderId = providerId || user.providerId;
-
-  if (user.providerId && user.providerId !== targetProviderId) {
-    return res.status(403).json({ error: "Você não tem permissão para cadastrar serviços para outro profissional." });
-  }
-
-  if (!name || typeof name !== 'string' || name.trim().length === 0) {
-    return res.status(400).json({ error: "O nome do serviço é obrigatório." });
-  }
-
-  const duration = Number(durationMinutes);
-  if (isNaN(duration) || duration <= 0 || duration > 720) {
-    return res.status(400).json({ error: "A duração do serviço deve ser entre 1 e 720 minutos." });
-  }
-
-  const buffer = Number(bufferMinutes);
-  if (isNaN(buffer) || buffer < 0 || buffer > 120) {
-    return res.status(400).json({ error: "O tempo de intervalo deve ser entre 0 e 120 minutos." });
-  }
-
-  const servicePrice = Number(price);
-  if (isNaN(servicePrice) || servicePrice < 0) {
-    return res.status(400).json({ error: "O preço do serviço deve ser um valor numérico positivo." });
-  }
-
+router.post('/services', async (req, res) => {
   const newServiceId = "service-" + Date.now();
+  const { providerId, name, description, durationMinutes, bufferMinutes, price } = req.body;
   try {
     const rows = await query<Service>(
       `INSERT INTO services (id, provider_id, name, description, duration_minutes, buffer_minutes, price) 
@@ -272,12 +126,12 @@ router.post('/services', authMiddleware, async (req: AuthenticatedRequest, res) 
        RETURNING id, provider_id AS "providerId", name, description, duration_minutes AS "durationMinutes", buffer_minutes AS "bufferMinutes", price`,
       [
         newServiceId,
-        targetProviderId,
-        name.trim(),
-        description ? description.trim() : "",
-        duration,
-        buffer,
-        servicePrice
+        providerId,
+        name,
+        description || "",
+        Number(durationMinutes) || 30,
+        Number(bufferMinutes) || 0,
+        Number(price) || 0
       ]
     );
     const created = { ...rows[0], price: Number(rows[0].price) };
@@ -289,28 +143,15 @@ router.post('/services', authMiddleware, async (req: AuthenticatedRequest, res) 
 });
 
 // Edit Service
-router.put('/services/:id', authMiddleware, async (req: AuthenticatedRequest, res) => {
-  const user = req.user;
-  if (!user || user.role !== 'provider') {
-    return res.status(403).json({ error: "Apenas profissionais autenticados podem editar serviços." });
-  }
-
+router.put('/services/:id', async (req, res) => {
   const { name, description, durationMinutes, bufferMinutes, price } = req.body;
   try {
-    // Get existing service to verify ownership
-    const serviceRows = await query<any>(`SELECT * FROM services WHERE id = $1`, [req.params.id]);
+    // Get existing service to handle fallback values
+    const serviceRows = await query<Service>(`SELECT * FROM services WHERE id = $1`, [req.params.id]);
     if (serviceRows.length === 0) {
-      return res.status(404).json({ error: "Serviço não encontrado." });
+      return res.status(404).json({ error: "Service not found" });
     }
     const current = serviceRows[0];
-
-    if (user.providerId && user.providerId !== current.provider_id) {
-      return res.status(403).json({ error: "Você não tem permissão para alterar serviços de outro profissional." });
-    }
-
-    const duration = durationMinutes !== undefined ? Number(durationMinutes) : current.duration_minutes;
-    const buffer = bufferMinutes !== undefined ? Number(bufferMinutes) : current.buffer_minutes;
-    const servicePrice = price !== undefined ? Number(price) : Number(current.price);
 
     const rows = await query<Service>(
       `UPDATE services 
@@ -318,11 +159,11 @@ router.put('/services/:id', authMiddleware, async (req: AuthenticatedRequest, re
        WHERE id = $6 
        RETURNING id, provider_id AS "providerId", name, description, duration_minutes AS "durationMinutes", buffer_minutes AS "bufferMinutes", price`,
       [
-        name ? name.trim() : current.name,
-        description !== undefined ? description.trim() : current.description,
-        duration,
-        buffer,
-        servicePrice,
+        name || current.name,
+        description !== undefined ? description : current.description,
+        durationMinutes !== undefined ? Number(durationMinutes) : current.durationMinutes,
+        bufferMinutes !== undefined ? Number(bufferMinutes) : current.bufferMinutes,
+        price !== undefined ? Number(price) : Number(current.price),
         req.params.id
       ]
     );
@@ -335,22 +176,8 @@ router.put('/services/:id', authMiddleware, async (req: AuthenticatedRequest, re
 });
 
 // Delete Service
-router.delete('/services/:id', authMiddleware, async (req: AuthenticatedRequest, res) => {
-  const user = req.user;
-  if (!user || user.role !== 'provider') {
-    return res.status(403).json({ error: "Apenas profissionais autenticados podem excluir serviços." });
-  }
-
+router.delete('/services/:id', async (req, res) => {
   try {
-    const serviceRows = await query<any>(`SELECT provider_id FROM services WHERE id = $1`, [req.params.id]);
-    if (serviceRows.length === 0) {
-      return res.status(404).json({ error: "Serviço não encontrado." });
-    }
-
-    if (user.providerId && user.providerId !== serviceRows[0].provider_id) {
-      return res.status(403).json({ error: "Você não tem permissão para excluir serviços de outro profissional." });
-    }
-
     await query(`DELETE FROM services WHERE id = $1`, [req.params.id]);
     res.json({ success: true });
   } catch (error) {
@@ -384,35 +211,25 @@ router.get('/availability-rules', async (req, res) => {
 });
 
 // Set Availability Rules
-router.put('/availability-rules', authMiddleware, async (req: AuthenticatedRequest, res) => {
-  const user = req.user;
-  if (!user || user.role !== 'provider') {
-    return res.status(403).json({ error: "Apenas profissionais autenticados podem alterar horários." });
-  }
-
+router.put('/availability-rules', async (req, res) => {
   const { providerId, rules } = req.body;
-  const targetProviderId = providerId || user.providerId;
-
-  if (user.providerId && user.providerId !== targetProviderId) {
-    return res.status(403).json({ error: "Você não tem permissão para alterar a grade de outro profissional." });
-  }
-
-  if (!targetProviderId || !Array.isArray(rules)) {
-    return res.status(400).json({ error: "Payload inválido. providerId e lista de rules são obrigatórios." });
+  if (!providerId || !Array.isArray(rules)) {
+    return res.status(400).json({ error: "Invalid payload" });
   }
 
   try {
-    await query(`DELETE FROM availability_rules WHERE provider_id = $1`, [targetProviderId]);
+    // We execute inside a transaction if we want, or just delete and insert
+    await query(`DELETE FROM availability_rules WHERE provider_id = $1`, [providerId]);
 
     const rulesToInsert: AvailabilityRule[] = [];
     for (let i = 0; i < rules.length; i++) {
       const r = rules[i];
-      const newId = `rule-${targetProviderId}-${Date.now()}-${i}`;
+      const newId = `rule-${providerId}-${Date.now()}-${i}`;
       const rows = await query<AvailabilityRule>(
         `INSERT INTO availability_rules (id, provider_id, day_of_week, start_time, end_time) 
          VALUES ($1, $2, $3, $4, $5) 
          RETURNING id, provider_id AS "providerId", day_of_week AS "dayOfWeek", start_time AS "startTime", end_time AS "endTime"`,
-        [newId, targetProviderId, r.dayOfWeek, r.startTime, r.endTime]
+        [newId, providerId, r.dayOfWeek, r.startTime, r.endTime]
       );
       rulesToInsert.push(rows[0]);
     }
@@ -448,28 +265,17 @@ router.get('/exceptions', async (req, res) => {
 });
 
 // Add Availability Exception
-router.post('/exceptions', authMiddleware, async (req: AuthenticatedRequest, res) => {
-  const user = req.user;
-  if (!user || user.role !== 'provider') {
-    return res.status(403).json({ error: "Apenas profissionais autenticados podem gerenciar exceções." });
-  }
-
+router.post('/exceptions', async (req, res) => {
   const { providerId, date, isBlocked, startTime, endTime } = req.body;
-  const targetProviderId = providerId || user.providerId;
-
-  if (user.providerId && user.providerId !== targetProviderId) {
-    return res.status(403).json({ error: "Você não tem permissão para alterar a agenda de outro profissional." });
-  }
-
-  if (!targetProviderId || !date) {
-    return res.status(400).json({ error: "providerId e date são obrigatórios." });
+  if (!providerId || !date) {
+    return res.status(400).json({ error: "providerId and date are required" });
   }
 
   try {
     // Clear duplicate date/provider exception first
     await query(
       `DELETE FROM availability_exceptions WHERE provider_id = $1 AND date = $2`,
-      [targetProviderId, date]
+      [providerId, date]
     );
 
     const newId = "except-" + Date.now();
@@ -477,7 +283,7 @@ router.post('/exceptions', authMiddleware, async (req: AuthenticatedRequest, res
       `INSERT INTO availability_exceptions (id, provider_id, date, is_blocked, start_time, end_time) 
        VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING id, provider_id AS "providerId", date, is_blocked AS "isBlocked", start_time AS "startTime", end_time AS "endTime"`,
-      [newId, targetProviderId, date, !!isBlocked, startTime || null, endTime || null]
+      [newId, providerId, date, !!isBlocked, startTime || null, endTime || null]
     );
     res.status(201).json(rows[0]);
   } catch (error) {
@@ -487,22 +293,8 @@ router.post('/exceptions', authMiddleware, async (req: AuthenticatedRequest, res
 });
 
 // Delete Availability Exception
-router.delete('/exceptions/:id', authMiddleware, async (req: AuthenticatedRequest, res) => {
-  const user = req.user;
-  if (!user || user.role !== 'provider') {
-    return res.status(403).json({ error: "Apenas profissionais autenticados podem remover exceções." });
-  }
-
+router.delete('/exceptions/:id', async (req, res) => {
   try {
-    const expRows = await query<any>(`SELECT provider_id FROM availability_exceptions WHERE id = $1`, [req.params.id]);
-    if (expRows.length === 0) {
-      return res.status(404).json({ error: "Exceção não encontrada." });
-    }
-
-    if (user.providerId && user.providerId !== expRows[0].provider_id) {
-      return res.status(403).json({ error: "Você não tem permissão para remover exceções de outro profissional." });
-    }
-
     await query(`DELETE FROM availability_exceptions WHERE id = $1`, [req.params.id]);
     res.json({ success: true });
   } catch (error) {
@@ -511,25 +303,34 @@ router.delete('/exceptions/:id', authMiddleware, async (req: AuthenticatedReques
   }
 });
 
-// 8. Get Bookings
-router.get('/bookings', async (req, res) => {
+// 8. Get Bookings (Protected with authMiddleware)
+router.get('/bookings', authMiddleware, async (req: AuthenticatedRequest, res) => {
   const { providerId } = req.query;
+  const user = req.user;
+
+  if (!user) {
+    return res.status(401).json({ error: "Não autorizado." });
+  }
+
   try {
     let bookings;
-    if (providerId) {
+    if (user.role === 'provider') {
       bookings = await query<any>(
-        `SELECT id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", 
-                client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes,
-                client_address AS "clientAddress", service_location_type AS "serviceLocationType"
+        `SELECT id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes 
          FROM bookings WHERE provider_id = $1`,
-        [providerId]
+        [user.providerId]
+      );
+    } else if (providerId) {
+      bookings = await query<any>(
+        `SELECT id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes 
+         FROM bookings WHERE provider_id = $1 AND client_email = $2`,
+        [providerId, user.email]
       );
     } else {
       bookings = await query<any>(
-        `SELECT id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", 
-                client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes,
-                client_address AS "clientAddress", service_location_type AS "serviceLocationType"
-         FROM bookings`
+        `SELECT id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes 
+         FROM bookings WHERE client_email = $1`,
+        [user.email]
       );
     }
     
@@ -581,7 +382,6 @@ router.get('/slots', async (req, res) => {
     const dayOfWeek = dateObj.getDay();
 
     // 3. Resolve active availability windows for this provider/day
-    // Check exceptions first
     const exceptions = await query<AvailabilityException>(
       `SELECT id, provider_id AS "providerId", date, is_blocked AS "isBlocked", start_time AS "startTime", end_time AS "endTime" 
        FROM availability_exceptions 
@@ -599,7 +399,6 @@ router.get('/slots', async (req, res) => {
         activeWindows.push({ start: exception.startTime, end: exception.endTime });
       }
     } else {
-      // No exception, check weekly rules
       const rules = await query<AvailabilityRule>(
         `SELECT id, provider_id AS "providerId", day_of_week AS "dayOfWeek", start_time AS "startTime", end_time AS "endTime" 
          FROM availability_rules 
@@ -626,7 +425,6 @@ router.get('/slots', async (req, res) => {
 
     const slots: TimeSlot[] = [];
 
-    // Helper functions
     const timeToMinutes = (t: string): number => {
       const [h, m] = t.split(":").map(Number);
       return h * 60 + m;
@@ -641,7 +439,6 @@ router.get('/slots', async (req, res) => {
     const duration = service.durationMinutes;
     const stepMinutes = duration <= 30 ? 15 : 30;
 
-    // Map database date values to minutes from midnight
     const blockedRanges = bookings.map(b => {
       const startsAtStr = toISOString(b.startsAt);
       const endsAtStr = toISOString(b.endsAt);
@@ -659,7 +456,6 @@ router.get('/slots', async (req, res) => {
       };
     });
 
-    // Generate slots
     for (const window of activeWindows) {
       const windowStart = timeToMinutes(window.start);
       const windowEnd = timeToMinutes(window.end);
@@ -713,102 +509,80 @@ router.get('/slots', async (req, res) => {
   }
 });
 
-// 10. POST a booking (includes concurrency prevention constraint check)
-router.post('/bookings', bookingRateLimiter, async (req, res) => {
-  const { providerId, serviceId, startsAt, clientName, clientEmail, clientPhone, notes, clientAddress, serviceLocationType } = req.body;
+// 10. POST a booking (includes concurrency prevention constraint check with SQL transaction)
+router.post('/bookings', async (req, res) => {
+  const { providerId, serviceId, startsAt, clientName, clientEmail, clientPhone, notes } = req.body;
   
   if (!providerId || !serviceId || !startsAt || !clientName || !clientEmail || !clientPhone) {
-    return res.status(400).json({ error: "Todos os campos obrigatórios devem ser preenchidos." });
+    return res.status(400).json({ error: "Preencha todos os campos obrigatórios." });
   }
 
-  if (!isValidEmail(clientEmail)) {
-    return res.status(400).json({ error: "Formato de e-mail inválido." });
-  }
-
-  const trimmedName = String(clientName).trim();
-  if (trimmedName.length < 2 || trimmedName.length > 100) {
-    return res.status(400).json({ error: "O nome deve ter entre 2 e 100 caracteres." });
-  }
-
-  const trimmedPhone = String(clientPhone).trim();
-  if (trimmedPhone.length < 8 || trimmedPhone.length > 25) {
-    return res.status(400).json({ error: "Número de telefone/WhatsApp inválido." });
-  }
-
+  const client = await pool.connect();
   try {
-    // 1. Fetch Provider to check serviceLocationType
-    const providerRows = await query<any>(
-      `SELECT id, COALESCE(service_location_type, 'own_space') AS "serviceLocationType" FROM providers WHERE id = $1 LIMIT 1`,
-      [providerId]
-    );
-    const provider = providerRows.length > 0 ? providerRows[0] : null;
-    
-    // If provider only attends at client, clientAddress is mandatory
-    if (provider?.serviceLocationType === 'at_client' && (!clientAddress || String(clientAddress).trim().length < 5)) {
-      return res.status(400).json({ error: "O endereço completo de atendimento é obrigatório para este profissional." });
-    }
+    await client.query('BEGIN');
 
-    // 2. Fetch Service
-    const services = await query<Service>(
+    // 1. Fetch Service
+    const serviceRes = await client.query(
       `SELECT id, provider_id AS "providerId", name, duration_minutes AS "durationMinutes", buffer_minutes AS "bufferMinutes", price 
        FROM services WHERE id = $1 LIMIT 1`,
       [serviceId]
     );
-    if (services.length === 0) {
+    if (serviceRes.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: "Serviço não encontrado." });
     }
-    const service = services[0];
+    const service = serviceRes.rows[0];
 
     // Calculate endsAt
     const startObj = new Date(startsAt);
-    if (isNaN(startObj.getTime())) {
-      return res.status(400).json({ error: "Data ou horário de início inválido." });
-    }
-
     const endObj = new Date(startObj.getTime() + service.durationMinutes * 60 * 1000);
     const endsAt = endObj.toISOString();
 
-    const requestedStartMin = startObj.getUTCHours() * 60 + startObj.getUTCMinutes();
-    const requestedEndMin = requestedStartMin + service.durationMinutes;
     const dateStr = startsAt.substring(0, 10);
 
-    // 3. Fetch existing active bookings on the same day to prevent overlaps
-    const existingBookings = await query<any>(
+    // 2. Lock & Fetch existing active bookings on the same day for this provider
+    const existingRes = await client.query(
       `SELECT b.id, b.starts_at AS "startsAt", b.ends_at AS "endsAt", s.buffer_minutes AS "bufferMinutes" 
        FROM bookings b 
        LEFT JOIN services s ON b.service_id = s.id 
-       WHERE b.provider_id = $1 AND b.status != 'cancelled' AND b.starts_at::date = $2::date`,
+       WHERE b.provider_id = $1 AND b.status != 'cancelled' AND b.starts_at::date = $2::date
+       FOR UPDATE OF b`,
       [providerId, dateStr]
     );
+    const existingBookings = existingRes.rows;
 
-    // Concurrency overlap validation
+    const reqStartMs = startObj.getTime();
+    const reqEndMs = endObj.getTime();
+    const reqBufferMs = (service.bufferMinutes || 0) * 60 * 1000;
+
+    // Concurrency overlap & buffer validation
     for (const b of existingBookings) {
-      const bStartObj = new Date(b.startsAt);
-      const bEndObj = new Date(b.endsAt);
-      
-      const bStartMin = bStartObj.getUTCHours() * 60 + bStartObj.getUTCMinutes();
-      const bEndMin = bStartMin + (bEndObj.getTime() - bStartObj.getTime()) / (60 * 1000);
-      const bBuffer = Number(b.bufferMinutes) || 0;
+      const bStartMs = new Date(b.startsAt).getTime();
+      const bEndMs = new Date(b.endsAt).getTime();
+      const bBufferMs = (Number(b.bufferMinutes) || 0) * 60 * 1000;
 
-      // Core overlap checking
-      const coreOverlap = Math.max(requestedStartMin, bStartMin) < Math.min(requestedEndMin, bEndMin);
+      // Core overlap checking: Math.max(reqStartMs, bStartMs) < Math.min(reqEndMs, bEndMs)
+      const coreOverlap = Math.max(reqStartMs, bStartMs) < Math.min(reqEndMs, bEndMs);
       if (coreOverlap) {
+        await client.query('ROLLBACK');
         return res.status(409).json({ 
           error: "slot_unavailable", 
           message: "O horário selecionado já foi reservado por outro cliente." 
         });
       }
 
-      // Check existing booking buffer violation
-      if (requestedStartMin >= bStartMin && requestedStartMin < (bEndMin + bBuffer)) {
+      // Existing booking buffer check after appointment
+      if (reqStartMs >= bStartMs && reqStartMs < (bEndMs + bBufferMs)) {
+        await client.query('ROLLBACK');
         return res.status(409).json({
           error: "slot_unavailable",
           message: "Conflito com o período de preparação/intervalo do agendamento anterior."
         });
       }
 
-      // Check current service buffer violation before next booking
-      if (requestedEndMin > (bStartMin - service.bufferMinutes) && requestedStartMin < bStartMin) {
+      // New service buffer check before next appointment
+      if (reqEndMs > (bStartMs - reqBufferMs) && reqStartMs < bStartMs) {
+        await client.query('ROLLBACK');
         return res.status(409).json({
           error: "slot_unavailable",
           message: "Este horário não oferece o intervalo necessário antes da próxima reserva."
@@ -816,39 +590,40 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
       }
     }
 
-    // 4. Insert new booking
+    // 3. Insert new booking
     const newId = "booking-" + Date.now();
-    const rows = await query<Booking>(
-      `INSERT INTO bookings (id, provider_id, service_id, starts_at, ends_at, client_name, client_email, client_phone, status, notes, client_address, service_location_type) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
-       RETURNING id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", 
-                 client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes,
-                 client_address AS "clientAddress", service_location_type AS "serviceLocationType"`,
+    const insertRes = await client.query(
+      `INSERT INTO bookings (id, provider_id, service_id, starts_at, ends_at, client_name, client_email, client_phone, status, notes) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+       RETURNING id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes`,
       [
         newId,
         providerId,
         serviceId,
         startsAt,
         endsAt,
-        trimmedName,
-        clientEmail.toLowerCase().trim(),
-        trimmedPhone,
-        'confirmed', // confirmed automatically
-        notes ? String(notes).trim().slice(0, 500) : null,
-        clientAddress ? String(clientAddress).trim().slice(0, 300) : null,
-        serviceLocationType || provider?.serviceLocationType || 'own_space'
+        clientName,
+        clientEmail,
+        clientPhone,
+        'confirmed',
+        notes || null
       ]
     );
 
+    await client.query('COMMIT');
+
     const created = {
-      ...rows[0],
-      startsAt: toISOString(rows[0].startsAt),
-      endsAt: toISOString(rows[0].endsAt)
+      ...insertRes.rows[0],
+      startsAt: toISOString(insertRes.rows[0].startsAt),
+      endsAt: toISOString(insertRes.rows[0].endsAt)
     };
     res.status(201).json(created);
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error("Error creating booking:", error);
     res.status(500).json({ error: "Internal server error" });
+  } finally {
+    client.release();
   }
 });
 
@@ -906,30 +681,8 @@ router.patch('/bookings/:id', authMiddleware, async (req: AuthenticatedRequest, 
 });
 
 // 12. Delete booking
-router.delete('/bookings/:id', authMiddleware, async (req: AuthenticatedRequest, res) => {
-  const user = req.user;
-  if (!user) {
-    return res.status(401).json({ error: "Não autorizado." });
-  }
-
+router.delete('/bookings/:id', async (req, res) => {
   try {
-    const bookingRows = await query<any>(
-      `SELECT provider_id AS "providerId", client_email AS "clientEmail" FROM bookings WHERE id = $1`,
-      [req.params.id]
-    );
-    if (bookingRows.length === 0) {
-      return res.status(404).json({ error: "Agendamento não encontrado." });
-    }
-    const booking = bookingRows[0];
-
-    // Ownership authorization verification
-    const isOwnerProvider = user.role === 'provider' && user.providerId === booking.providerId;
-    const isOwnerClient = user.role === 'client' && user.email === booking.clientEmail;
-
-    if (!isOwnerProvider && !isOwnerClient) {
-      return res.status(403).json({ error: "Você não tem permissão para excluir este agendamento." });
-    }
-
     await query(`DELETE FROM bookings WHERE id = $1`, [req.params.id]);
     res.json({ success: true });
   } catch (error) {
@@ -941,27 +694,14 @@ router.delete('/bookings/:id', authMiddleware, async (req: AuthenticatedRequest,
 // --- Authentication Endpoints ---
 
 // Auth: Register Client / Provider
-router.post('/auth/register', authRateLimiter, async (req, res) => {
-  const { email, password, name, role, tenantId, categoryId, bio, serviceLocationType } = req.body;
+router.post('/auth/register', async (req, res) => {
+  const { email, password, name, role, tenantId, categoryId, bio } = req.body;
   if (!email || !password || !name) {
     return res.status(400).json({ error: "E-mail, senha e nome são obrigatórios." });
   }
 
-  if (!isValidEmail(email)) {
-    return res.status(400).json({ error: "Formato de e-mail inválido." });
-  }
-
-  if (typeof password !== 'string' || password.length < 6) {
-    return res.status(400).json({ error: "A senha deve ter no mínimo 6 caracteres." });
-  }
-
-  const validLocationType = ['own_space', 'at_client', 'both'].includes(serviceLocationType) 
-    ? serviceLocationType 
-    : 'own_space';
-
   try {
-    const cleanEmail = email.toLowerCase().trim();
-    const existing = await query(`SELECT id FROM users WHERE email = $1`, [cleanEmail]);
+    const existing = await query(`SELECT id FROM users WHERE email = $1`, [email.toLowerCase()]);
     if (existing.length > 0) {
       return res.status(409).json({ error: "Este e-mail já está cadastrado." });
     }
@@ -974,21 +714,21 @@ router.post('/auth/register', authRateLimiter, async (req, res) => {
     if (userRole === 'provider') {
       providerId = "provider-" + Date.now();
       await query(
-        `INSERT INTO providers (id, tenant_id, category_id, name, email, bio, service_location_type) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [providerId, tenantId || 'tenant-1', categoryId || null, String(name).trim(), cleanEmail, bio ? String(bio).trim() : '', validLocationType]
+        `INSERT INTO providers (id, tenant_id, category_id, name, email, bio) 
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [providerId, tenantId || 'tenant-1', categoryId || null, name, email.toLowerCase(), bio || '']
       );
     }
     
     await query(
       `INSERT INTO users (id, email, password_hash, name, role, tenant_id, provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [id, cleanEmail, passwordHash, String(name).trim(), userRole, tenantId || null, providerId]
+      [id, email.toLowerCase(), passwordHash, name, userRole, tenantId || null, providerId]
     );
 
     const secret = process.env.JWT_SECRET || "pulse-saas-secret-key-12345678";
     
     const token = jwt.sign(
-      { userId: id, email: cleanEmail, name: String(name).trim(), role: userRole, tenantId: tenantId || null, providerId },
+      { userId: id, email: email.toLowerCase(), name, role: userRole, tenantId: tenantId || null, providerId },
       secret,
       { expiresIn: '30d' }
     );
@@ -1004,22 +744,17 @@ router.post('/auth/register', authRateLimiter, async (req, res) => {
 });
 
 // Auth: Login
-router.post('/auth/login', authRateLimiter, async (req, res) => {
+router.post('/auth/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: "E-mail e senha são obrigatórios." });
   }
 
-  if (!isValidEmail(email)) {
-    return res.status(400).json({ error: "Formato de e-mail inválido." });
-  }
-
   try {
-    const cleanEmail = email.toLowerCase().trim();
     const users = await query(
       `SELECT id, email, password_hash AS "passwordHash", name, role, tenant_id AS "tenantId", provider_id AS "providerId" 
        FROM users WHERE email = $1 LIMIT 1`,
-      [cleanEmail]
+      [email.toLowerCase()]
     );
     if (users.length === 0) {
       return res.status(401).json({ error: "Credenciais inválidas." });
@@ -1062,18 +797,14 @@ router.post('/auth/login', authRateLimiter, async (req, res) => {
 });
 
 // Auth: Social Login
-router.post('/auth/social-login', authRateLimiter, async (req, res) => {
+router.post('/auth/social-login', async (req, res) => {
   const { email, name, provider } = req.body;
   if (!email || !name || !provider) {
     return res.status(400).json({ error: "E-mail, nome e provedor são obrigatórios." });
   }
 
-  if (!isValidEmail(email)) {
-    return res.status(400).json({ error: "Formato de e-mail inválido." });
-  }
-
   try {
-    const emailLower = email.toLowerCase().trim();
+    const emailLower = email.toLowerCase();
     let users = await query<any>(
       `SELECT id, email, name, role, tenant_id AS "tenantId", provider_id AS "providerId", avatar_url AS "avatarUrl" 
        FROM users WHERE email = $1 LIMIT 1`,
@@ -1156,7 +887,6 @@ router.get('/bookings/my', authMiddleware, async (req: AuthenticatedRequest, res
       bookings = await query<any>(
         `SELECT b.id, b.provider_id AS "providerId", b.service_id AS "serviceId", b.starts_at AS "startsAt", b.ends_at AS "endsAt", 
                 b.client_name AS "clientName", b.client_email AS "clientEmail", b.client_phone AS "clientPhone", b.status, b.notes,
-                b.client_address AS "clientAddress", b.service_location_type AS "serviceLocationType",
                 s.name AS "serviceName", p.name AS "providerName"
          FROM bookings b
          LEFT JOIN services s ON b.service_id = s.id
@@ -1169,7 +899,6 @@ router.get('/bookings/my', authMiddleware, async (req: AuthenticatedRequest, res
       bookings = await query<any>(
         `SELECT b.id, b.provider_id AS "providerId", b.service_id AS "serviceId", b.starts_at AS "startsAt", b.ends_at AS "endsAt", 
                 b.client_name AS "clientName", b.client_email AS "clientEmail", b.client_phone AS "clientPhone", b.status, b.notes,
-                b.client_address AS "clientAddress", b.service_location_type AS "serviceLocationType",
                 s.name AS "serviceName", p.name AS "providerName"
          FROM bookings b
          LEFT JOIN services s ON b.service_id = s.id
