@@ -884,6 +884,7 @@ export default function App() {
               >
                 <ClientPortal 
                   tenant={selectedTenant} 
+                  selectedProvider={selectedProvider}
                   currentUser={currentUser}
                   authMode={authMode}
                   setAuthMode={setAuthMode}

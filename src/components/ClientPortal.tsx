@@ -43,6 +43,7 @@ import { motion, AnimatePresence } from "motion/react";
 
 interface ClientPortalProps {
   tenant: Tenant;
+  selectedProvider?: Provider | null;
   currentUser?: any;
   // Auth state & handlers passed from App.tsx
   authMode: "login" | "register";
@@ -90,6 +91,7 @@ const getServiceIcon = (name: string) => {
 
 export default function ClientPortal({ 
   tenant, 
+  selectedProvider: initialSelectedProvider,
   currentUser,
   authMode,
   setAuthMode,
@@ -123,7 +125,7 @@ export default function ClientPortal({
   const [activeTab, setActiveTab] = useState<"new" | "my">("new");
   
   // Selection States
-  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(initialSelectedProvider || null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(""); // YYYY-MM-DD
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
@@ -139,7 +141,7 @@ export default function ClientPortal({
   const [notes, setNotes] = useState<string>("");
   
   // Flow/Status States
-  // 1: Service Selection, 2: Date/Time Selection, 3: Client Info, 4: Success
+  // 1: Service Selection (Filtered by Provider), 2: Date/Time Selection, 3: Client Info, 4: Success
   const [step, setStep] = useState<number>(1);
   const [bookingLoading, setBookingLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -172,6 +174,13 @@ export default function ClientPortal({
     }
   }, [currentUser]);
 
+  // Sync initialSelectedProvider if updated from App.tsx
+  useEffect(() => {
+    if (initialSelectedProvider) {
+      setSelectedProvider(initialSelectedProvider);
+    }
+  }, [initialSelectedProvider]);
+
   // Fetch initial services, providers, and categories for this tenant
   useEffect(() => {
     async function loadData() {
@@ -187,6 +196,27 @@ export default function ClientPortal({
         if (cats.length > 0) {
           setRegisterCategoryId(cats[0].id);
         }
+
+        // Determine default provider for Step 1
+        const urlParams = new URLSearchParams(window.location.search);
+        const directProviderId = urlParams.get("providerId") || urlParams.get("provider");
+        let targetProv: Provider | null = null;
+
+        if (directProviderId && provs.length > 0) {
+          targetProv = provs.find(p => p.id === directProviderId || p.name.toLowerCase().includes(directProviderId.toLowerCase())) || null;
+        }
+
+        if (!targetProv && initialSelectedProvider) {
+          targetProv = initialSelectedProvider;
+        }
+
+        if (!targetProv && provs.length > 0) {
+          targetProv = provs[0];
+        }
+
+        if (targetProv) {
+          setSelectedProvider(targetProv);
+        }
       } catch (err) {
         console.error("Error loading portal data", err);
         setError("Não foi possível carregar as informações do agendamento.");
@@ -195,7 +225,6 @@ export default function ClientPortal({
     loadData();
     
     // Reset selection if tenant changes
-    setSelectedProvider(null);
     setSelectedService(null);
     setSelectedDate("");
     setSelectedSlot(null);
@@ -204,8 +233,13 @@ export default function ClientPortal({
     setActiveTab("new");
   }, [tenant]);
 
-  // Filter services by category and search term
+  // Filter services STRICTLY for the selected provider
   const filteredServices = services.filter(s => {
+    // Must match the selected provider
+    if (selectedProvider && s.providerId !== selectedProvider.id) {
+      return false;
+    }
+
     const provider = providers.find(p => p.id === s.providerId);
     const matchesCategory = selectedCategoryFilter === "all" 
       ? true 
@@ -215,18 +249,18 @@ export default function ClientPortal({
     const matchesSearch = searchLower === "" 
       ? true 
       : s.name.toLowerCase().includes(searchLower) || 
-        (s.description && s.description.toLowerCase().includes(searchLower)) ||
-        (provider && provider.name.toLowerCase().includes(searchLower));
+        (s.description && s.description.toLowerCase().includes(searchLower));
 
     return matchesCategory && matchesSearch;
   });
 
-  // Select service and resolve provider automatically
+  // Select service and proceed to Step 2 (Data e Hora)
   const handleSelectService = (service: Service) => {
     setSelectedService(service);
-    const matchingProvider = providers.find(p => p.id === service.providerId) || null;
+    // Ensure provider is assigned to match service
+    const matchingProvider = providers.find(p => p.id === service.providerId) || selectedProvider;
     setSelectedProvider(matchingProvider);
-    setStep(2); // Jump directly to Date and Time selection
+    setStep(2);
   };
 
   // Load slots when service and date are selected
@@ -772,7 +806,7 @@ export default function ClientPortal({
           {activeTab === "new" ? (
             <div key="tab-new">
               
-              {/* STEP 1: DIRECT SERVICE SELECTION */}
+              {/* STEP 1: SERVICES OF THE SELECTED PROVIDER ONLY */}
               {step === 1 && (
                 <motion.div
                   key="step-1"
@@ -781,9 +815,45 @@ export default function ClientPortal({
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-6"
                 >
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">Escolha o Serviço</h2>
-                    <p className="text-sm text-gray-500 mt-1">Selecione o procedimento que deseja realizar para prosseguir com o agendamento.</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">Escolha o Serviço</h2>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Serviços disponíveis com <strong className="text-slate-900 font-bold">{selectedProvider ? selectedProvider.name : "o profissional"}</strong>.
+                      </p>
+                    </div>
+
+                    {/* Professional Switcher Bar if multiple providers exist */}
+                    {providers.length > 1 && (
+                      <div className="space-y-1 self-start sm:self-auto">
+                        <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider block">Prestador Selecionado:</label>
+                        <div className="flex items-center gap-1.5 overflow-x-auto bg-gray-50 p-1 rounded-xl border border-gray-200">
+                          {providers.map(p => {
+                            const isCurrent = selectedProvider?.id === p.id;
+                            return (
+                              <button
+                                key={p.id}
+                                onClick={() => setSelectedProvider(p)}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                                  isCurrent
+                                    ? `bg-slate-900 text-white shadow-sm`
+                                    : "text-gray-600 hover:bg-gray-200"
+                                }`}
+                              >
+                                {p.avatarUrl ? (
+                                  <img src={p.avatarUrl} alt={p.name} className="w-4 h-4 rounded-full object-cover" />
+                                ) : (
+                                  <span className="w-4 h-4 rounded-full bg-indigo-200 text-indigo-800 text-5xs flex items-center justify-center font-bold">
+                                    {p.name.charAt(0)}
+                                  </span>
+                                )}
+                                <span>{p.name}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Search and Category Filters */}
@@ -827,18 +897,17 @@ export default function ClientPortal({
                     </div>
                   </div>
 
-                  {/* Services Grid */}
+                  {/* Services Grid (Strictly filtered by selected provider) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredServices.length === 0 ? (
                       <div className="col-span-full py-12 border border-dashed border-gray-200 rounded-2xl text-center text-gray-400 space-y-2">
                         <AlertCircle className="w-10 h-10 stroke-1 mx-auto text-amber-500" />
-                        <p className="text-xs font-semibold">Nenhum serviço encontrado.</p>
+                        <p className="text-xs font-semibold">Nenhum serviço encontrado para este prestador.</p>
                       </div>
                     ) : (
                       filteredServices.map(service => {
                         const isSelected = selectedService?.id === service.id;
                         const icon = getServiceIcon(service.name);
-                        const provider = providers.find(p => p.id === service.providerId);
                         
                         return (
                           <div
@@ -860,12 +929,6 @@ export default function ClientPortal({
                                   {service.durationMinutes} min
                                 </span>
                               </div>
-
-                              {provider && (
-                                <p className="text-4xs font-semibold text-gray-400">
-                                  Profissional: <strong className="text-gray-700">{provider.name}</strong>
-                                </p>
-                              )}
 
                               <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{service.description || "Atendimento especializado com horário reservado."}</p>
                               
@@ -899,7 +962,6 @@ export default function ClientPortal({
                     <button 
                       onClick={() => {
                         setSelectedService(null);
-                        setSelectedProvider(null);
                         setStep(1);
                       }}
                       className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors cursor-pointer"
@@ -1230,7 +1292,6 @@ export default function ClientPortal({
                   <div className="flex flex-col sm:flex-row gap-3">
                     <button
                       onClick={() => {
-                        setSelectedProvider(null);
                         setSelectedService(null);
                         setSelectedDate("");
                         setSelectedSlot(null);
