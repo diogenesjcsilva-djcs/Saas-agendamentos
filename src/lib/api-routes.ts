@@ -89,9 +89,9 @@ router.get('/providers', async (req, res) => {
   }
 });
 
-// 4. Get Services (optionally filtered by providerId)
+// 4. Get Services (optionally filtered by providerId or tenantId)
 router.get('/services', async (req, res) => {
-  const { providerId } = req.query;
+  const { providerId, tenantId } = req.query;
   try {
     let services;
     if (providerId) {
@@ -99,6 +99,14 @@ router.get('/services', async (req, res) => {
         `SELECT id, provider_id AS "providerId", name, description, duration_minutes AS "durationMinutes", buffer_minutes AS "bufferMinutes", price 
          FROM services WHERE provider_id = $1`,
         [providerId]
+      );
+    } else if (tenantId) {
+      services = await query<Service>(
+        `SELECT s.id, s.provider_id AS "providerId", s.name, s.description, s.duration_minutes AS "durationMinutes", s.buffer_minutes AS "bufferMinutes", s.price 
+         FROM services s
+         INNER JOIN providers p ON s.provider_id = p.id
+         WHERE p.tenant_id = $1`,
+        [tenantId]
       );
     } else {
       services = await query<Service>(

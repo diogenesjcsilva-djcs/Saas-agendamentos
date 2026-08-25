@@ -4,35 +4,35 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { 
-  Tenant, 
-  Provider, 
-  Service, 
-  TimeSlot, 
+import {
+  Tenant,
+  Provider,
+  Service,
+  TimeSlot,
   Booking,
-  Category 
+  Category
 } from "../types";
-import { 
-  getProviders, 
-  getServices, 
-  getSlots, 
+import {
+  getProviders,
+  getServices,
+  getSlots,
   createBooking,
   getMyBookings,
   updateBookingStatus,
   rescheduleBooking,
   getCategories
 } from "../lib/api.js";
-import { 
-  Calendar as CalendarIcon, 
-  Clock, 
-  User, 
-  Mail, 
+import {
+  Calendar as CalendarIcon,
+  Clock,
+  User,
+  Mail,
   Lock,
-  Phone, 
-  CheckCircle, 
-  ArrowLeft, 
-  AlertCircle, 
-  ChevronLeft, 
+  Phone,
+  CheckCircle,
+  ArrowLeft,
+  AlertCircle,
+  ChevronLeft,
   ChevronRight,
   CalendarDays,
   FileText,
@@ -89,8 +89,8 @@ const getServiceIcon = (name: string) => {
   return "🗓️";
 };
 
-export default function ClientPortal({ 
-  tenant, 
+export default function ClientPortal({
+  tenant,
   selectedProvider: initialSelectedProvider,
   currentUser,
   authMode,
@@ -113,33 +113,33 @@ export default function ClientPortal({
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
   const [serviceSearchTerm, setServiceSearchTerm] = useState<string>("");
-  
+
   const [registerRole, setRegisterRole] = useState<"client" | "provider">("client");
   const [registerCategoryId, setRegisterCategoryId] = useState<string>("");
   const [registerBio, setRegisterBio] = useState<string>("");
 
   const [providers, setProviders] = useState<Provider[]>([]);
   const [services, setServices] = useState<Service[]>([]);
-  
+
   // Tab State
   const [activeTab, setActiveTab] = useState<"new" | "my">("new");
-  
+
   // Selection States
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(initialSelectedProvider || null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(""); // YYYY-MM-DD
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
-  
+
   // Slots State
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [slotsLoading, setSlotsLoading] = useState<boolean>(false);
-  
+
   // Form States
   const [clientName, setClientName] = useState<string>("");
   const [clientEmail, setClientEmail] = useState<string>("");
   const [clientPhone, setClientPhone] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
-  
+
   // Flow/Status States
   // 1: Service Selection (Filtered by Provider), 2: Date/Time Selection, 3: Client Info, 4: Success
   const [step, setStep] = useState<number>(1);
@@ -187,8 +187,8 @@ export default function ClientPortal({
       try {
         const provs = await getProviders(tenant.id);
         setProviders(provs);
-        
-        const servs = await getServices();
+
+        const servs = await getServices(undefined, tenant.id);
         setServices(servs);
 
         const cats = await getCategories();
@@ -223,7 +223,7 @@ export default function ClientPortal({
       }
     }
     loadData();
-    
+
     // Reset selection if tenant changes
     setSelectedService(null);
     setSelectedDate("");
@@ -233,23 +233,30 @@ export default function ClientPortal({
     setActiveTab("new");
   }, [tenant]);
 
-  // Filter services STRICTLY for the selected provider
+  // Filter services STRICTLY for the selected provider & tenant
   const filteredServices = services.filter(s => {
-    // Must match the selected provider
+    // 1) Must belong to a provider of this tenant
+    const provider = providers.find(p => p.id === s.providerId);
+    if (!provider) {
+      return false;
+    }
+
+    // 2) Must match the selected provider if one is active
     if (selectedProvider && s.providerId !== selectedProvider.id) {
       return false;
     }
 
-    const provider = providers.find(p => p.id === s.providerId);
-    const matchesCategory = selectedCategoryFilter === "all" 
-      ? true 
-      : provider?.categoryId === selectedCategoryFilter;
-      
+    // 3) Category filter
+    const matchesCategory = selectedCategoryFilter === "all"
+      ? true
+      : provider.categoryId === selectedCategoryFilter;
+
+    // 4) Search term filter
     const searchLower = serviceSearchTerm.trim().toLowerCase();
-    const matchesSearch = searchLower === "" 
-      ? true 
-      : s.name.toLowerCase().includes(searchLower) || 
-        (s.description && s.description.toLowerCase().includes(searchLower));
+    const matchesSearch = searchLower === ""
+      ? true
+      : s.name.toLowerCase().includes(searchLower) ||
+      (s.description && s.description.toLowerCase().includes(searchLower));
 
     return matchesCategory && matchesSearch;
   });
@@ -366,7 +373,7 @@ export default function ClientPortal({
     const month = (currentMonth.getMonth() + 1).toString().padStart(2, "0");
     const dayStr = day.toString().padStart(2, "0");
     const dateStr = `${year}-${month}-${dayStr}`;
-    
+
     const todayStr = getTodayLocalDateString();
     if (dateStr < todayStr) return;
 
@@ -379,7 +386,7 @@ export default function ClientPortal({
     const month = (rescheduleMonth.getMonth() + 1).toString().padStart(2, "0");
     const dayStr = day.toString().padStart(2, "0");
     const dateStr = `${year}-${month}-${dayStr}`;
-    
+
     const todayStr = getTodayLocalDateString();
     if (dateStr < todayStr) return;
 
@@ -535,8 +542,8 @@ export default function ClientPortal({
                 {authMode === "login" ? "Entrar na sua Conta" : "Criar sua Conta"}
               </h3>
               <p className="text-4xs text-gray-500">
-                {authMode === "login" 
-                  ? "Entre para ver seus agendamentos e agendar mais rápido." 
+                {authMode === "login"
+                  ? "Entre para ver seus agendamentos e agendar mais rápido."
                   : "Cadastre-se para acompanhar seu histórico de reservas."
                 }
               </p>
@@ -558,22 +565,20 @@ export default function ClientPortal({
                       <button
                         type="button"
                         onClick={() => setRegisterRole("client")}
-                        className={`py-1.5 rounded-lg text-3xs font-bold transition-all ${
-                          registerRole === "client"
+                        className={`py-1.5 rounded-lg text-3xs font-bold transition-all ${registerRole === "client"
                             ? "bg-white text-indigo-650 shadow-sm border border-gray-150"
                             : "text-gray-400 hover:text-gray-650"
-                        }`}
+                          }`}
                       >
                         Sou Cliente
                       </button>
                       <button
                         type="button"
                         onClick={() => setRegisterRole("provider")}
-                        className={`py-1.5 rounded-lg text-3xs font-bold transition-all ${
-                          registerRole === "provider"
+                        className={`py-1.5 rounded-lg text-3xs font-bold transition-all ${registerRole === "provider"
                             ? "bg-white text-indigo-650 shadow-sm border border-gray-150"
                             : "text-gray-400 hover:text-gray-650"
-                        }`}
+                          }`}
                       >
                         Sou Profissional
                       </button>
@@ -749,22 +754,20 @@ export default function ClientPortal({
         <div className="flex border-b border-gray-100 bg-gray-50/50">
           <button
             onClick={() => setActiveTab("new")}
-            className={`flex-1 py-4 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-2 cursor-pointer ${
-              activeTab === "new"
+            className={`flex-1 py-4 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-2 cursor-pointer ${activeTab === "new"
                 ? `border-${currentTheme.accent} text-${currentTheme.accent} bg-white`
                 : "border-transparent text-gray-400 hover:text-gray-600"
-            }`}
+              }`}
           >
             <CalendarDays className="w-4 h-4" />
             Novo Agendamento
           </button>
           <button
             onClick={() => setActiveTab("my")}
-            className={`flex-1 py-4 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-2 cursor-pointer ${
-              activeTab === "my"
+            className={`flex-1 py-4 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-2 cursor-pointer ${activeTab === "my"
                 ? `border-${currentTheme.accent} text-${currentTheme.accent} bg-white`
                 : "border-transparent text-gray-400 hover:text-gray-600"
-            }`}
+              }`}
           >
             <FileText className="w-4 h-4" />
             Meus Agendamentos
@@ -805,7 +808,7 @@ export default function ClientPortal({
         <AnimatePresence mode="wait">
           {activeTab === "new" ? (
             <div key="tab-new">
-              
+
               {/* STEP 1: SERVICES OF THE SELECTED PROVIDER ONLY */}
               {step === 1 && (
                 <motion.div
@@ -834,11 +837,10 @@ export default function ClientPortal({
                               <button
                                 key={p.id}
                                 onClick={() => setSelectedProvider(p)}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                                  isCurrent
+                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${isCurrent
                                     ? `bg-slate-900 text-white shadow-sm`
                                     : "text-gray-600 hover:bg-gray-200"
-                                }`}
+                                  }`}
                               >
                                 {p.avatarUrl ? (
                                   <img src={p.avatarUrl} alt={p.name} className="w-4 h-4 rounded-full object-cover" />
@@ -872,11 +874,10 @@ export default function ClientPortal({
                     <div className="flex gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
                       <button
                         onClick={() => setSelectedCategoryFilter("all")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          selectedCategoryFilter === "all"
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${selectedCategoryFilter === "all"
                             ? "bg-slate-900 text-white shadow-sm"
                             : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                        }`}
+                          }`}
                       >
                         Todos
                       </button>
@@ -884,11 +885,10 @@ export default function ClientPortal({
                         <button
                           key={cat.id}
                           onClick={() => setSelectedCategoryFilter(cat.id)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                            selectedCategoryFilter === cat.id
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${selectedCategoryFilter === cat.id
                               ? "bg-slate-900 text-white shadow-sm"
                               : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                          }`}
+                            }`}
                         >
                           <span>{cat.imageUrl}</span>
                           <span>{cat.name}</span>
@@ -908,16 +908,15 @@ export default function ClientPortal({
                       filteredServices.map(service => {
                         const isSelected = selectedService?.id === service.id;
                         const icon = getServiceIcon(service.name);
-                        
+
                         return (
                           <div
                             key={service.id}
                             onClick={() => handleSelectService(service)}
-                            className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex gap-4 items-start ${
-                              isSelected 
-                                ? `border-${currentTheme.accent} ${currentTheme.bg} shadow-md` 
+                            className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex gap-4 items-start ${isSelected
+                                ? `border-${currentTheme.accent} ${currentTheme.bg} shadow-md`
                                 : "border-gray-150 hover:border-indigo-600 hover:shadow-md hover:translate-y-[-2px] bg-white group"
-                            }`}
+                              }`}
                           >
                             <span className="text-3xl p-3 bg-gray-50 rounded-xl border border-gray-100 shrink-0 select-none shadow-sm group-hover:scale-105 transition-transform">
                               {icon}
@@ -931,7 +930,7 @@ export default function ClientPortal({
                               </div>
 
                               <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{service.description || "Atendimento especializado com horário reservado."}</p>
-                              
+
                               <div className="flex justify-between items-center pt-2">
                                 <span className="text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition-transform">
                                   Agendar Horário &rarr;
@@ -959,7 +958,7 @@ export default function ClientPortal({
                   className="space-y-6"
                 >
                   <div className="flex items-center gap-3">
-                    <button 
+                    <button
                       onClick={() => {
                         setSelectedService(null);
                         setStep(1);
@@ -1014,7 +1013,7 @@ export default function ClientPortal({
                         {Array.from({ length: firstDayOfMonth(currentMonth) }).map((_, i) => (
                           <div key={`empty-${i}`} className="aspect-square"></div>
                         ))}
-                        
+
                         {Array.from({ length: daysInMonth(currentMonth) }).map((_, i) => {
                           const day = i + 1;
                           const year = currentMonth.getFullYear();
@@ -1022,7 +1021,7 @@ export default function ClientPortal({
                           const dayStr = day.toString().padStart(2, "0");
                           const dateStr = `${year}-${month}-${dayStr}`;
                           const isSelected = selectedDate === dateStr;
-                          
+
                           const todayStr = getTodayLocalDateString();
                           const isPast = dateStr < todayStr;
                           const isWeekend = new Date(year, currentMonth.getMonth(), day).getDay() === 0;
@@ -1032,15 +1031,14 @@ export default function ClientPortal({
                               key={`day-${day}`}
                               disabled={isPast}
                               onClick={() => selectDateHandler(day)}
-                              className={`aspect-square flex items-center justify-center rounded-xl text-xs font-medium transition-all cursor-pointer ${
-                                isPast 
-                                  ? "text-gray-250 cursor-not-allowed" 
+                              className={`aspect-square flex items-center justify-center rounded-xl text-xs font-medium transition-all cursor-pointer ${isPast
+                                  ? "text-gray-250 cursor-not-allowed"
                                   : isSelected
                                     ? `bg-${currentTheme.accent} text-white shadow-md font-bold scale-105`
                                     : isWeekend
                                       ? "text-red-500 hover:bg-red-50 font-bold"
                                       : "text-gray-700 hover:bg-gray-100 font-semibold"
-                              }`}
+                                }`}
                             >
                               {day}
                             </button>
@@ -1073,20 +1071,19 @@ export default function ClientPortal({
                               <Clock className="w-4 h-4 text-gray-400" />
                               Horários em {formatDateHuman(selectedDate)}
                             </h4>
-                            
+
                             <div className="grid grid-cols-2 gap-2 max-h-[250px] overflow-y-auto pr-1">
                               {slots.map(slot => (
                                 <button
                                   key={slot.time}
                                   disabled={!slot.available}
                                   onClick={() => setSelectedSlot(slot)}
-                                  className={`py-2.5 px-3 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer ${
-                                    !slot.available
+                                  className={`py-2.5 px-3 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer ${!slot.available
                                       ? "bg-gray-50 border-gray-100 text-gray-350 cursor-not-allowed text-left flex flex-col opacity-60"
                                       : selectedSlot?.time === slot.time
                                         ? `bg-${currentTheme.accent} border-${currentTheme.accent} text-white shadow-sm`
                                         : "bg-white border-gray-200 text-gray-700 hover:border-indigo-600"
-                                  }`}
+                                    }`}
                                 >
                                   <span>{slot.time}</span>
                                 </button>
@@ -1095,7 +1092,7 @@ export default function ClientPortal({
                           </div>
 
                           {selectedSlot && (
-                            <motion.div 
+                            <motion.div
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
                               className="pt-4 border-t border-gray-100"
@@ -1125,7 +1122,7 @@ export default function ClientPortal({
                   className="space-y-6"
                 >
                   <div className="flex items-center gap-3">
-                    <button 
+                    <button
                       onClick={() => {
                         setStep(2);
                       }}
@@ -1207,7 +1204,7 @@ export default function ClientPortal({
                     {/* Booking Summary Box */}
                     <div className="md:col-span-5 bg-gray-50 border border-gray-150 rounded-2xl p-6 self-start space-y-4">
                       <h3 className="font-bold text-slate-900 text-sm border-b border-gray-200 pb-2">Resumo da Reserva</h3>
-                      
+
                       <div className="space-y-3 text-xs">
                         <div className="flex justify-between items-start gap-4">
                           <span className="text-gray-400">Serviço:</span>
@@ -1348,29 +1345,27 @@ export default function ClientPortal({
                     const start = new Date(booking.startsAt);
                     const formattedDate = start.toLocaleDateString("pt-BR", { day: "numeric", month: "short", year: "numeric" });
                     const formattedTime = start.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
-                    
+
                     const isCancelled = booking.status === "cancelled";
                     const isCompleted = booking.status === "completed";
-                    
+
                     return (
                       <div
                         key={booking.id}
-                        className={`p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                          isCancelled 
-                            ? "bg-gray-50/50 border-gray-150 opacity-60" 
+                        className={`p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${isCancelled
+                            ? "bg-gray-50/50 border-gray-150 opacity-60"
                             : "bg-white border-gray-150 shadow-sm"
-                        }`}
+                          }`}
                       >
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-2">
                             <h3 className="font-bold text-gray-900 text-sm">{booking.serviceName}</h3>
-                            <span className={`text-4xs font-extrabold uppercase px-2 py-0.5 rounded-full ${
-                              isCancelled 
-                                ? "bg-red-50 text-red-500 border border-red-100" 
-                                : isCompleted 
+                            <span className={`text-4xs font-extrabold uppercase px-2 py-0.5 rounded-full ${isCancelled
+                                ? "bg-red-50 text-red-500 border border-red-100"
+                                : isCompleted
                                   ? "bg-green-50 text-green-500 border border-green-100"
                                   : "bg-blue-50 text-blue-500 border border-blue-100"
-                            }`}>
+                              }`}>
                               {booking.status === "confirmed" ? "confirmado" : booking.status}
                             </span>
                           </div>
@@ -1454,13 +1449,13 @@ export default function ClientPortal({
                       {rescheduleMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
                     </h4>
                     <div className="flex items-center gap-1">
-                      <button 
+                      <button
                         onClick={handleReschedulePrevMonth}
                         className="p-1 hover:bg-gray-50 rounded text-gray-600 border border-gray-100 cursor-pointer"
                       >
                         <ChevronLeft className="w-3.5 h-3.5" />
                       </button>
-                      <button 
+                      <button
                         onClick={handleRescheduleNextMonth}
                         className="p-1 hover:bg-gray-50 rounded text-gray-600 border border-gray-100 cursor-pointer"
                       >
@@ -1483,7 +1478,7 @@ export default function ClientPortal({
                     {Array.from({ length: firstDayOfMonth(rescheduleMonth) }).map((_, i) => (
                       <div key={`empty-res-${i}`} className="aspect-square"></div>
                     ))}
-                    
+
                     {Array.from({ length: daysInMonth(rescheduleMonth) }).map((_, i) => {
                       const day = i + 1;
                       const year = rescheduleMonth.getFullYear();
@@ -1491,7 +1486,7 @@ export default function ClientPortal({
                       const dayStr = day.toString().padStart(2, "0");
                       const dateStr = `${year}-${month}-${dayStr}`;
                       const isSelected = rescheduleDate === dateStr;
-                      
+
                       const todayStr = getTodayLocalDateString();
                       const isPast = dateStr < todayStr;
                       const isWeekend = new Date(year, rescheduleMonth.getMonth(), day).getDay() === 0;
@@ -1501,15 +1496,14 @@ export default function ClientPortal({
                           key={`resday-${day}`}
                           disabled={isPast}
                           onClick={() => selectRescheduleDateHandler(day)}
-                          className={`aspect-square flex items-center justify-center rounded text-xs font-semibold cursor-pointer ${
-                            isPast 
-                              ? "text-gray-100 cursor-not-allowed" 
+                          className={`aspect-square flex items-center justify-center rounded text-xs font-semibold cursor-pointer ${isPast
+                              ? "text-gray-100 cursor-not-allowed"
                               : isSelected
                                 ? `bg-${currentTheme.accent} text-white font-bold`
                                 : isWeekend
                                   ? "text-red-400 hover:bg-red-50/50"
                                   : "text-gray-700 hover:bg-gray-150"
-                          }`}
+                            }`}
                         >
                           {day}
                         </button>
@@ -1547,13 +1541,12 @@ export default function ClientPortal({
                               key={slot.time}
                               disabled={!slot.available}
                               onClick={() => setSelectedRescheduleSlot(slot)}
-                              className={`py-2 rounded-lg text-xs font-semibold font-mono border transition-all cursor-pointer ${
-                                !slot.available
+                              className={`py-2 rounded-lg text-xs font-semibold font-mono border transition-all cursor-pointer ${!slot.available
                                   ? "bg-gray-50 border-gray-105 text-gray-200 cursor-not-allowed"
                                   : selectedRescheduleSlot?.time === slot.time
                                     ? `bg-${currentTheme.accent} border-${currentTheme.accent} text-white shadow-sm`
                                     : "bg-white border-gray-200 text-gray-700 hover:border-gray-400"
-                              }`}
+                                }`}
                             >
                               {slot.time}
                             </button>

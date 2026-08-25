@@ -386,6 +386,7 @@ export default function App() {
         } else {
           // Home '/' or '/cadastrar'
           setSelectedTenant(null);
+          setSelectedProvider(null);
           setIs404(false);
         }
       } catch (err: any) {
