@@ -290,3 +290,28 @@ export async function socialLogin(email: string, name: string, provider: string)
   }
   return res.json();
 }
+
+export async function updateProviderSettings(settings: {
+  name?: string;
+  email?: string;
+  password?: string;
+  bio?: string;
+  avatarUrl?: string;
+  serviceLocationType?: 'own_space' | 'at_client' | 'both';
+  slug?: string;
+  themeColor?: string;
+  tenantName?: string;
+  tenantDescription?: string;
+}): Promise<{ success: boolean; provider: Provider; tenant?: Tenant; user: any }> {
+  const res = await fetch(`${API_BASE}/provider/settings`, {
+    method: "PUT",
+    headers: getHeaders(),
+    body: JSON.stringify(settings),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || err.message || "Erro ao atualizar configurações do prestador.");
+  }
+  return res.json();
+}
+

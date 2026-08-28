@@ -9,7 +9,9 @@ import {
   Service, 
   Booking, 
   AvailabilityRule, 
-  AvailabilityException 
+  AvailabilityException,
+  Tenant,
+  ServiceLocationType
 } from "../types";
 import { 
   getServices, 
@@ -22,7 +24,8 @@ import {
   createException, 
   deleteException, 
   getBookings, 
-  updateBookingStatus 
+  updateBookingStatus,
+  updateProviderSettings
 } from "../lib/api";
 import { 
   BarChart, 
@@ -57,19 +60,39 @@ import {
   UserCheck,
   Search,
   Check,
-  FileText
+  FileText,
+  Settings,
+  Key,
+  Lock,
+  Mail,
+  Globe,
+  MapPin,
+  Copy,
+  ExternalLink,
+  Eye,
+  Palette
 } from "lucide-react";
 import { motion } from "motion/react";
 
 interface ProviderDashboardProps {
   provider: Provider;
+  tenant?: Tenant | null;
   isNewOnboarding?: boolean;
   onOnboardingComplete?: () => void;
+  onProviderUpdate?: (updated: Provider) => void;
+  onTenantUpdate?: (updated: Tenant) => void;
 }
 
-type TabType = "overview" | "bookings" | "services" | "availability";
+type TabType = "overview" | "bookings" | "services" | "availability" | "settings";
 
-export default function ProviderDashboard({ provider, isNewOnboarding, onOnboardingComplete }: ProviderDashboardProps) {
+export default function ProviderDashboard({ 
+  provider, 
+  tenant, 
+  isNewOnboarding, 
+  onOnboardingComplete,
+  onProviderUpdate,
+  onTenantUpdate 
+}: ProviderDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   
   // Dynamic Data
@@ -162,6 +185,86 @@ export default function ProviderDashboard({ provider, isNewOnboarding, onOnboard
     setSuccessMsg(msg);
     setTimeout(() => setSuccessMsg(null), 4000);
   };
+
+  // Settings State
+  const [settingsName, setSettingsName] = useState<string>(provider.name || "");
+  const [settingsEmail, setSettingsEmail] = useState<string>(provider.email || "");
+  const [settingsBio, setSettingsBio] = useState<string>(provider.bio || "");
+  const [settingsLocationType, setSettingsLocationType] = useState<ServiceLocationType>(provider.serviceLocationType || "both");
+  const [settingsAvatarUrl, setSettingsAvatarUrl] = useState<string>(provider.avatarUrl || "");
+  const [settingsSlug, setSettingsSlug] = useState<string>(tenant?.slug || "");
+  const [settingsThemeColor, setSettingsThemeColor] = useState<string>(tenant?.themeColor || "indigo");
+  const [settingsTenantName, setSettingsTenantName] = useState<string>(tenant?.name || provider.name || "");
+  const [settingsTenantDesc, setSettingsTenantDesc] = useState<string>(tenant?.description || provider.bio || "");
+  
+  const [settingsPassword, setSettingsPassword] = useState<string>("");
+  const [settingsConfirmPassword, setSettingsConfirmPassword] = useState<string>("");
+  const [settingsSaving, setSettingsSaving] = useState<boolean>(false);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
+
+  useEffect(() => {
+    setSettingsName(provider.name || "");
+    setSettingsEmail(provider.email || "");
+    setSettingsBio(provider.bio || "");
+    setSettingsLocationType(provider.serviceLocationType || "both");
+    setSettingsAvatarUrl(provider.avatarUrl || "");
+    if (tenant) {
+      setSettingsSlug(tenant.slug || "");
+      setSettingsThemeColor(tenant.themeColor || "indigo");
+      setSettingsTenantName(tenant.name || provider.name || "");
+      setSettingsTenantDesc(tenant.description || provider.bio || "");
+    }
+  }, [provider, tenant]);
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSettingsSaving(true);
+    setSettingsError(null);
+
+    if (settingsPassword && settingsPassword.length < 6) {
+      setSettingsError("A nova senha deve conter pelo menos 6 caracteres.");
+      setSettingsSaving(false);
+      return;
+    }
+
+    if (settingsPassword && settingsPassword !== settingsConfirmPassword) {
+      setSettingsError("A confirmação de senha não confere com a nova senha digitada.");
+      setSettingsSaving(false);
+      return;
+    }
+
+    try {
+      const res = await updateProviderSettings({
+        name: settingsName,
+        email: settingsEmail,
+        password: settingsPassword || undefined,
+        bio: settingsBio,
+        avatarUrl: settingsAvatarUrl,
+        serviceLocationType: settingsLocationType,
+        slug: settingsSlug || undefined,
+        themeColor: settingsThemeColor || undefined,
+        tenantName: settingsTenantName || undefined,
+        tenantDescription: settingsTenantDesc || undefined
+      });
+
+      showFlashSuccess("Configurações atualizadas com sucesso!");
+      setSettingsPassword("");
+      setSettingsConfirmPassword("");
+
+      if (res.provider && onProviderUpdate) {
+        onProviderUpdate(res.provider);
+      }
+      if (res.tenant && onTenantUpdate) {
+        onTenantUpdate(res.tenant);
+      }
+    } catch (err: any) {
+      setSettingsError(err.message || "Erro ao salvar configurações.");
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
+
 
   // 1. Manage Bookings
   const handleStatusChange = async (bookingId: string, newStatus: Booking["status"]) => {
@@ -454,6 +557,18 @@ export default function ProviderDashboard({ provider, isNewOnboarding, onOnboard
           >
             <Clock className="w-4 h-4 shrink-0" />
             Agenda & Bloqueios
+          </button>
+
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all text-left w-full whitespace-nowrap shrink-0 ${
+              activeTab === "settings" 
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/15" 
+                : "text-slate-400 hover:text-white hover:bg-slate-900"
+            }`}
+          >
+            <Settings className="w-4 h-4 shrink-0" />
+            Configurações
           </button>
         </nav>
       </div>
@@ -1074,8 +1189,284 @@ export default function ProviderDashboard({ provider, isNewOnboarding, onOnboard
             </div>
           </div>
         )}
+
+        {/* ========================================= TAB: SETTINGS ========================================= */}
+        {activeTab === "settings" && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-indigo-400" />
+                  Configurações da Conta & Estabelecimento
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Atualize suas credenciais de login, senha, link de divulgação e modalidade de atendimento.
+                </p>
+              </div>
+            </div>
+
+            {settingsError && (
+              <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-red-200 text-xs font-semibold flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                {settingsError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveSettings} className="space-y-6">
+              
+              {/* Card 1: Perfil & Apresentação */}
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-5">
+                <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+                  <UserCheck className="w-4 h-4 text-indigo-400" />
+                  <h3 className="font-bold text-white text-sm">Perfil & Apresentação Profissional</h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-slate-300">Nome do Profissional / Estúdio *</label>
+                    <input
+                      type="text"
+                      required
+                      value={settingsName}
+                      onChange={(e) => setSettingsName(e.target.value)}
+                      placeholder="Ex: Juliana Sobrancelhas"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-slate-300">Ícone ou Emoji de Avatar</label>
+                    <input
+                      type="text"
+                      value={settingsAvatarUrl}
+                      onChange={(e) => setSettingsAvatarUrl(e.target.value)}
+                      placeholder="Ex: 💅, ✂️, 💄 ou URL da imagem"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label className="font-bold text-slate-300">Biografia / Apresentação de Especialidades</label>
+                    <textarea
+                      rows={3}
+                      value={settingsBio}
+                      onChange={(e) => setSettingsBio(e.target.value)}
+                      placeholder="Descreva suas especialidades, cursos e diferenciais para seus clientes..."
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Modalidade de Atendimento */}
+                <div className="space-y-2 pt-2 border-t border-slate-850">
+                  <label className="font-bold text-slate-300 text-xs block">
+                    Onde você atende seus clientes? (Modalidade de Atendimento)
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSettingsLocationType("own_space")}
+                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        settingsLocationType === "own_space"
+                          ? "bg-indigo-600/20 border-indigo-500 text-white font-bold shadow-sm shadow-indigo-600/20"
+                          : "bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                      }`}
+                    >
+                      <div className="text-sm font-extrabold flex items-center gap-1.5">
+                        🏢 Espaço Próprio
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1 font-normal">
+                        Atendimento apenas no seu estúdio/salão
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSettingsLocationType("at_client")}
+                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        settingsLocationType === "at_client"
+                          ? "bg-indigo-600/20 border-indigo-500 text-white font-bold shadow-sm shadow-indigo-600/20"
+                          : "bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                      }`}
+                    >
+                      <div className="text-sm font-extrabold flex items-center gap-1.5">
+                        🚗 A Domicílio
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1 font-normal">
+                        Atendimento exclusivo no endereço do cliente
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSettingsLocationType("both")}
+                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        settingsLocationType === "both"
+                          ? "bg-indigo-600/20 border-indigo-500 text-white font-bold shadow-sm shadow-indigo-600/20"
+                          : "bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                      }`}
+                    >
+                      <div className="text-sm font-extrabold flex items-center gap-1.5">
+                        🔄 Ambos
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1 font-normal">
+                        O cliente escolhe no agendamento
+                      </p>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Credenciais & Segurança (Login e Senha) */}
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-5">
+                <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+                  <Lock className="w-4 h-4 text-indigo-400" />
+                  <h3 className="font-bold text-white text-sm">Acesso & Segurança da Conta (Login / Senha)</h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-slate-300">E-mail de Login *</label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                      <input
+                        type="email"
+                        required
+                        value={settingsEmail}
+                        onChange={(e) => setSettingsEmail(e.target.value)}
+                        placeholder="seuemail@exemplo.com"
+                        className="w-full bg-slate-900 border border-slate-800 pl-9 pr-3 py-2.5 rounded-xl text-white font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-slate-300">Nova Senha (deixe em branco para manter)</label>
+                    <div className="relative">
+                      <Key className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                      <input
+                        type="password"
+                        value={settingsPassword}
+                        onChange={(e) => setSettingsPassword(e.target.value)}
+                        placeholder="Mínimo 6 caracteres"
+                        className="w-full bg-slate-900 border border-slate-800 pl-9 pr-3 py-2.5 rounded-xl text-white font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-slate-300">Confirmar Nova Senha</label>
+                    <div className="relative">
+                      <Key className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                      <input
+                        type="password"
+                        value={settingsConfirmPassword}
+                        onChange={(e) => setSettingsConfirmPassword(e.target.value)}
+                        placeholder="Repita a nova senha"
+                        className="w-full bg-slate-900 border border-slate-800 pl-9 pr-3 py-2.5 rounded-xl text-white font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Link e URL Personalizada */}
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-5">
+                <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+                  <Globe className="w-4 h-4 text-indigo-400" />
+                  <h3 className="font-bold text-white text-sm">Link de Agendamento & Divulgação (URL)</h3>
+                </div>
+
+                <div className="space-y-4 text-xs">
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-slate-300">URL / Slug Personalizado do Portal</label>
+                    <div className="flex items-center gap-2">
+                      <span className="bg-slate-900 text-slate-400 px-3 py-2.5 rounded-xl border border-slate-800 font-mono text-xs select-none">
+                        portalagendeai.app.br/
+                      </span>
+                      <input
+                        type="text"
+                        value={settingsSlug}
+                        onChange={(e) => setSettingsSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+                        placeholder="meu-estudio"
+                        className="flex-1 bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Share Preview Banner */}
+                  <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="space-y-1 min-w-0">
+                      <span className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider block">
+                        Link público para seus clientes agendarem
+                      </span>
+                      <p className="text-xs text-slate-200 font-mono truncate">
+                        {window.location.origin}/{settingsSlug || tenant?.slug || "agendar"}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const link = `${window.location.origin}/${settingsSlug || tenant?.slug || ""}`;
+                          navigator.clipboard.writeText(link);
+                          setCopiedLink(true);
+                          setTimeout(() => setCopiedLink(false), 2500);
+                        }}
+                        className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        {copiedLink ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-green-400" />
+                            <span className="text-green-400">Copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Copiar Link</span>
+                          </>
+                        )}
+                      </button>
+
+                      <a
+                        href={`/${settingsSlug || tenant?.slug || ""}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold flex items-center gap-1.5 transition-colors"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Abrir Portal</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botão de Salvar Alterações */}
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={settingsSaving}
+                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-indigo-600/20 transition-all cursor-pointer"
+                >
+                  {settingsSaving ? (
+                    <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Salvar Todas as Configurações
+                    </>
+                  )}
+                </button>
+              </div>
+
+            </form>
+          </div>
+        )}
       </div>
 
     </div>
   );
 }
+

@@ -426,7 +426,12 @@ export default function App() {
       // If logged in as provider, set view to provider and select correct provider profile
       if (res.user.role === "provider") {
         setViewMode("provider");
-        const matchingProv = providers.find(p => p.id === res.user.providerId);
+        let matchingProv = providers.find(p => p.id === res.user.providerId);
+        if (!matchingProv) {
+          const loadedProviders = await getProviders(res.user.tenantId || undefined);
+          setProviders(loadedProviders);
+          matchingProv = loadedProviders.find(p => p.id === res.user.providerId);
+        }
         if (matchingProv) {
           setSelectedProvider(matchingProv);
           const matchingTenant = tenants.find(t => t.id === matchingProv.tenantId);
@@ -467,6 +472,16 @@ export default function App() {
         const matchingProv = loadedProviders.find(p => p.id === res.user.providerId);
         if (matchingProv) {
           setSelectedProvider(matchingProv);
+        } else {
+          setSelectedProvider({
+            id: res.user.providerId,
+            tenantId: res.user.tenantId || tenantId || 'tenant-1',
+            categoryId,
+            name: res.user.name || authName,
+            email: res.user.email || authEmail,
+            bio: bio || "",
+            serviceLocationType: serviceLocationType || 'own_space'
+          });
         }
         setIsNewProviderOnboarding(true);
         setViewMode("provider");
@@ -581,8 +596,20 @@ export default function App() {
             {/* Discreet Provider / Client Switcher */}
             {selectedTenant && (
               <button
-                onClick={() => setViewMode(viewMode === "client" ? "provider" : "client")}
-                className="text-slate-400 hover:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors mr-2 whitespace-nowrap"
+                onClick={() => {
+                  const nextMode = viewMode === "client" ? "provider" : "client";
+                  if (nextMode === "provider" && !selectedProvider) {
+                    if (currentUser?.role === "provider" && currentUser.providerId) {
+                      const match = providers.find(p => p.id === currentUser.providerId);
+                      if (match) setSelectedProvider(match);
+                      else if (providers.length > 0) setSelectedProvider(providers[0]);
+                    } else if (providers.length > 0) {
+                      setSelectedProvider(providers[0]);
+                    }
+                  }
+                  setViewMode(nextMode);
+                }}
+                className="text-slate-400 hover:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors mr-2 whitespace-nowrap cursor-pointer"
               >
                 {viewMode === "client" ? (
                   <>
@@ -912,8 +939,17 @@ export default function App() {
               >
                 <ProviderDashboard 
                   provider={selectedProvider} 
+                  tenant={selectedTenant}
                   isNewOnboarding={isNewProviderOnboarding}
                   onOnboardingComplete={() => setIsNewProviderOnboarding(false)}
+                  onProviderUpdate={(updated) => {
+                    setSelectedProvider(updated);
+                    setProviders(prev => prev.map(p => p.id === updated.id ? updated : p));
+                  }}
+                  onTenantUpdate={(updated) => {
+                    setSelectedTenant(updated);
+                    setTenants(prev => prev.map(t => t.id === updated.id ? updated : t));
+                  }}
                 />
               </motion.div>
             ) : (

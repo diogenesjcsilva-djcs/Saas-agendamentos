@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query } from './db.js';
+import { query, pool } from './db.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { authMiddleware, AuthenticatedRequest } from './auth-middleware.js';
@@ -121,32 +121,44 @@ router.post('/tenants', tenantRateLimiter, async (req, res) => {
     }
 
     const tenantId = `tenant-${Date.now()}`;
-
-    // 1. Criar Tenant
-    const newTenants = await query<Tenant>(
-      `INSERT INTO tenants (id, name, slug, logo_url, description, theme_color, accent_color)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, name, slug, logo_url AS "logoUrl", description, theme_color AS "themeColor", accent_color AS "accentColor"`,
-      [tenantId, name.trim(), cleanSlug, logoUrl || "🗓️", description.trim(), themeColor, accentColor]
-    );
-
-    const tenant = newTenants[0];
-
-    // 2. Criar Provider (Profissional)
     const providerId = `provider-${Date.now()}`;
-    await query(
-      `INSERT INTO providers (id, tenant_id, category_id, name, email, bio) 
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [providerId, tenantId, null, ownerName.trim(), email.toLowerCase().trim(), "Administrador / Proprietário"]
-    );
-
-    // 3. Criar Usuário (com hash de senha)
     const userId = `user-${Date.now()}`;
     const passwordHash = await bcrypt.hash(password, 10);
-    await query(
-      `INSERT INTO users (id, email, password_hash, name, role, tenant_id, provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [userId, email.toLowerCase().trim(), passwordHash, ownerName.trim(), 'provider', tenantId, providerId]
-    );
+
+    const client = await pool.connect();
+    let tenant: Tenant;
+    try {
+      await client.query('BEGIN');
+
+      // 1. Criar Tenant
+      const newTenants = await client.query(
+        `INSERT INTO tenants (id, name, slug, logo_url, description, theme_color, accent_color)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, name, slug, logo_url AS "logoUrl", description, theme_color AS "themeColor", accent_color AS "accentColor"`,
+        [tenantId, name.trim(), cleanSlug, logoUrl || "🗓️", description.trim(), themeColor, accentColor]
+      );
+      tenant = newTenants.rows[0];
+
+      // 2. Criar Provider (Profissional)
+      await client.query(
+        `INSERT INTO providers (id, tenant_id, category_id, name, email, bio) 
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [providerId, tenantId, null, ownerName.trim(), email.toLowerCase().trim(), "Administrador / Proprietário"]
+      );
+
+      // 3. Criar Usuário (com hash de senha)
+      await client.query(
+        `INSERT INTO users (id, email, password_hash, name, role, tenant_id, provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [userId, email.toLowerCase().trim(), passwordHash, ownerName.trim(), 'provider', tenantId, providerId]
+      );
+
+      await client.query('COMMIT');
+    } catch (txError) {
+      await client.query('ROLLBACK');
+      throw txError;
+    } finally {
+      client.release();
+    }
 
     // 4. Gerar Token de Acesso JWT
     const secret = process.env.JWT_SECRET || "pulse-saas-secret-key-12345678";
@@ -163,7 +175,7 @@ router.post('/tenants', tenantRateLimiter, async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating tenant and provider:", error);
-    res.status(500).json({ error: "Internal server error", details: (error as Error).message });
+    res.status(500).json({ error: "Erro interno ao criar estabelecimento." });
   }
 });
 
@@ -175,7 +187,7 @@ router.get('/categories', async (req, res) => {
     res.json(categories);
   } catch (error) {
     console.error("Error fetching categories:", error);
-    res.status(500).json({ error: "Internal server error", details: (error as Error).message });
+    res.status(500).json({ error: "Erro interno ao buscar categorias." });
   }
 });
 
@@ -201,7 +213,157 @@ router.get('/providers', async (req, res) => {
     res.json(providers);
   } catch (error) {
     console.error("Error fetching providers:", error);
-    res.status(500).json({ error: "Internal server error", details: (error as Error).message });
+    res.status(500).json({ error: "Erro interno ao buscar profissionais." });
+  }
+});
+
+// Update Provider and Tenant Settings
+router.put('/provider/settings', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  const user = req.user;
+  if (!user || user.role !== 'provider' || !user.providerId) {
+    return res.status(403).json({ error: "Apenas profissionais autenticados podem alterar configurações de perfil." });
+  }
+
+  const { 
+    name, 
+    email, 
+    password, 
+    bio, 
+    avatarUrl, 
+    serviceLocationType, 
+    slug, 
+    themeColor,
+    tenantName,
+    tenantDescription 
+  } = req.body;
+
+  try {
+    // 1. Validate Email if provided
+    if (email && !isValidEmail(email)) {
+      return res.status(400).json({ error: "E-mail inválido." });
+    }
+
+    const userId = user.userId || (user as any).id;
+
+    // Check if new email already belongs to another user
+    if (email && email.toLowerCase().trim() !== user.email.toLowerCase().trim()) {
+      const existingUser = await query(`SELECT id FROM users WHERE email = $1 AND id != $2`, [email.toLowerCase().trim(), userId]);
+      if (existingUser.length > 0) {
+        return res.status(400).json({ error: "Este e-mail já está sendo utilizado por outro usuário." });
+      }
+    }
+
+    // 2. Validate Password if provided
+    let passwordHash: string | null = null;
+    if (password) {
+      if (typeof password !== 'string' || password.length < 6) {
+        return res.status(400).json({ error: "A nova senha deve ter pelo menos 6 caracteres." });
+      }
+      passwordHash = await bcrypt.hash(password, 10);
+    }
+
+    // 3. Validate serviceLocationType
+    const validLocations = ['own_space', 'at_client', 'both'];
+    const locationType = serviceLocationType && validLocations.includes(serviceLocationType)
+      ? serviceLocationType
+      : 'both';
+
+    // 4. Update Database within Transaction
+    const targetEmail = email ? email.toLowerCase().trim() : user.email;
+    const targetName = name ? name.trim() : user.name;
+
+    const client = await pool.connect();
+    let updatedTenant: any = null;
+    let updatedProvider: any = null;
+
+    try {
+      await client.query('BEGIN');
+
+      // Update Users Table
+      if (passwordHash) {
+        await client.query(
+          `UPDATE users SET name = $1, email = $2, password_hash = $3, avatar_url = $4 WHERE id = $5`,
+          [targetName, targetEmail, passwordHash, avatarUrl || null, userId]
+        );
+      } else {
+        await client.query(
+          `UPDATE users SET name = $1, email = $2, avatar_url = $3 WHERE id = $4`,
+          [targetName, targetEmail, avatarUrl || null, userId]
+        );
+      }
+
+      // Update Providers Table
+      await client.query(
+        `UPDATE providers 
+         SET name = $1, email = $2, bio = $3, avatar_url = $4, service_location_type = $5 
+         WHERE id = $6`,
+        [targetName, targetEmail, bio || '', avatarUrl || null, locationType, user.providerId]
+      );
+
+      // Update Tenant Table (if tenantId is associated)
+      if (user.tenantId) {
+        let cleanSlug = slug ? slug.toLowerCase().trim().replace(/[^a-z0-9-]/g, '-') : null;
+        if (cleanSlug) {
+          const existingTenantSlug = await client.query(`SELECT id FROM tenants WHERE slug = $1 AND id != $2`, [cleanSlug, user.tenantId]);
+          if (existingTenantSlug.rows.length > 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: "Esta URL/Slug já está em uso por outro estabelecimento." });
+          }
+        }
+
+        await client.query(
+          `UPDATE tenants 
+           SET name = COALESCE($1, name), 
+               slug = COALESCE($2, slug), 
+               description = COALESCE($3, description), 
+               theme_color = COALESCE($4, theme_color),
+               logo_url = COALESCE($5, logo_url)
+           WHERE id = $6`,
+          [tenantName || targetName, cleanSlug, tenantDescription || bio, themeColor || null, avatarUrl || null, user.tenantId]
+        );
+
+        const tRes = await client.query(
+          `SELECT id, name, slug, logo_url AS "logoUrl", description, theme_color AS "themeColor", accent_color AS "accentColor" 
+           FROM tenants WHERE id = $1`,
+          [user.tenantId]
+        );
+        if (tRes.rows.length > 0) updatedTenant = tRes.rows[0];
+      }
+
+      // Fetch updated provider
+      const provRes = await client.query(
+        `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, email, bio, avatar_url AS "avatarUrl",
+                COALESCE(service_location_type, 'own_space') AS "serviceLocationType"
+         FROM providers WHERE id = $1`,
+        [user.providerId]
+      );
+      updatedProvider = provRes.rows[0];
+
+      await client.query('COMMIT');
+    } catch (txError) {
+      await client.query('ROLLBACK');
+      throw txError;
+    } finally {
+      client.release();
+    }
+
+    res.json({
+      success: true,
+      provider: updatedProvider,
+      tenant: updatedTenant,
+      user: {
+        id: userId,
+        email: targetEmail,
+        name: targetName,
+        role: user.role,
+        tenantId: user.tenantId,
+        providerId: user.providerId,
+        avatarUrl: avatarUrl || null
+      }
+    });
+  } catch (error) {
+    console.error("Error updating provider settings:", error);
+    res.status(500).json({ error: "Erro interno ao atualizar configurações." });
   }
 });
 
@@ -401,25 +563,31 @@ router.put('/availability-rules', authMiddleware, async (req: AuthenticatedReque
     return res.status(400).json({ error: "Payload inválido. providerId e lista de rules são obrigatórios." });
   }
 
+  const client = await pool.connect();
   try {
-    await query(`DELETE FROM availability_rules WHERE provider_id = $1`, [targetProviderId]);
+    await client.query('BEGIN');
+    await client.query(`DELETE FROM availability_rules WHERE provider_id = $1`, [targetProviderId]);
 
     const rulesToInsert: AvailabilityRule[] = [];
     for (let i = 0; i < rules.length; i++) {
       const r = rules[i];
       const newId = `rule-${targetProviderId}-${Date.now()}-${i}`;
-      const rows = await query<AvailabilityRule>(
+      const rows = await client.query(
         `INSERT INTO availability_rules (id, provider_id, day_of_week, start_time, end_time) 
          VALUES ($1, $2, $3, $4, $5) 
          RETURNING id, provider_id AS "providerId", day_of_week AS "dayOfWeek", start_time AS "startTime", end_time AS "endTime"`,
         [newId, targetProviderId, r.dayOfWeek, r.startTime, r.endTime]
       );
-      rulesToInsert.push(rows[0]);
+      rulesToInsert.push(rows.rows[0]);
     }
+    await client.query('COMMIT');
     res.json(rulesToInsert);
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error("Error setting availability rules:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Erro interno ao atualizar horários de disponibilidade." });
+  } finally {
+    client.release();
   }
 });
 
@@ -443,7 +611,7 @@ router.get('/exceptions', async (req, res) => {
     res.json(exceptions);
   } catch (error) {
     console.error("Error fetching exceptions:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Erro interno ao buscar exceções." });
   }
 });
 
@@ -482,7 +650,7 @@ router.post('/exceptions', authMiddleware, async (req: AuthenticatedRequest, res
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error("Error creating exception:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Erro interno ao criar exceção." });
   }
 });
 
@@ -507,30 +675,46 @@ router.delete('/exceptions/:id', authMiddleware, async (req: AuthenticatedReques
     res.json({ success: true });
   } catch (error) {
     console.error("Error deleting exception:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Erro interno ao excluir exceção." });
   }
 });
 
-// 8. Get Bookings
-router.get('/bookings', async (req, res) => {
+// 8. Get Bookings (Protected - Only Providers can list their bookings or Clients their own)
+router.get('/bookings', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  const user = req.user;
+  if (!user) {
+    return res.status(401).json({ error: "Acesso não autorizado." });
+  }
+
   const { providerId } = req.query;
+
   try {
     let bookings;
-    if (providerId) {
+    if (user.role === 'provider') {
+      const targetProviderId = (providerId as string) || user.providerId;
+      if (user.providerId && user.providerId !== targetProviderId) {
+        return res.status(403).json({ error: "Você não tem permissão para visualizar agendamentos de outro profissional." });
+      }
+
       bookings = await query<any>(
         `SELECT id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", 
                 client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes,
                 client_address AS "clientAddress", service_location_type AS "serviceLocationType"
-         FROM bookings WHERE provider_id = $1`,
-        [providerId]
+         FROM bookings WHERE provider_id = $1
+         ORDER BY starts_at ASC`,
+        [targetProviderId]
+      );
+    } else if (user.role === 'client') {
+      bookings = await query<any>(
+        `SELECT id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", 
+                client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes,
+                client_address AS "clientAddress", service_location_type AS "serviceLocationType"
+         FROM bookings WHERE client_email = $1
+         ORDER BY starts_at DESC`,
+        [user.email]
       );
     } else {
-      bookings = await query<any>(
-        `SELECT id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", 
-                client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes,
-                client_address AS "clientAddress", service_location_type AS "serviceLocationType"
-         FROM bookings`
-      );
+      return res.status(403).json({ error: "Acesso não permitido." });
     }
     
     // Map Date objects to ISO strings
@@ -542,7 +726,7 @@ router.get('/bookings', async (req, res) => {
     res.json(mapped);
   } catch (error) {
     console.error("Error fetching bookings:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Erro interno ao buscar agendamentos." });
   }
 });
 
