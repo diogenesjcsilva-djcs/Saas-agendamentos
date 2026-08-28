@@ -74,8 +74,11 @@ export async function getProviders(tenantId?: string): Promise<Provider[]> {
   return res.json();
 }
 
-export async function getServices(providerId?: string): Promise<Service[]> {
-  const url = providerId ? `${API_BASE}/services?providerId=${providerId}` : `${API_BASE}/services`;
+export async function getServices(providerId?: string, tenantId?: string): Promise<Service[]> {
+  const params = new URLSearchParams();
+  if (providerId) params.append("providerId", providerId);
+  if (tenantId) params.append("tenantId", tenantId);
+  const url = params.toString() ? `${API_BASE}/services?${params.toString()}` : `${API_BASE}/services`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to fetch services");
   return res.json();

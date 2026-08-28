@@ -386,6 +386,7 @@ export default function App() {
         } else {
           // Home '/' or '/cadastrar'
           setSelectedTenant(null);
+          setSelectedProvider(null);
           setIs404(false);
         }
       } catch (err: any) {
@@ -911,6 +912,7 @@ export default function App() {
               >
                 <ClientPortal 
                   tenant={selectedTenant} 
+                  selectedProvider={selectedProvider}
                   currentUser={currentUser}
                   authMode={authMode}
                   setAuthMode={setAuthMode}

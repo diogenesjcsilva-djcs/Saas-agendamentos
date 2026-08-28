@@ -4,51 +4,46 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { 
-  Tenant, 
-  Provider, 
-  Service, 
-  Booking, 
-  TimeSlot, 
-  Category,
-  ServiceLocationType
-} from "../types.js";
-import { 
+import {
+  Tenant,
+  Provider,
+  Service,
+  TimeSlot,
+  Booking,
+  Category
+} from "../types";
+import {
   getProviders,
-  getServices, 
-  getBookings, 
-  getSlots, 
-  createBooking, 
-  getMyBookings, 
-  updateBookingStatus, 
-  rescheduleBooking, 
-  getCategories 
+  getServices,
+  getSlots,
+  createBooking,
+  getMyBookings,
+  updateBookingStatus,
+  rescheduleBooking,
+  getCategories
 } from "../lib/api.js";
-import { 
-  Calendar as CalendarIcon, 
-  Clock, 
-  User, 
-  Mail, 
-  Lock, 
-  Phone, 
-  CheckCircle, 
-  ArrowLeft, 
-  AlertCircle, 
-  ChevronLeft, 
-  ChevronRight, 
-  Sparkles, 
-  Scissors, 
-  CalendarDays, 
+import {
+  Calendar as CalendarIcon,
+  Clock,
+  User,
+  Mail,
+  Lock,
+  Phone,
+  CheckCircle,
+  ArrowLeft,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  CalendarDays,
   FileText,
-  MapPin,
-  Building,
-  Home,
-  Navigation
+  Search,
+  Check
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface ClientPortalProps {
   tenant: Tenant;
+  selectedProvider?: Provider | null;
   currentUser?: any;
   // Auth state & handlers passed from App.tsx
   authMode: "login" | "register";
@@ -56,7 +51,7 @@ interface ClientPortalProps {
   authEmail: string;
   setAuthEmail: (email: string) => void;
   authPassword: string;
-  setAuthPassword: (pass: string) => void;
+  setAuthPassword: (password: string) => void;
   authName: string;
   setAuthName: (name: string) => void;
   authError: string | null;
@@ -69,8 +64,7 @@ interface ClientPortalProps {
     role?: string,
     tenantId?: string,
     categoryId?: string,
-    bio?: string,
-    serviceLocationType?: ServiceLocationType
+    bio?: string
   ) => Promise<void>;
   setSocialAuthOpen: (provider: "google" | "instagram" | null) => void;
 }
@@ -95,8 +89,9 @@ const getServiceIcon = (name: string) => {
   return "🗓️";
 };
 
-export default function ClientPortal({ 
-  tenant, 
+export default function ClientPortal({
+  tenant,
+  selectedProvider: initialSelectedProvider,
   currentUser,
   authMode,
   setAuthMode,
@@ -114,40 +109,40 @@ export default function ClientPortal({
   handleRegister,
   setSocialAuthOpen
 }: ClientPortalProps) {
-  // Categories and professional register states
+  // Categories and search state
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
+  const [serviceSearchTerm, setServiceSearchTerm] = useState<string>("");
+
   const [registerRole, setRegisterRole] = useState<"client" | "provider">("client");
   const [registerCategoryId, setRegisterCategoryId] = useState<string>("");
   const [registerBio, setRegisterBio] = useState<string>("");
-  const [registerServiceLocationType, setRegisterServiceLocationType] = useState<ServiceLocationType>("own_space");
 
   const [providers, setProviders] = useState<Provider[]>([]);
   const [services, setServices] = useState<Service[]>([]);
-  
+
   // Tab State
   const [activeTab, setActiveTab] = useState<"new" | "my">("new");
-  
+
   // Selection States
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(initialSelectedProvider || null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(""); // YYYY-MM-DD
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
-  
+
   // Slots State
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [slotsLoading, setSlotsLoading] = useState<boolean>(false);
-  
+
   // Form States
   const [clientName, setClientName] = useState<string>("");
   const [clientEmail, setClientEmail] = useState<string>("");
   const [clientPhone, setClientPhone] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
-  const [clientAddress, setClientAddress] = useState<string>("");
-  const [bookingLocationChoice, setBookingLocationChoice] = useState<"own_space" | "at_client">("own_space");
-  
+
   // Flow/Status States
-  const [step, setStep] = useState<number>(1); // 1: Service, 2: Provider, 3: Date/Time, 4: Client Info, 5: Success, 4: Client Info, 5: Success
+  // 1: Service Selection (Filtered by Provider), 2: Date/Time Selection, 3: Client Info, 4: Success
+  const [step, setStep] = useState<number>(1);
   const [bookingLoading, setBookingLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successBooking, setSuccessBooking] = useState<Booking | null>(null);
@@ -179,22 +174,21 @@ export default function ClientPortal({
     }
   }, [currentUser]);
 
+  // Sync initialSelectedProvider if updated from App.tsx
+  useEffect(() => {
+    if (initialSelectedProvider) {
+      setSelectedProvider(initialSelectedProvider);
+    }
+  }, [initialSelectedProvider]);
+
   // Fetch initial services, providers, and categories for this tenant
   useEffect(() => {
     async function loadData() {
       try {
         const provs = await getProviders(tenant.id);
         setProviders(provs);
-        if (provs.length > 0) {
-          setSelectedProvider(provs[0]);
-          if (provs[0].serviceLocationType === 'at_client') {
-            setBookingLocationChoice('at_client');
-          } else {
-            setBookingLocationChoice('own_space');
-          }
-        }
-        
-        const servs = await getServices();
+
+        const servs = await getServices(undefined, tenant.id);
         setServices(servs);
 
         const cats = await getCategories();
@@ -202,15 +196,35 @@ export default function ClientPortal({
         if (cats.length > 0) {
           setRegisterCategoryId(cats[0].id);
         }
+
+        // Determine default provider for Step 1
+        const urlParams = new URLSearchParams(window.location.search);
+        const directProviderId = urlParams.get("providerId") || urlParams.get("provider");
+        let targetProv: Provider | null = null;
+
+        if (directProviderId && provs.length > 0) {
+          targetProv = provs.find(p => p.id === directProviderId || p.name.toLowerCase().includes(directProviderId.toLowerCase())) || null;
+        }
+
+        if (!targetProv && initialSelectedProvider) {
+          targetProv = initialSelectedProvider;
+        }
+
+        if (!targetProv && provs.length > 0) {
+          targetProv = provs[0];
+        }
+
+        if (targetProv) {
+          setSelectedProvider(targetProv);
+        }
       } catch (err) {
         console.error("Error loading portal data", err);
         setError("Não foi possível carregar as informações do agendamento.");
       }
     }
     loadData();
-    
+
     // Reset selection if tenant changes
-    setSelectedCategory(null);
     setSelectedService(null);
     setSelectedDate("");
     setSelectedSlot(null);
@@ -219,20 +233,42 @@ export default function ClientPortal({
     setActiveTab("new");
   }, [tenant]);
 
-  // Filter categories that have registered providers in this tenant
-  const activeCategories = categories.filter(cat => 
-    providers.some(p => p.categoryId === cat.id)
-  );
+  // Filter services STRICTLY for the selected provider & tenant
+  const filteredServices = services.filter(s => {
+    // 1) Must belong to a provider of this tenant
+    const provider = providers.find(p => p.id === s.providerId);
+    if (!provider) {
+      return false;
+    }
 
-  // Filter providers in the selected category
-  const filteredProviders = providers.filter(p => 
-    selectedCategory ? p.categoryId === selectedCategory.id : true
-  );
+    // 2) Must match the selected provider if one is active
+    if (selectedProvider && s.providerId !== selectedProvider.id) {
+      return false;
+    }
 
-  // Filter services offered by the selected provider
-  const filteredServices = services.filter(s => 
-    selectedProvider ? s.providerId === selectedProvider.id : true
-  );
+    // 3) Category filter
+    const matchesCategory = selectedCategoryFilter === "all"
+      ? true
+      : provider.categoryId === selectedCategoryFilter;
+
+    // 4) Search term filter
+    const searchLower = serviceSearchTerm.trim().toLowerCase();
+    const matchesSearch = searchLower === ""
+      ? true
+      : s.name.toLowerCase().includes(searchLower) ||
+      (s.description && s.description.toLowerCase().includes(searchLower));
+
+    return matchesCategory && matchesSearch;
+  });
+
+  // Select service and proceed to Step 2 (Data e Hora)
+  const handleSelectService = (service: Service) => {
+    setSelectedService(service);
+    // Ensure provider is assigned to match service
+    const matchingProvider = providers.find(p => p.id === service.providerId) || selectedProvider;
+    setSelectedProvider(matchingProvider);
+    setStep(2);
+  };
 
   // Load slots when service and date are selected
   useEffect(() => {
@@ -323,13 +359,22 @@ export default function ClientPortal({
     setRescheduleMonth(new Date(rescheduleMonth.getFullYear(), rescheduleMonth.getMonth() + 1, 1));
   };
 
+  // Format today's local date string in YYYY-MM-DD
+  const getTodayLocalDateString = (): string => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = (now.getMonth() + 1).toString().padStart(2, "0");
+    const d = now.getDate().toString().padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
+
   const selectDateHandler = (day: number) => {
     const year = currentMonth.getFullYear();
     const month = (currentMonth.getMonth() + 1).toString().padStart(2, "0");
     const dayStr = day.toString().padStart(2, "0");
     const dateStr = `${year}-${month}-${dayStr}`;
-    
-    const todayStr = new Date().toISOString().split("T")[0];
+
+    const todayStr = getTodayLocalDateString();
     if (dateStr < todayStr) return;
 
     setSelectedDate(dateStr);
@@ -341,8 +386,8 @@ export default function ClientPortal({
     const month = (rescheduleMonth.getMonth() + 1).toString().padStart(2, "0");
     const dayStr = day.toString().padStart(2, "0");
     const dateStr = `${year}-${month}-${dayStr}`;
-    
-    const todayStr = new Date().toISOString().split("T")[0];
+
+    const todayStr = getTodayLocalDateString();
     if (dateStr < todayStr) return;
 
     setRescheduleDate(dateStr);
@@ -353,17 +398,6 @@ export default function ClientPortal({
     e.preventDefault();
     if (!selectedProvider || !selectedService || !selectedSlot || !clientName || !clientEmail || !clientPhone) {
       setError("Por favor, preencha todos os campos obrigatórios.");
-      return;
-    }
-
-    const effectiveLocation = selectedProvider.serviceLocationType === "at_client" 
-      ? "at_client" 
-      : selectedProvider.serviceLocationType === "both" 
-        ? bookingLocationChoice 
-        : "own_space";
-
-    if (effectiveLocation === "at_client" && (!clientAddress || clientAddress.trim().length < 5)) {
-      setError("Por favor, informe o endereço completo onde o serviço será realizado.");
       return;
     }
 
@@ -378,14 +412,16 @@ export default function ClientPortal({
         clientName,
         clientEmail,
         clientPhone,
-        notes,
-        clientAddress: effectiveLocation === "at_client" ? clientAddress.trim() : undefined,
-        serviceLocationType: effectiveLocation
+        notes
       });
       setSuccessBooking(b);
-      setStep(4);
+      setStep(4); // Step 4 is Success / Confirmation
     } catch (err: any) {
-      setError(err.message || "Ocorreu um erro ao realizar seu agendamento. Tente novamente.");
+      if (err.message === "slot_unavailable" || err.message.includes("já foi reservado")) {
+        setError("O horário selecionado não está mais disponível. Por favor, volte ao passo de horários e escolha outra vaga.");
+      } else {
+        setError(err.message || "Ocorreu um erro ao realizar seu agendamento. Tente novamente.");
+      }
     } finally {
       setBookingLoading(false);
     }
@@ -467,16 +503,13 @@ export default function ClientPortal({
       registerRole,
       tenant.id,
       registerRole === "provider" ? registerCategoryId : undefined,
-      registerRole === "provider" ? registerBio : undefined,
-      registerRole === "provider" ? registerServiceLocationType : undefined
+      registerRole === "provider" ? registerBio : undefined
     );
   };
 
   if (!currentUser) {
     return (
       <div id="client-portal-root" className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-
-
         {/* Auth Required Screen */}
         <div className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
           <div className="md:col-span-6 space-y-6">
@@ -509,8 +542,8 @@ export default function ClientPortal({
                 {authMode === "login" ? "Entrar na sua Conta" : "Criar sua Conta"}
               </h3>
               <p className="text-4xs text-gray-500">
-                {authMode === "login" 
-                  ? "Entre para ver seus agendamentos e agendar mais rápido." 
+                {authMode === "login"
+                  ? "Entre para ver seus agendamentos e agendar mais rápido."
                   : "Cadastre-se para acompanhar seu histórico de reservas."
                 }
               </p>
@@ -532,22 +565,20 @@ export default function ClientPortal({
                       <button
                         type="button"
                         onClick={() => setRegisterRole("client")}
-                        className={`py-1.5 rounded-lg text-3xs font-bold transition-all ${
-                          registerRole === "client"
+                        className={`py-1.5 rounded-lg text-3xs font-bold transition-all ${registerRole === "client"
                             ? "bg-white text-indigo-650 shadow-sm border border-gray-150"
                             : "text-gray-400 hover:text-gray-650"
-                        }`}
+                          }`}
                       >
                         Sou Cliente
                       </button>
                       <button
                         type="button"
                         onClick={() => setRegisterRole("provider")}
-                        className={`py-1.5 rounded-lg text-3xs font-bold transition-all ${
-                          registerRole === "provider"
+                        className={`py-1.5 rounded-lg text-3xs font-bold transition-all ${registerRole === "provider"
                             ? "bg-white text-indigo-650 shadow-sm border border-gray-150"
                             : "text-gray-400 hover:text-gray-650"
-                        }`}
+                          }`}
                       >
                         Sou Profissional
                       </button>
@@ -588,58 +619,6 @@ export default function ClientPortal({
                         </select>
                       </div>
 
-                      {/* Local de Execução dos Serviços (3 Situações) */}
-                      <div className="space-y-1.5">
-                        <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider block">
-                          Local de Atendimento / Execução
-                        </label>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setRegisterServiceLocationType("own_space")}
-                            className={`p-2 rounded-xl border text-left flex flex-col items-center justify-center gap-1 transition-all ${
-                              registerServiceLocationType === "own_space"
-                                ? "border-indigo-600 bg-indigo-50/70 text-indigo-900 shadow-sm"
-                                : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100"
-                            }`}
-                          >
-                            <Building className="w-4 h-4 text-indigo-600 shrink-0" />
-                            <span className="text-[10px] font-bold text-center leading-tight">1. Espaço Próprio</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setRegisterServiceLocationType("at_client")}
-                            className={`p-2 rounded-xl border text-left flex flex-col items-center justify-center gap-1 transition-all ${
-                              registerServiceLocationType === "at_client"
-                                ? "border-indigo-600 bg-indigo-50/70 text-indigo-900 shadow-sm"
-                                : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100"
-                            }`}
-                          >
-                            <Home className="w-4 h-4 text-indigo-600 shrink-0" />
-                            <span className="text-[10px] font-bold text-center leading-tight">2. No Cliente</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setRegisterServiceLocationType("both")}
-                            className={`p-2 rounded-xl border text-left flex flex-col items-center justify-center gap-1 transition-all ${
-                              registerServiceLocationType === "both"
-                                ? "border-indigo-600 bg-indigo-50/70 text-indigo-900 shadow-sm"
-                                : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100"
-                            }`}
-                          >
-                            <Navigation className="w-4 h-4 text-indigo-600 shrink-0" />
-                            <span className="text-[10px] font-bold text-center leading-tight">3. Ambos</span>
-                          </button>
-                        </div>
-                        <p className="text-[10px] text-gray-400">
-                          {registerServiceLocationType === "own_space" && "🏢 Atendimentos realizados exclusivamente em seu estabelecimento/estúdio."}
-                          {registerServiceLocationType === "at_client" && "🚗 Atendimentos realizados no endereço indicado pelo cliente no agendamento."}
-                          {registerServiceLocationType === "both" && "🔄 O cliente escolhe no agendamento se prefere no seu espaço ou a domicílio."}
-                        </p>
-                      </div>
-
                       <div className="space-y-1">
                         <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider">Biografia / Apresentação</label>
                         <textarea
@@ -655,10 +634,8 @@ export default function ClientPortal({
                 </>
               )}
 
-               <div className="space-y-1">
-                <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider block text-left">
-                  {authMode === "register" && registerRole === "provider" ? "E-mail / Login de Acesso" : "E-mail"}
-                </label>
+              <div className="space-y-1">
+                <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider">E-mail</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                   <input
@@ -666,16 +643,14 @@ export default function ClientPortal({
                     required
                     value={authEmail}
                     onChange={(e) => setAuthEmail(e.target.value)}
-                    placeholder={authMode === "register" && registerRole === "provider" ? "nome@empresa.com" : "seuemail@provedor.com"}
+                    placeholder="seuemail@provedor.com"
                     className="w-full bg-gray-50 border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider block text-left">
-                  {authMode === "register" && registerRole === "provider" ? "Senha de Acesso" : "Senha"}
-                </label>
+                <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider">Senha</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                   <input
@@ -683,8 +658,7 @@ export default function ClientPortal({
                     required
                     value={authPassword}
                     onChange={(e) => setAuthPassword(e.target.value)}
-                    placeholder={authMode === "register" && registerRole === "provider" ? "Mínimo 6 caracteres" : "••••••••"}
-                    minLength={authMode === "register" && registerRole === "provider" ? 6 : undefined}
+                    placeholder="••••••••"
                     className="w-full bg-gray-50 border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
                   />
                 </div>
@@ -693,7 +667,7 @@ export default function ClientPortal({
               <button
                 type="submit"
                 disabled={authLoading}
-                className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition-colors flex items-center justify-center gap-2 shadow-indigo-600/10"
+                className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition-colors flex items-center justify-center gap-2 shadow-indigo-600/10 font-sans cursor-pointer"
               >
                 {authLoading ? (
                   <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
@@ -703,7 +677,6 @@ export default function ClientPortal({
               </button>
             </form>
 
-            {/* Social Dividers & Intuitive Buttons */}
             <div className="relative flex items-center justify-center my-3">
               <div className="border-t border-gray-150 w-full"></div>
               <span className="absolute bg-white px-2 text-5xs text-gray-400 font-bold uppercase tracking-wider">ou</span>
@@ -713,7 +686,7 @@ export default function ClientPortal({
               <button
                 type="button"
                 onClick={() => setSocialAuthOpen("google")}
-                className="py-2 bg-white hover:bg-gray-50 border border-gray-250 text-gray-700 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5"
+                className="py-2 bg-white hover:bg-gray-50 border border-gray-250 text-gray-700 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
                   <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.57h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.48C21.68,11.75 21.56,11.4 21.35,11.1z" fill="#4285F4" />
@@ -727,7 +700,7 @@ export default function ClientPortal({
               <button
                 type="button"
                 onClick={() => setSocialAuthOpen("instagram")}
-                className="py-2 bg-gradient-to-r from-purple-600 via-pink-500 to-yellow-500 hover:opacity-90 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center justify-center gap-1.5"
+                className="py-2 bg-gradient-to-r from-purple-600 via-pink-500 to-yellow-500 hover:opacity-90 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
                   <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
@@ -747,7 +720,7 @@ export default function ClientPortal({
                       setAuthMode("register");
                       setAuthError(null);
                     }}
-                    className="text-indigo-600 font-bold hover:underline"
+                    className="text-indigo-600 font-bold hover:underline cursor-pointer"
                   >
                     Cadastre-se
                   </button>
@@ -760,7 +733,7 @@ export default function ClientPortal({
                       setAuthMode("login");
                       setAuthError(null);
                     }}
-                    className="text-indigo-600 font-bold hover:underline"
+                    className="text-indigo-600 font-bold hover:underline cursor-pointer"
                   >
                     Faça Login
                   </button>
@@ -776,28 +749,25 @@ export default function ClientPortal({
   return (
     <div id="client-portal-root" className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
 
-
       {/* Tabs Switcher for Authenticated Clients */}
       {currentUser && currentUser.role === "client" && (
         <div className="flex border-b border-gray-100 bg-gray-50/50">
           <button
             onClick={() => setActiveTab("new")}
-            className={`flex-1 py-4 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${
-              activeTab === "new"
+            className={`flex-1 py-4 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-2 cursor-pointer ${activeTab === "new"
                 ? `border-${currentTheme.accent} text-${currentTheme.accent} bg-white`
                 : "border-transparent text-gray-400 hover:text-gray-600"
-            }`}
+              }`}
           >
             <CalendarDays className="w-4 h-4" />
             Novo Agendamento
           </button>
           <button
             onClick={() => setActiveTab("my")}
-            className={`flex-1 py-4 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${
-              activeTab === "my"
+            className={`flex-1 py-4 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-2 cursor-pointer ${activeTab === "my"
                 ? `border-${currentTheme.accent} text-${currentTheme.accent} bg-white`
                 : "border-transparent text-gray-400 hover:text-gray-600"
-            }`}
+              }`}
           >
             <FileText className="w-4 h-4" />
             Meus Agendamentos
@@ -805,20 +775,22 @@ export default function ClientPortal({
         </div>
       )}
 
-      {/* Progress Steps Indicator */}
+      {/* Progress Steps Indicator (4-Step Streamlined Flow) */}
       {activeTab === "new" && step < 4 && (
         <div className="px-8 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between text-xs font-medium text-gray-400">
           <div className="flex items-center gap-4 w-full justify-center md:justify-start flex-wrap">
-            <span className={`pb-1 ${step === 1 ? `text-${currentTheme.accent} border-b-2 border-${currentTheme.accent} font-bold` : "text-gray-900 font-semibold"}`}>
-              1. Escolha do Serviço
+            <span className={`pb-1 flex items-center gap-1.5 ${step === 1 ? `text-${currentTheme.accent} font-bold border-b-2 border-${currentTheme.accent}` : step > 1 ? "text-gray-900 font-semibold" : ""}`}>
+              {step > 1 ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : null}
+              1. Serviço
             </span>
             <span className="text-gray-300">/</span>
-            <span className={`pb-1 ${step === 2 ? `text-${currentTheme.accent} border-b-2 border-${currentTheme.accent} font-bold` : step > 2 ? "text-gray-900 font-semibold" : ""}`}>
-              2. Data e Horário
+            <span className={`pb-1 flex items-center gap-1.5 ${step === 2 ? `text-${currentTheme.accent} font-bold border-b-2 border-${currentTheme.accent}` : step > 2 ? "text-gray-900 font-semibold" : ""}`}>
+              {step > 2 ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : null}
+              2. Data e Hora
             </span>
             <span className="text-gray-300">/</span>
-            <span className={`pb-1 ${step === 3 ? `text-${currentTheme.accent} border-b-2 border-${currentTheme.accent} font-bold` : ""}`}>
-              3. Seus Dados & Local
+            <span className={`pb-1 flex items-center gap-1.5 ${step === 3 ? `text-${currentTheme.accent} font-bold border-b-2 border-${currentTheme.accent}` : ""}`}>
+              3. Seus Dados
             </span>
           </div>
         </div>
@@ -836,7 +808,8 @@ export default function ClientPortal({
         <AnimatePresence mode="wait">
           {activeTab === "new" ? (
             <div key="tab-new">
-              {/* STEP 1: SELECT SERVICE (DIRECT ENTRY) */}
+
+              {/* STEP 1: SERVICES OF THE SELECTED PROVIDER ONLY */}
               {step === 1 && (
                 <motion.div
                   key="step-1"
@@ -845,110 +818,123 @@ export default function ClientPortal({
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-6"
                 >
-                  {/* Provider Header Banner */}
-                  {selectedProvider && (
-                    <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-2xl p-6 shadow-md border border-slate-700 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-indigo-600/30 border border-indigo-500/40 text-2xl flex items-center justify-center font-bold text-white shadow-inner shrink-0">
-                          {selectedProvider.avatarUrl || selectedProvider.name.charAt(0)}
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h2 className="text-lg font-bold text-white">{selectedProvider.name}</h2>
-                            {selectedProvider.serviceLocationType === 'at_client' && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30">
-                                🚗 A Domicílio
-                              </span>
-                            )}
-                            {selectedProvider.serviceLocationType === 'both' && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-400/30">
-                                🔄 No Local / A Domicílio
-                              </span>
-                            )}
-                            {(!selectedProvider.serviceLocationType || selectedProvider.serviceLocationType === 'own_space') && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                                🏢 No Estabelecimento
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed max-w-xl">
-                            {selectedProvider.bio || tenant.description}
-                          </p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">Escolha o Serviço</h2>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Serviços disponíveis com <strong className="text-slate-900 font-bold">{selectedProvider ? selectedProvider.name : "o profissional"}</strong>.
+                      </p>
+                    </div>
+
+                    {/* Professional Switcher Bar if multiple providers exist */}
+                    {providers.length > 1 && (
+                      <div className="space-y-1 self-start sm:self-auto">
+                        <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider block">Prestador Selecionado:</label>
+                        <div className="flex items-center gap-1.5 overflow-x-auto bg-gray-50 p-1 rounded-xl border border-gray-200">
+                          {providers.map(p => {
+                            const isCurrent = selectedProvider?.id === p.id;
+                            return (
+                              <button
+                                key={p.id}
+                                onClick={() => setSelectedProvider(p)}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${isCurrent
+                                    ? `bg-slate-900 text-white shadow-sm`
+                                    : "text-gray-600 hover:bg-gray-200"
+                                  }`}
+                              >
+                                {p.avatarUrl ? (
+                                  <img src={p.avatarUrl} alt={p.name} className="w-4 h-4 rounded-full object-cover" />
+                                ) : (
+                                  <span className="w-4 h-4 rounded-full bg-indigo-200 text-indigo-800 text-5xs flex items-center justify-center font-bold">
+                                    {p.name.charAt(0)}
+                                  </span>
+                                )}
+                                <span>{p.name}</span>
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
-                  {/* Multi-provider switch selector if establishment has more than 1 provider */}
-                  {providers.length > 1 && (
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 bg-gray-50/70 p-2.5 rounded-xl border border-gray-100">
-                      <span className="text-xs font-bold text-gray-500 whitespace-nowrap pl-1">Profissional:</span>
-                      {providers.map(p => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedProvider(p);
-                            if (p.serviceLocationType === 'at_client') {
-                              setBookingLocationChoice('at_client');
-                            } else {
-                              setBookingLocationChoice('own_space');
-                            }
-                          }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                            selectedProvider?.id === p.id
-                              ? `bg-indigo-600 text-white shadow-sm shadow-indigo-600/20`
-                              : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
+                  {/* Search and Category Filters */}
+                  <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                    <div className="relative w-full sm:w-72">
+                      <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={serviceSearchTerm}
+                        onChange={(e) => setServiceSearchTerm(e.target.value)}
+                        placeholder="Buscar serviço..."
+                        className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
+                      />
+                    </div>
+
+                    <div className="flex gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+                      <button
+                        onClick={() => setSelectedCategoryFilter("all")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${selectedCategoryFilter === "all"
+                            ? "bg-slate-900 text-white shadow-sm"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                           }`}
+                      >
+                        Todos
+                      </button>
+                      {categories.map((cat) => (
+                        <button
+                          key={cat.id}
+                          onClick={() => setSelectedCategoryFilter(cat.id)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${selectedCategoryFilter === cat.id
+                              ? "bg-slate-900 text-white shadow-sm"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            }`}
                         >
-                          <span>{p.avatarUrl || "👤"}</span>
-                          <span>{p.name}</span>
+                          <span>{cat.imageUrl}</span>
+                          <span>{cat.name}</span>
                         </button>
                       ))}
                     </div>
-                  )}
-
-                  <div>
-                    <h3 className="text-base font-bold text-gray-900">Selecione o Serviço</h3>
-                    <p className="text-xs text-gray-500 mt-0.5">Escolha o serviço desejado para visualizar as datas e horários disponíveis.</p>
                   </div>
 
-                  {filteredServices.length === 0 ? (
-                    <div className="text-center py-12 bg-gray-50 rounded-2xl border border-gray-100 text-gray-400 text-xs">
-                      Nenhum serviço cadastrado para este profissional no momento.
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {filteredServices.map(service => {
+                  {/* Services Grid (Strictly filtered by selected provider) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredServices.length === 0 ? (
+                      <div className="col-span-full py-12 border border-dashed border-gray-200 rounded-2xl text-center text-gray-400 space-y-2">
+                        <AlertCircle className="w-10 h-10 stroke-1 mx-auto text-amber-500" />
+                        <p className="text-xs font-semibold">Nenhum serviço encontrado para este prestador.</p>
+                      </div>
+                    ) : (
+                      filteredServices.map(service => {
                         const isSelected = selectedService?.id === service.id;
                         const icon = getServiceIcon(service.name);
-                        
+
                         return (
                           <div
                             key={service.id}
-                            onClick={() => {
-                              setSelectedService(service);
-                              setStep(2);
-                            }}
-                            className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex gap-4 items-start ${
-                              isSelected 
-                                ? `border-${currentTheme.accent} ${currentTheme.bg} shadow-md` 
-                                : "border-gray-100 hover:border-gray-200 hover:shadow-sm hover:translate-y-[-2px] bg-white"
-                            }`}
+                            onClick={() => handleSelectService(service)}
+                            className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex gap-4 items-start ${isSelected
+                                ? `border-${currentTheme.accent} ${currentTheme.bg} shadow-md`
+                                : "border-gray-150 hover:border-indigo-600 hover:shadow-md hover:translate-y-[-2px] bg-white group"
+                              }`}
                           >
-                            <span className="text-3xl p-3 bg-gray-50 rounded-xl border border-gray-100 shrink-0 select-none shadow-sm">
+                            <span className="text-3xl p-3 bg-gray-50 rounded-xl border border-gray-100 shrink-0 select-none shadow-sm group-hover:scale-105 transition-transform">
                               {icon}
                             </span>
                             <div className="space-y-1.5 flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap justify-between">
-                                <h3 className="font-bold text-slate-900 text-sm leading-snug truncate">{service.name}</h3>
-                                <span className="text-[11px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-mono font-bold shrink-0">
+                                <h3 className="font-bold text-slate-900 text-sm leading-snug truncate group-hover:text-indigo-600 transition-colors">{service.name}</h3>
+                                <span className="text-5xs bg-gray-100 text-gray-650 px-2 py-0.5 rounded-full font-mono font-bold shrink-0">
                                   {service.durationMinutes} min
                                 </span>
                               </div>
-                              <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{service.description}</p>
+
+                              <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{service.description || "Atendimento especializado com horário reservado."}</p>
+
                               <div className="flex justify-between items-center pt-2">
-                                <div></div>
+                                <span className="text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition-transform">
+                                  Agendar Horário &rarr;
+                                </span>
                                 <span className={`text-xs font-extrabold font-mono text-${currentTheme.accent}`}>
                                   {formatPrice(service.price)}
                                 </span>
@@ -956,14 +942,14 @@ export default function ClientPortal({
                             </div>
                           </div>
                         );
-                      })}
-                    </div>
-                  )}
+                      })
+                    )}
+                  </div>
                 </motion.div>
               )}
 
               {/* STEP 2: SELECT DATE & TIME */}
-              {step === 2 && (
+              {step === 2 && selectedService && (
                 <motion.div
                   key="step-2"
                   initial={{ opacity: 0, x: 20 }}
@@ -972,7 +958,7 @@ export default function ClientPortal({
                   className="space-y-6"
                 >
                   <div className="flex items-center gap-3">
-                    <button 
+                    <button
                       onClick={() => {
                         setSelectedService(null);
                         setStep(1);
@@ -983,27 +969,30 @@ export default function ClientPortal({
                     </button>
                     <div>
                       <h2 className="text-xl font-bold text-gray-900">Selecione Data e Horário</h2>
-                      <p className="text-sm text-gray-500 mt-0.5">Disponibilidades para <strong className="text-gray-700">{selectedService?.name}</strong> com <strong className="text-gray-700">{selectedProvider?.name}</strong>.</p>
+                      <p className="text-sm text-gray-500 mt-0.5">
+                        Disponibilidades para <strong className="text-slate-900 font-bold">{selectedService.name}</strong>
+                        {selectedProvider ? <> com <strong className="text-slate-900 font-bold">{selectedProvider.name}</strong></> : null}.
+                      </p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Calendar Card */}
-                    <div className="lg:col-span-7 bg-white border border-gray-100 rounded-xl p-5 shadow-sm space-y-4">
+                    <div className="lg:col-span-7 bg-white border border-gray-150 rounded-2xl p-5 shadow-sm space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-gray-900">
+                        <h3 className="font-bold text-slate-900 capitalize text-sm">
                           {currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
                         </h3>
                         <div className="flex gap-1.5">
                           <button
                             onClick={handlePrevMonth}
-                            className="p-1.5 hover:bg-gray-100 rounded-lg border border-gray-150 text-gray-600 transition-colors cursor-pointer"
+                            className="p-1.5 hover:bg-gray-100 rounded-lg border border-gray-200 text-gray-600 transition-colors cursor-pointer"
                           >
                             <ChevronLeft className="w-4 h-4" />
                           </button>
                           <button
                             onClick={handleNextMonth}
-                            className="p-1.5 hover:bg-gray-100 rounded-lg border border-gray-150 text-gray-600 transition-colors cursor-pointer"
+                            className="p-1.5 hover:bg-gray-100 rounded-lg border border-gray-200 text-gray-600 transition-colors cursor-pointer"
                           >
                             <ChevronRight className="w-4 h-4" />
                           </button>
@@ -1024,7 +1013,7 @@ export default function ClientPortal({
                         {Array.from({ length: firstDayOfMonth(currentMonth) }).map((_, i) => (
                           <div key={`empty-${i}`} className="aspect-square"></div>
                         ))}
-                        
+
                         {Array.from({ length: daysInMonth(currentMonth) }).map((_, i) => {
                           const day = i + 1;
                           const year = currentMonth.getFullYear();
@@ -1032,8 +1021,8 @@ export default function ClientPortal({
                           const dayStr = day.toString().padStart(2, "0");
                           const dateStr = `${year}-${month}-${dayStr}`;
                           const isSelected = selectedDate === dateStr;
-                          
-                          const todayStr = new Date().toISOString().split("T")[0];
+
+                          const todayStr = getTodayLocalDateString();
                           const isPast = dateStr < todayStr;
                           const isWeekend = new Date(year, currentMonth.getMonth(), day).getDay() === 0;
 
@@ -1042,15 +1031,14 @@ export default function ClientPortal({
                               key={`day-${day}`}
                               disabled={isPast}
                               onClick={() => selectDateHandler(day)}
-                              className={`aspect-square flex items-center justify-center rounded-lg text-xs font-medium transition-all ${
-                                isPast 
-                                  ? "text-gray-250 cursor-not-allowed" 
+                              className={`aspect-square flex items-center justify-center rounded-xl text-xs font-medium transition-all cursor-pointer ${isPast
+                                  ? "text-gray-250 cursor-not-allowed"
                                   : isSelected
                                     ? `bg-${currentTheme.accent} text-white shadow-md font-bold scale-105`
                                     : isWeekend
-                                      ? "text-red-400 hover:bg-red-50/50 cursor-pointer"
-                                      : "text-gray-700 hover:bg-gray-100 cursor-pointer"
-                              }`}
+                                      ? "text-red-500 hover:bg-red-50 font-bold"
+                                      : "text-gray-700 hover:bg-gray-100 font-semibold"
+                                }`}
                             >
                               {day}
                             </button>
@@ -1060,7 +1048,7 @@ export default function ClientPortal({
                     </div>
 
                     {/* Time Slots Card */}
-                    <div className="lg:col-span-5 bg-white border border-gray-100 rounded-xl p-5 shadow-sm flex flex-col justify-start min-h-[300px]">
+                    <div className="lg:col-span-5 bg-white border border-gray-150 rounded-2xl p-5 shadow-sm flex flex-col justify-start min-h-[300px]">
                       {slotsLoading ? (
                         <div className="flex-1 flex flex-col items-center justify-center py-12 text-gray-400">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
@@ -1073,30 +1061,29 @@ export default function ClientPortal({
                         </div>
                       ) : slots.length === 0 ? (
                         <div className="flex-1 flex flex-col items-center justify-center py-12 text-center text-gray-400 space-y-2">
-                          <AlertCircle className="w-8 h-8 text-yellow-500" />
+                          <AlertCircle className="w-8 h-8 text-amber-500" />
                           <p className="text-xs font-semibold">Nenhum horário disponível para esta data.</p>
                         </div>
                       ) : (
                         <div className="space-y-4 flex-1 flex flex-col justify-between">
                           <div className="space-y-3">
-                            <h4 className="font-semibold text-gray-900 text-sm flex items-center gap-2 border-b border-gray-100 pb-2">
+                            <h4 className="font-bold text-gray-900 text-xs flex items-center gap-2 border-b border-gray-100 pb-2">
                               <Clock className="w-4 h-4 text-gray-400" />
-                              Horários Disponíveis ({formatDateHuman(selectedDate)})
+                              Horários em {formatDateHuman(selectedDate)}
                             </h4>
-                            
+
                             <div className="grid grid-cols-2 gap-2 max-h-[250px] overflow-y-auto pr-1">
                               {slots.map(slot => (
                                 <button
                                   key={slot.time}
                                   disabled={!slot.available}
                                   onClick={() => setSelectedSlot(slot)}
-                                  className={`py-2.5 px-3 rounded-lg text-xs font-semibold font-mono border transition-all ${
-                                    !slot.available
-                                      ? "bg-gray-50 border-gray-100 text-gray-350 cursor-not-allowed text-left flex flex-col"
+                                  className={`py-2.5 px-3 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer ${!slot.available
+                                      ? "bg-gray-50 border-gray-100 text-gray-350 cursor-not-allowed text-left flex flex-col opacity-60"
                                       : selectedSlot?.time === slot.time
-                                        ? `bg-${currentTheme.accent} border-${currentTheme.accent} text-white shadow-sm font-bold`
-                                        : "bg-white border-gray-200 text-gray-700 hover:border-gray-400 cursor-pointer"
-                                  }`}
+                                        ? `bg-${currentTheme.accent} border-${currentTheme.accent} text-white shadow-sm`
+                                        : "bg-white border-gray-200 text-gray-700 hover:border-indigo-600"
+                                    }`}
                                 >
                                   <span>{slot.time}</span>
                                 </button>
@@ -1105,16 +1092,16 @@ export default function ClientPortal({
                           </div>
 
                           {selectedSlot && (
-                            <motion.div 
+                            <motion.div
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
                               className="pt-4 border-t border-gray-100"
                             >
                               <button
                                 onClick={() => setStep(3)}
-                                className={`w-full py-3 px-4 bg-${currentTheme.accent} hover:bg-opacity-95 text-white rounded-xl font-semibold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer`}
+                                className={`w-full py-3 px-4 bg-${currentTheme.accent} hover:bg-opacity-95 text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer`}
                               >
-                                Prosseguir com Agendamento
+                                Avançar para Seus Dados &rarr;
                               </button>
                             </motion.div>
                           )}
@@ -1126,7 +1113,7 @@ export default function ClientPortal({
               )}
 
               {/* STEP 3: CLIENT INFO FORM */}
-              {step === 3 && (
+              {step === 3 && selectedService && selectedSlot && (
                 <motion.div
                   key="step-3"
                   initial={{ opacity: 0, x: 20 }}
@@ -1135,9 +1122,8 @@ export default function ClientPortal({
                   className="space-y-6"
                 >
                   <div className="flex items-center gap-3">
-                    <button 
+                    <button
                       onClick={() => {
-                        setSelectedSlot(null);
                         setStep(2);
                       }}
                       className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors cursor-pointer"
@@ -1145,98 +1131,42 @@ export default function ClientPortal({
                       <ArrowLeft className="w-5 h-5" />
                     </button>
                     <div>
-                      <h2 className="text-xl font-bold text-gray-900">Preencha seus dados</h2>
-                      <p className="text-sm text-gray-500 mt-0.5">Insira suas informações para finalizar a reserva.</p>
+                      <h2 className="text-xl font-bold text-gray-900">Preencha seus dados de contato</h2>
+                      <p className="text-sm text-gray-500 mt-0.5">Informe os dados para confirmar a reserva.</p>
                     </div>
                   </div>
 
                   <form onSubmit={handleBookingSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-8">
                     <div className="md:col-span-7 space-y-4">
-                      {/* Service Location Banner / Choice */}
-                      {selectedProvider?.serviceLocationType === "both" && (
-                        <div className="space-y-2 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
-                          <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
-                            <Navigation className="w-4 h-4 text-indigo-600" />
-                            Onde você deseja receber o atendimento?
-                          </label>
-                          <div className="grid grid-cols-2 gap-3">
-                            <button
-                              type="button"
-                              onClick={() => setBookingLocationChoice("own_space")}
-                              className={`p-3 rounded-xl border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
-                                bookingLocationChoice === "own_space"
-                                  ? "border-indigo-600 bg-white text-indigo-900 shadow-sm ring-2 ring-indigo-500/20 font-bold"
-                                  : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-white"
-                              }`}
-                            >
-                              <Building className="w-4 h-4 text-indigo-600 shrink-0" />
-                              <div>
-                                <div className="text-xs font-bold">No Estabelecimento</div>
-                                <div className="text-[10px] text-gray-500">Espaço do profissional</div>
-                              </div>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => setBookingLocationChoice("at_client")}
-                              className={`p-3 rounded-xl border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
-                                bookingLocationChoice === "at_client"
-                                  ? "border-indigo-600 bg-white text-indigo-900 shadow-sm ring-2 ring-indigo-500/20 font-bold"
-                                  : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-white"
-                              }`}
-                            >
-                              <Home className="w-4 h-4 text-indigo-600 shrink-0" />
-                              <div>
-                                <div className="text-xs font-bold">No meu endereço</div>
-                                <div className="text-[10px] text-gray-500">A domicílio</div>
-                              </div>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {selectedProvider?.serviceLocationType === "at_client" && (
-                        <div className="bg-blue-50 border border-blue-200 p-3.5 rounded-xl flex items-start gap-2.5">
-                          <Home className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-xs font-bold text-blue-900">Atendimento a Domicílio</p>
-                            <p className="text-xs text-blue-700 mt-0.5">Este profissional atende exclusivamente no endereço indicado por você abaixo.</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {(!selectedProvider?.serviceLocationType || selectedProvider?.serviceLocationType === "own_space") && (
-                        <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex items-center gap-2.5">
-                          <Building className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <p className="text-xs text-emerald-800 font-medium">Atendimento presencial no estabelecimento / espaço do profissional.</p>
-                        </div>
-                      )}
-
                       <div className="space-y-1.5">
-                        <label htmlFor="client-name" className="text-xs font-semibold text-gray-700 block">Nome Completo</label>
+                        <label htmlFor="client-name" className="text-xs font-semibold text-gray-700 block">Nome Completo *</label>
                         <div className="relative">
                           <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                           <input
                             id="client-name"
                             type="text"
-                            disabled
+                            required
                             value={clientName}
-                            className="w-full py-2.5 pl-10 pr-4 bg-gray-50 border border-gray-150 rounded-xl text-sm text-gray-500 font-semibold cursor-not-allowed"
+                            onChange={(e) => setClientName(e.target.value)}
+                            placeholder="Seu nome completo"
+                            className="w-full py-2.5 pl-10 pr-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all font-semibold"
                           />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <label htmlFor="client-email" className="text-xs font-semibold text-gray-700 block">E-mail</label>
+                          <label htmlFor="client-email" className="text-xs font-semibold text-gray-700 block">E-mail *</label>
                           <div className="relative">
                             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input
                               id="client-email"
                               type="email"
-                              disabled
+                              required
                               value={clientEmail}
-                              className="w-full py-2.5 pl-10 pr-4 bg-gray-50 border border-gray-150 rounded-xl text-sm text-gray-500 font-semibold cursor-not-allowed"
+                              onChange={(e) => setClientEmail(e.target.value)}
+                              placeholder="seu@email.com"
+                              className="w-full py-2.5 pl-10 pr-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all font-semibold"
                             />
                           </div>
                         </div>
@@ -1258,25 +1188,6 @@ export default function ClientPortal({
                         </div>
                       </div>
 
-                      {/* Address input if at_client or chosen both->at_client */}
-                      {(selectedProvider?.serviceLocationType === "at_client" || (selectedProvider?.serviceLocationType === "both" && bookingLocationChoice === "at_client")) && (
-                        <div className="space-y-1.5">
-                          <label htmlFor="client-address" className="text-xs font-semibold text-gray-700 block flex items-center gap-1">
-                            <MapPin className="w-3.5 h-3.5 text-indigo-600" />
-                            Endereço Completo de Atendimento *
-                          </label>
-                          <input
-                            id="client-address"
-                            type="text"
-                            required
-                            value={clientAddress}
-                            onChange={(e) => setClientAddress(e.target.value)}
-                            placeholder="Rua, Número, Bairro, Cidade, Complemento / Ponto de Referência"
-                            className="w-full py-2.5 px-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all font-semibold"
-                          />
-                        </div>
-                      )}
-
                       <div className="space-y-1.5">
                         <label htmlFor="client-notes" className="text-xs font-semibold text-gray-700 block">Observações (Opcional)</label>
                         <textarea
@@ -1285,42 +1196,36 @@ export default function ClientPortal({
                           value={notes}
                           onChange={(e) => setNotes(e.target.value)}
                           placeholder="Alguma recomendação especial?"
-                          className="w-full py-2.5 px-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all font-semibold"
+                          className="w-full py-2.5 px-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all font-semibold resize-none"
                         />
                       </div>
                     </div>
 
                     {/* Booking Summary Box */}
-                    <div className="md:col-span-5 bg-gray-50 border border-gray-100 rounded-2xl p-6 self-start space-y-4">
-                      <h3 className="font-bold text-gray-900 text-sm border-b border-gray-200 pb-2">Resumo da Reserva</h3>
-                      
+                    <div className="md:col-span-5 bg-gray-50 border border-gray-150 rounded-2xl p-6 self-start space-y-4">
+                      <h3 className="font-bold text-slate-900 text-sm border-b border-gray-200 pb-2">Resumo da Reserva</h3>
+
                       <div className="space-y-3 text-xs">
                         <div className="flex justify-between items-start gap-4">
                           <span className="text-gray-400">Serviço:</span>
-                          <span className="text-gray-900 font-bold text-right">{selectedService?.name}</span>
+                          <span className="text-gray-900 font-bold text-right">{selectedService.name}</span>
                         </div>
-                        <div className="flex justify-between items-start gap-4">
-                          <span className="text-gray-400">Profissional:</span>
-                          <span className="text-gray-900 font-semibold text-right">{selectedProvider?.name}</span>
-                        </div>
-                        <div className="flex justify-between items-start gap-4">
-                          <span className="text-gray-400">Local:</span>
-                          <span className="text-gray-900 font-semibold text-right">
-                            {selectedProvider?.serviceLocationType === "at_client" || (selectedProvider?.serviceLocationType === "both" && bookingLocationChoice === "at_client") 
-                              ? "🚗 No seu endereço (a domicílio)" 
-                              : "🏢 No estabelecimento"}
-                          </span>
-                        </div>
+                        {selectedProvider && (
+                          <div className="flex justify-between items-start gap-4">
+                            <span className="text-gray-400">Profissional:</span>
+                            <span className="text-gray-900 font-semibold text-right">{selectedProvider.name}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between items-start gap-4 border-t border-gray-200 pt-2">
-                          <span className="text-gray-400">Horário:</span>
+                          <span className="text-gray-400">Data e Hora:</span>
                           <span className={`text-${currentTheme.accent} font-extrabold font-mono text-right`}>
-                            {formatDateHuman(selectedDate)} às {selectedSlot?.time}
+                            {formatDateHuman(selectedDate)} às {selectedSlot.time}
                           </span>
                         </div>
                         <div className="flex justify-between items-baseline gap-4 border-t border-gray-200 pt-3">
                           <span className="text-sm font-bold text-gray-900 font-sans">Valor total:</span>
                           <span className={`text-lg font-extrabold font-mono text-${currentTheme.accent}`}>
-                            {selectedService ? formatPrice(selectedService.price) : ""}
+                            {formatPrice(selectedService.price)}
                           </span>
                         </div>
                       </div>
@@ -1328,17 +1233,17 @@ export default function ClientPortal({
                       <button
                         type="submit"
                         disabled={bookingLoading}
-                        className={`w-full py-3 px-4 bg-${currentTheme.accent} hover:bg-opacity-95 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer`}
+                        className={`w-full py-3 px-4 bg-${currentTheme.accent} hover:bg-opacity-95 text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer font-sans`}
                       >
                         {bookingLoading ? (
                           <>
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            Processando agendamento...
+                            Confirmando agendamento...
                           </>
                         ) : (
                           <>
                             <CheckCircle className="w-4 h-4" />
-                            Confirmar Agendamento Agora
+                            Finalizar e Confirmar Reserva
                           </>
                         )}
                       </button>
@@ -1347,62 +1252,68 @@ export default function ClientPortal({
                 </motion.div>
               )}
 
-              {/* STEP 4: SUCCESS MESSAGE */}
+              {/* STEP 4: SUCCESS & SUMMARY SCREEN */}
               {step === 4 && successBooking && (
                 <motion.div
                   key="step-4"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="text-center py-12 px-4 max-w-lg mx-auto space-y-6"
+                  className="text-center py-10 px-4 max-w-lg mx-auto space-y-6"
                 >
-                  <div className="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto border border-green-200 shadow-inner">
-                    <CheckCircle className="w-10 h-10" />
+                  <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-200 shadow-inner">
+                    <CheckCircle className="w-10 h-10 text-emerald-600" />
                   </div>
 
                   <div className="space-y-2">
-                    <h2 className="text-2xl font-extrabold text-gray-900">Agendamento Realizado!</h2>
+                    <h2 className="text-2xl font-extrabold text-slate-900">Agendamento Realizado!</h2>
                     <p className="text-sm text-gray-500 leading-relaxed">
-                      Tudo certo, <strong>{clientName}</strong>! Seu horário está confirmado com sucesso e já está reservado na agenda de {selectedProvider?.name}.
+                      Seu horário está confirmado e reservado com sucesso.
                     </p>
                   </div>
 
-                  <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5 text-left space-y-3 text-xs">
+                  <div className="bg-gray-50 border border-gray-150 rounded-2xl p-5 text-left space-y-3 text-xs">
                     <div className="flex justify-between border-b border-gray-200 pb-2">
                       <span className="font-semibold text-gray-500 uppercase tracking-wider text-3xs">Código de Reserva</span>
                       <span className="font-mono font-bold text-gray-900">{successBooking.id}</span>
                     </div>
 
                     <div className="space-y-1.5 pt-1">
-                      <p className="text-gray-800">💅 Serviço: <strong className="text-gray-900">{selectedService?.name}</strong></p>
-                      <p className="text-gray-800">👤 Profissional: <strong>{selectedProvider?.name}</strong></p>
-                      <p className="text-gray-800">
-                        📍 Local: <strong>
-                          {successBooking.clientAddress 
-                            ? `🚗 A domicílio: ${successBooking.clientAddress}` 
-                            : '🏢 No estabelecimento do profissional'}
-                        </strong>
-                      </p>
+                      <p className="text-gray-800">💅 Serviço: <strong>{selectedService?.name}</strong></p>
+                      {selectedProvider && <p className="text-gray-800">👤 Profissional: <strong>{selectedProvider.name}</strong></p>}
                       <p className="text-gray-800">📅 Data: <strong>{formatDateHuman(selectedDate)}</strong></p>
                       <p className="text-gray-800">⏰ Horário: <strong className={`text-${currentTheme.accent} font-mono text-sm`}>{selectedSlot?.time}</strong></p>
-                      <p className="text-gray-800">💰 Preço: <strong className="font-mono">{selectedService ? formatPrice(selectedService.price) : ""}</strong></p>
+                      <p className="text-gray-800">💰 Valor: <strong className="font-mono">{selectedService ? formatPrice(selectedService.price) : ""}</strong></p>
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => {
-                      setSelectedCategory(null);
-                      setSelectedService(null);
-                      setSelectedDate("");
-                      setSelectedSlot(null);
-                      setStep(1);
-                      setError(null);
-                    }}
-                    className="w-full py-2.5 px-4 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-xl font-semibold text-xs transition-colors cursor-pointer"
-                  >
-                    Fazer Outro Agendamento
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      onClick={() => {
+                        setSelectedService(null);
+                        setSelectedDate("");
+                        setSelectedSlot(null);
+                        setStep(1);
+                        setError(null);
+                      }}
+                      className="flex-1 py-2.5 px-4 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-xl font-bold text-xs transition-colors cursor-pointer"
+                    >
+                      Novo Agendamento
+                    </button>
+                    {currentUser && (
+                      <button
+                        onClick={() => {
+                          setActiveTab("my");
+                          fetchBookings();
+                        }}
+                        className={`flex-1 py-2.5 px-4 bg-${currentTheme.accent} text-white rounded-xl font-bold text-xs transition-colors shadow-sm cursor-pointer`}
+                      >
+                        Ver Meus Agendamentos
+                      </button>
+                    )}
+                  </div>
                 </motion.div>
               )}
+
             </div>
           ) : (
             // TAB MY BOOKINGS (CLIENT BOOKING HISTORY LIST)
@@ -1419,11 +1330,11 @@ export default function ClientPortal({
                 </div>
               ) : myBookings.length === 0 ? (
                 <div className="border border-dashed border-gray-200 rounded-2xl p-12 text-center text-gray-400 space-y-3">
-                  <CalendarIcon className="w-12 h-12 stroke-1 mx-auto" />
+                  <CalendarIcon className="w-12 h-12 stroke-1 mx-auto text-gray-300" />
                   <p className="text-sm font-semibold">Você ainda não tem nenhum agendamento cadastrado.</p>
                   <button
                     onClick={() => setActiveTab("new")}
-                    className={`px-4 py-2 bg-${currentTheme.accent} text-white rounded-lg text-xs font-bold shadow-md shadow-indigo-600/5`}
+                    className={`px-4 py-2 bg-${currentTheme.accent} text-white rounded-xl text-xs font-bold shadow-md cursor-pointer`}
                   >
                     Agendar agora
                   </button>
@@ -1434,35 +1345,33 @@ export default function ClientPortal({
                     const start = new Date(booking.startsAt);
                     const formattedDate = start.toLocaleDateString("pt-BR", { day: "numeric", month: "short", year: "numeric" });
                     const formattedTime = start.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
-                    
+
                     const isCancelled = booking.status === "cancelled";
                     const isCompleted = booking.status === "completed";
-                    
+
                     return (
                       <div
                         key={booking.id}
-                        className={`p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                          isCancelled 
-                            ? "bg-gray-50/50 border-gray-150 opacity-60" 
-                            : "bg-white border-gray-100 shadow-sm"
-                        }`}
+                        className={`p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${isCancelled
+                            ? "bg-gray-50/50 border-gray-150 opacity-60"
+                            : "bg-white border-gray-150 shadow-sm"
+                          }`}
                       >
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-2">
                             <h3 className="font-bold text-gray-900 text-sm">{booking.serviceName}</h3>
-                            <span className={`text-4xs font-extrabold uppercase px-2 py-0.5 rounded-full ${
-                              isCancelled 
-                                ? "bg-red-50 text-red-500 border border-red-100" 
-                                : isCompleted 
+                            <span className={`text-4xs font-extrabold uppercase px-2 py-0.5 rounded-full ${isCancelled
+                                ? "bg-red-50 text-red-500 border border-red-100"
+                                : isCompleted
                                   ? "bg-green-50 text-green-500 border border-green-100"
                                   : "bg-blue-50 text-blue-500 border border-blue-100"
-                            }`}>
+                              }`}>
                               {booking.status === "confirmed" ? "confirmado" : booking.status}
                             </span>
                           </div>
 
                           <div className="text-xs text-gray-500 space-y-0.5">
-                            <p>👤 Profissional: <strong>{booking.providerName}</strong></p>
+                            {booking.providerName && <p>👤 Profissional: <strong>{booking.providerName}</strong></p>}
                             <p className="font-mono">📅 Horário: {formattedDate} às {formattedTime}</p>
                           </div>
                         </div>
@@ -1476,13 +1385,13 @@ export default function ClientPortal({
                                 setRescheduleDate("");
                                 setSelectedRescheduleSlot(null);
                               }}
-                              className={`px-3 py-1.5 border border-${currentTheme.accent} text-${currentTheme.accent} hover:bg-${tenant.themeColor}-50 rounded-lg text-2xs font-bold transition-all`}
+                              className={`px-3 py-1.5 border border-${currentTheme.accent} text-${currentTheme.accent} hover:bg-${tenant.themeColor}-50 rounded-lg text-2xs font-bold transition-all cursor-pointer`}
                             >
                               Reagendar
                             </button>
                             <button
                               onClick={() => handleCancel(booking.id)}
-                              className="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg text-2xs font-bold transition-all"
+                              className="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg text-2xs font-bold transition-all cursor-pointer"
                             >
                               Cancelar
                             </button>
@@ -1514,7 +1423,7 @@ export default function ClientPortal({
                   setRescheduleDate("");
                   setSelectedRescheduleSlot(null);
                 }}
-                className="absolute right-6 top-6 text-gray-400 hover:text-gray-600 font-bold text-sm"
+                className="absolute right-6 top-6 text-gray-400 hover:text-gray-600 font-bold text-sm cursor-pointer"
               >
                 ✕
               </button>
@@ -1540,15 +1449,15 @@ export default function ClientPortal({
                       {rescheduleMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
                     </h4>
                     <div className="flex items-center gap-1">
-                      <button 
+                      <button
                         onClick={handleReschedulePrevMonth}
-                        className="p-1 hover:bg-gray-50 rounded text-gray-600 border border-gray-100"
+                        className="p-1 hover:bg-gray-50 rounded text-gray-600 border border-gray-100 cursor-pointer"
                       >
                         <ChevronLeft className="w-3.5 h-3.5" />
                       </button>
-                      <button 
+                      <button
                         onClick={handleRescheduleNextMonth}
-                        className="p-1 hover:bg-gray-50 rounded text-gray-600 border border-gray-100"
+                        className="p-1 hover:bg-gray-50 rounded text-gray-600 border border-gray-100 cursor-pointer"
                       >
                         <ChevronRight className="w-3.5 h-3.5" />
                       </button>
@@ -1569,7 +1478,7 @@ export default function ClientPortal({
                     {Array.from({ length: firstDayOfMonth(rescheduleMonth) }).map((_, i) => (
                       <div key={`empty-res-${i}`} className="aspect-square"></div>
                     ))}
-                    
+
                     {Array.from({ length: daysInMonth(rescheduleMonth) }).map((_, i) => {
                       const day = i + 1;
                       const year = rescheduleMonth.getFullYear();
@@ -1577,8 +1486,8 @@ export default function ClientPortal({
                       const dayStr = day.toString().padStart(2, "0");
                       const dateStr = `${year}-${month}-${dayStr}`;
                       const isSelected = rescheduleDate === dateStr;
-                      
-                      const todayStr = new Date().toISOString().split("T")[0];
+
+                      const todayStr = getTodayLocalDateString();
                       const isPast = dateStr < todayStr;
                       const isWeekend = new Date(year, rescheduleMonth.getMonth(), day).getDay() === 0;
 
@@ -1587,15 +1496,14 @@ export default function ClientPortal({
                           key={`resday-${day}`}
                           disabled={isPast}
                           onClick={() => selectRescheduleDateHandler(day)}
-                          className={`aspect-square flex items-center justify-center rounded text-xs font-semibold ${
-                            isPast 
-                              ? "text-gray-100 cursor-not-allowed" 
+                          className={`aspect-square flex items-center justify-center rounded text-xs font-semibold cursor-pointer ${isPast
+                              ? "text-gray-100 cursor-not-allowed"
                               : isSelected
                                 ? `bg-${currentTheme.accent} text-white font-bold`
                                 : isWeekend
                                   ? "text-red-400 hover:bg-red-50/50"
                                   : "text-gray-700 hover:bg-gray-150"
-                          }`}
+                            }`}
                         >
                           {day}
                         </button>
@@ -1633,13 +1541,12 @@ export default function ClientPortal({
                               key={slot.time}
                               disabled={!slot.available}
                               onClick={() => setSelectedRescheduleSlot(slot)}
-                              className={`py-2 rounded-lg text-xs font-semibold font-mono border transition-all ${
-                                !slot.available
+                              className={`py-2 rounded-lg text-xs font-semibold font-mono border transition-all cursor-pointer ${!slot.available
                                   ? "bg-gray-50 border-gray-105 text-gray-200 cursor-not-allowed"
                                   : selectedRescheduleSlot?.time === slot.time
                                     ? `bg-${currentTheme.accent} border-${currentTheme.accent} text-white shadow-sm`
                                     : "bg-white border-gray-200 text-gray-700 hover:border-gray-400"
-                              }`}
+                                }`}
                             >
                               {slot.time}
                             </button>
@@ -1659,14 +1566,14 @@ export default function ClientPortal({
                     setRescheduleDate("");
                     setSelectedRescheduleSlot(null);
                   }}
-                  className="flex-1 py-2 rounded-xl text-xs font-bold border border-gray-200 hover:bg-gray-50 text-gray-700 transition-colors"
+                  className="flex-1 py-2 rounded-xl text-xs font-bold border border-gray-200 hover:bg-gray-50 text-gray-700 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   disabled={!selectedRescheduleSlot}
                   onClick={handleRescheduleConfirm}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold text-white bg-${currentTheme.accent} hover:bg-opacity-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-indigo-600/5`}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold text-white bg-${currentTheme.accent} hover:bg-opacity-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md cursor-pointer`}
                 >
                   Confirmar Reagendamento
                 </button>
