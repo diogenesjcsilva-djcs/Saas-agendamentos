@@ -308,12 +308,7 @@ export default function ClientPortal({
       return false;
     }
 
-    // 3) Category filter
-    const matchesCategory = selectedCategoryFilter === "all"
-      ? true
-      : provider.categoryId === selectedCategoryFilter;
-
-    return matchesCategory;
+    return true;
   });
 
   // Select service and proceed to Step 2 (Data e Hora)
@@ -945,40 +940,6 @@ export default function ClientPortal({
                       </div>
                     )}
                   </div>
-
-                  {/* Category Filter Cards */}
-                  {categories.length > 0 && (
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 w-full">
-                      <button
-                        onClick={() => setSelectedCategoryFilter("all")}
-                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 border ${
-                          selectedCategoryFilter === "all"
-                            ? "bg-slate-900 text-white border-slate-900 shadow-sm"
-                            : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-                        }`}
-                      >
-                        <span>✨</span>
-                        <span>Todos</span>
-                      </button>
-                      {categories.map((cat) => {
-                        const isSelected = selectedCategoryFilter === cat.id;
-                        return (
-                          <button
-                            key={cat.id}
-                            onClick={() => setSelectedCategoryFilter(cat.id)}
-                            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 border ${
-                              isSelected
-                                ? "bg-slate-900 text-white border-slate-900 shadow-sm"
-                                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-                            }`}
-                          >
-                            <span>{cat.imageUrl}</span>
-                            <span>{cat.name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
 
                   {/* Services Grid (Strictly filtered by selected provider) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
