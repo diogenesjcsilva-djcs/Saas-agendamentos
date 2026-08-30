@@ -66,6 +66,7 @@ interface ClientPortalProps {
     bio?: string
   ) => Promise<void>;
   setSocialAuthOpen: (provider: "google" | "instagram" | null) => void;
+  onNavigateHome?: () => void;
 }
 
 const getServiceIcon = (name: string) => {
@@ -106,8 +107,13 @@ export default function ClientPortal({
   setAuthLoading,
   handleLogin,
   handleRegister,
-  setSocialAuthOpen
+  setSocialAuthOpen,
+  onNavigateHome
 }: ClientPortalProps) {
+  // Invalid Provider / Service Link State
+  const [invalidLinkError, setInvalidLinkError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<number>(4);
+
   // Categories filter state
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
@@ -179,6 +185,30 @@ export default function ClientPortal({
     }
   }, [initialSelectedProvider]);
 
+  // Auto-redirect to home when link is invalid
+  useEffect(() => {
+    if (!invalidLinkError) return;
+
+    setCountdown(4);
+    const timer = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          if (onNavigateHome) {
+            onNavigateHome();
+          } else {
+            window.history.pushState(null, "", "/");
+            window.location.href = "/";
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [invalidLinkError, onNavigateHome]);
+
   // Fetch initial services, providers, and categories for this tenant
   useEffect(() => {
     async function loadData() {
@@ -200,20 +230,54 @@ export default function ClientPortal({
         const directProviderId = urlParams.get("providerId") || urlParams.get("provider");
         let targetProv: Provider | null = null;
 
-        if (directProviderId && provs.length > 0) {
-          targetProv = provs.find(p => p.id === directProviderId || p.name.toLowerCase().includes(directProviderId.toLowerCase())) || null;
+        if (directProviderId) {
+          if (provs.length > 0) {
+            targetProv = provs.find(p => p.id === directProviderId || p.name.toLowerCase().includes(directProviderId.toLowerCase())) || null;
+          }
+          // Direct provider requested: check if exists and has registered services
+          if (!targetProv) {
+            setInvalidLinkError("O link de prestador acessado é inválido ou não foi encontrado.");
+            return;
+          }
+          const providerServices = servs.filter(s => s.providerId === targetProv!.id);
+          if (providerServices.length === 0) {
+            setInvalidLinkError(`O link informado para o prestador "${targetProv.name}" é inválido pois ele ainda não cadastrou nenhum serviço.`);
+            return;
+          }
         }
 
         if (!targetProv && initialSelectedProvider) {
           targetProv = initialSelectedProvider;
         }
 
-        if (!targetProv && provs.length > 0) {
-          targetProv = provs[0];
+        // If target provider has 0 services, check if another provider has services or if whole tenant is empty
+        if (targetProv) {
+          const targetProvServices = servs.filter(s => s.providerId === targetProv!.id);
+          if (targetProvServices.length === 0) {
+            const provWithServices = provs.find(p => servs.some(s => s.providerId === p.id));
+            if (provWithServices) {
+              targetProv = provWithServices;
+            } else {
+              setInvalidLinkError("Este estabelecimento ainda não possui nenhum serviço cadastrado para agendamento.");
+              return;
+            }
+          }
+        } else if (provs.length > 0) {
+          const provWithServices = provs.find(p => servs.some(s => s.providerId === p.id));
+          if (provWithServices) {
+            targetProv = provWithServices;
+          } else {
+            setInvalidLinkError("Este estabelecimento ainda não possui nenhum serviço cadastrado para agendamento.");
+            return;
+          }
+        } else {
+          setInvalidLinkError("Nenhum profissional encontrado para este estabelecimento.");
+          return;
         }
 
         if (targetProv) {
           setSelectedProvider(targetProv);
+          setInvalidLinkError(null);
         }
       } catch (err) {
         console.error("Error loading portal data", err);
@@ -497,6 +561,41 @@ export default function ClientPortal({
       registerRole === "provider" ? registerBio : undefined
     );
   };
+
+  if (invalidLinkError) {
+    return (
+      <div id="client-portal-root" className="w-full max-w-md mx-auto bg-white rounded-3xl shadow-xl border border-gray-100 p-8 text-center space-y-6 my-10">
+        <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto text-3xl select-none font-bold shadow-inner">
+          ⚠️
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold text-gray-900">Link Inválido ou Indisponível</h2>
+          <p className="text-xs text-gray-600 leading-relaxed font-medium">
+            {invalidLinkError}
+          </p>
+        </div>
+
+        <div className="p-3.5 bg-gray-50 border border-gray-150 rounded-xl text-3xs font-semibold text-gray-600 flex items-center justify-center gap-2">
+          <span className="w-3.5 h-3.5 border-2 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin"></span>
+          <span>Redirecionando para a página principal em <strong>{countdown}s</strong>...</span>
+        </div>
+
+        <button
+          onClick={() => {
+            if (onNavigateHome) {
+              onNavigateHome();
+            } else {
+              window.history.pushState(null, "", "/");
+              window.location.href = "/";
+            }
+          }}
+          className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
+        >
+          Ir para a Página Principal Agora
+        </button>
+      </div>
+    );
+  }
 
   if (!currentUser) {
     return (

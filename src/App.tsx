@@ -929,6 +929,7 @@ export default function App() {
                   handleLogin={handleLogin}
                   handleRegister={handleRegister}
                   setSocialAuthOpen={setSocialAuthOpen}
+                  onNavigateHome={() => navigateTo("/")}
                 />
               </motion.div>
             ) : viewMode === "provider" && selectedProvider ? (
