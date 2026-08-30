@@ -903,42 +903,11 @@ export default function ClientPortal({
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-6"
                 >
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-4">
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-900">Escolha o Serviço</h2>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Serviços disponíveis com <strong className="text-slate-900 font-bold">{selectedProvider ? selectedProvider.name : "o profissional"}</strong>.
-                      </p>
-                    </div>
-
-                    {/* Professional Switcher Cards if multiple providers exist */}
-                    {providers.length > 1 && (
-                      <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
-                        {providers.map(p => {
-                          const isCurrent = selectedProvider?.id === p.id;
-                          return (
-                            <button
-                              key={p.id}
-                              onClick={() => setSelectedProvider(p)}
-                              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 border ${
-                                isCurrent
-                                  ? "bg-slate-900 text-white border-slate-900 shadow-sm"
-                                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-                              }`}
-                            >
-                              {p.avatarUrl ? (
-                                <img src={p.avatarUrl} alt={p.name} className="w-5 h-5 rounded-full object-cover shrink-0" />
-                              ) : (
-                                <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-3xs flex items-center justify-center font-bold shrink-0">
-                                  {p.name.charAt(0)}
-                                </span>
-                              )}
-                              <span>{p.name}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
+                  <div className="border-b border-gray-100 pb-4">
+                    <h2 className="text-xl font-bold text-gray-900">Escolha o Serviço</h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Serviços disponíveis com <strong className="text-slate-900 font-bold">{selectedProvider ? selectedProvider.name : "o profissional"}</strong>.
+                    </p>
                   </div>
 
                   {/* Services Grid (Strictly filtered by selected provider) */}
