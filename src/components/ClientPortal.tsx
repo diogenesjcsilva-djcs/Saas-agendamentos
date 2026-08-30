@@ -114,9 +114,8 @@ export default function ClientPortal({
   const [invalidLinkError, setInvalidLinkError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number>(4);
 
-  // Categories filter state
+  // Categories state
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
 
   const [registerRole, setRegisterRole] = useState<"client" | "provider">("client");
   const [registerCategoryId, setRegisterCategoryId] = useState<string>("");
