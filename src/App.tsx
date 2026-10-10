@@ -8,6 +8,7 @@ import { Tenant, Provider } from "./types";
 import { getTenants, getProviders, login, register, getMe, socialLogin, getTenantBySlug, createTenant } from "./lib/api.js";
 import ClientPortal from "./components/ClientPortal.js";
 import ProviderDashboard from "./components/ProviderDashboard.js";
+import { getTenantThemeVars } from "./theme/tenant.js";
 import { 
   Users, 
   Compass, 
@@ -771,12 +772,6 @@ export default function App() {
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {tenants.map(tenant => {
-                        const theme = tenant.themeColor || "indigo";
-                        const themeColorClass = 
-                          theme === "emerald" ? "emerald" :
-                          theme === "rose" ? "rose" :
-                          theme === "amber" ? "amber" : "indigo";
-                        
                         return (
                           <div
                             key={tenant.id}
@@ -801,12 +796,7 @@ export default function App() {
 
                             <button
                               onClick={() => navigateTo(`/${tenant.slug}`)}
-                              className={`w-full mt-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm border border-transparent ${
-                                themeColorClass === "emerald" ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white" :
-                                themeColorClass === "rose" ? "bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white" :
-                                themeColorClass === "amber" ? "bg-amber-50 text-amber-700 hover:bg-amber-600 hover:text-white" :
-                                "bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white"
-                              } cursor-pointer`}
+                              className="w-full mt-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm border border-transparent bg-[var(--tenant-accent-soft)] text-[var(--tenant-accent-strong)] hover:bg-[var(--tenant-accent)] hover:text-white cursor-pointer"
                             >
                               Acessar Agendamentos
                             </button>
@@ -909,6 +899,9 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.25 }}
+                /* Abre o escopo de cor do estabelecimento: tudo dentro do portal
+                   do cliente le --tenant-accent* em vez de nomear uma cor. */
+                style={getTenantThemeVars(selectedTenant.themeColor)}
               >
                 <ClientPortal 
                   tenant={selectedTenant} 

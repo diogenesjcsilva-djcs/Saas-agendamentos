@@ -33,4 +33,15 @@
   /* --- Elevation: two levels only ---------------------------------------- */
   --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06);
   --shadow-overlay: 0 24px 48px -12px rgb(15 23 42 / 0.28);
+
+  /* --- Tenant accent (the establishment's own colour) ---------------------
+     One palette per establishment, resolved at runtime: src/theme/tenant.ts
+     is the single source for the four palettes, and writes these same
+     properties onto the element that opens the tenant scope. The values below
+     are only the default (indigo) so the utilities keep working outside a
+     tenant — home page, registration — instead of resolving to nothing.
+     Keep in sync with TENANT_THEME_PALETTES.indigo. */
+  --tenant-accent: oklch(51.1% 0.262 276.966); /* indigo-600 */
+  --tenant-accent-strong: oklch(45.7% 0.24 277.023); /* indigo-700 */
+  --tenant-accent-soft: oklch(96.2% 0.018 272.314); /* indigo-50  */
 }

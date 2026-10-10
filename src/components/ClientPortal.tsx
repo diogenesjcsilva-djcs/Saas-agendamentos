@@ -500,40 +500,6 @@ export default function ClientPortal({
     }
   };
 
-  // Color mappings
-  const colorMap: Record<string, { bg: string, border: string, text: string, hover: string, accent: string }> = {
-    indigo: {
-      bg: "bg-indigo-50",
-      border: "border-indigo-200",
-      text: "text-indigo-900",
-      hover: "hover:bg-indigo-500 hover:text-white",
-      accent: "indigo-600"
-    },
-    emerald: {
-      bg: "bg-emerald-50",
-      border: "border-emerald-200",
-      text: "text-emerald-900",
-      hover: "hover:bg-emerald-500 hover:text-white",
-      accent: "emerald-600"
-    },
-    rose: {
-      bg: "bg-rose-50",
-      border: "border-rose-200",
-      text: "text-rose-900",
-      hover: "hover:bg-rose-500 hover:text-white",
-      accent: "rose-600"
-    },
-    amber: {
-      bg: "bg-amber-50",
-      border: "border-amber-200",
-      text: "text-amber-900",
-      hover: "hover:bg-amber-500 hover:text-white",
-      accent: "amber-600"
-    }
-  };
-
-  const currentTheme = colorMap[tenant.themeColor] || colorMap.indigo;
-
   const formatPrice = (p: number) => {
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(p);
   };
@@ -570,7 +536,7 @@ export default function ClientPortal({
         </div>
 
         <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl text-3xs font-semibold text-gray-600 flex items-center justify-center gap-2">
-          <span className="w-3.5 h-3.5 border-2 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin"></span>
+          <span className="w-3.5 h-3.5 border-2 border-[var(--tenant-accent)]/30 border-t-[var(--tenant-accent)] rounded-full animate-spin"></span>
           <span>Redirecionando para a página principal em <strong>{countdown}s</strong>...</span>
         </div>
 
@@ -606,15 +572,15 @@ export default function ClientPortal({
 
             <div className="space-y-4 text-xs font-semibold text-slate-700">
               <div className="flex items-center gap-3">
-                <span className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">⚡</span>
+                <span className="w-8 h-8 rounded-xl bg-[var(--tenant-accent-soft)] text-[var(--tenant-accent)] flex items-center justify-center font-bold">⚡</span>
                 <span>Agendamento rápido em menos de 1 minuto</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">🔄</span>
+                <span className="w-8 h-8 rounded-xl bg-[var(--tenant-accent-soft)] text-[var(--tenant-accent)] flex items-center justify-center font-bold">🔄</span>
                 <span>Reagende ou cancele de forma 100% online</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">🔔</span>
+                <span className="w-8 h-8 rounded-xl bg-[var(--tenant-accent-soft)] text-[var(--tenant-accent)] flex items-center justify-center font-bold">🔔</span>
                 <span>Histórico completo de visitas no seu portal</span>
               </div>
             </div>
@@ -650,7 +616,7 @@ export default function ClientPortal({
                         type="button"
                         onClick={() => setRegisterRole("client")}
                         className={`py-1.5 rounded-lg text-3xs font-bold transition-all ${registerRole === "client"
-                            ? "bg-white text-indigo-600 shadow-sm border border-gray-200"
+                            ? "bg-white text-[var(--tenant-accent)] shadow-sm border border-gray-200"
                             : "text-gray-400 hover:text-gray-600"
                           }`}
                       >
@@ -660,7 +626,7 @@ export default function ClientPortal({
                         type="button"
                         onClick={() => setRegisterRole("provider")}
                         className={`py-1.5 rounded-lg text-3xs font-bold transition-all ${registerRole === "provider"
-                            ? "bg-white text-indigo-600 shadow-sm border border-gray-200"
+                            ? "bg-white text-[var(--tenant-accent)] shadow-sm border border-gray-200"
                             : "text-gray-400 hover:text-gray-600"
                           }`}
                       >
@@ -680,7 +646,7 @@ export default function ClientPortal({
                         value={authName}
                         onChange={(e) => setAuthName(e.target.value)}
                         placeholder={registerRole === "provider" ? "Nome do Profissional" : "Seu nome"}
-                        className="w-full bg-gray-50 border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
+                        className="w-full bg-gray-50 border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-xs focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] focus:outline-none transition-all font-semibold"
                       />
                     </div>
                   </div>
@@ -693,7 +659,7 @@ export default function ClientPortal({
                         <select
                           value={registerCategoryId}
                           onChange={(e) => setRegisterCategoryId(e.target.value)}
-                          className="w-full bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold cursor-pointer"
+                          className="w-full bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-xs focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] focus:outline-none transition-all font-semibold cursor-pointer"
                         >
                           {categories.map((cat) => (
                             <option key={cat.id} value={cat.id}>
@@ -710,7 +676,7 @@ export default function ClientPortal({
                           onChange={(e) => setRegisterBio(e.target.value)}
                           placeholder="Fale um pouco sobre sua experiência e serviços..."
                           rows={2}
-                          className="w-full bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold resize-none"
+                          className="w-full bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-xs focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] focus:outline-none transition-all font-semibold resize-none"
                         />
                       </div>
                     </>
@@ -728,7 +694,7 @@ export default function ClientPortal({
                     value={authEmail}
                     onChange={(e) => setAuthEmail(e.target.value)}
                     placeholder="seuemail@provedor.com"
-                    className="w-full bg-gray-50 border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
+                    className="w-full bg-gray-50 border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-xs focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] focus:outline-none transition-all font-semibold"
                   />
                 </div>
               </div>
@@ -743,7 +709,7 @@ export default function ClientPortal({
                     value={authPassword}
                     onChange={(e) => setAuthPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full bg-gray-50 border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
+                    className="w-full bg-gray-50 border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-xs focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] focus:outline-none transition-all font-semibold"
                   />
                 </div>
               </div>
@@ -751,7 +717,7 @@ export default function ClientPortal({
               <button
                 type="submit"
                 disabled={authLoading}
-                className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition-colors flex items-center justify-center gap-2 shadow-indigo-600/10 font-sans cursor-pointer"
+                className="w-full py-2 bg-[var(--tenant-accent)] hover:bg-[var(--tenant-accent-strong)] text-white rounded-xl text-xs font-bold shadow-md transition-colors flex items-center justify-center gap-2 shadow-[color:var(--tenant-accent)]/10 font-sans cursor-pointer"
               >
                 {authLoading ? (
                   <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
@@ -804,7 +770,7 @@ export default function ClientPortal({
                       setAuthMode("register");
                       setAuthError(null);
                     }}
-                    className="text-indigo-600 font-bold hover:underline cursor-pointer"
+                    className="text-[var(--tenant-accent)] font-bold hover:underline cursor-pointer"
                   >
                     Cadastre-se
                   </button>
@@ -817,7 +783,7 @@ export default function ClientPortal({
                       setAuthMode("login");
                       setAuthError(null);
                     }}
-                    className="text-indigo-600 font-bold hover:underline cursor-pointer"
+                    className="text-[var(--tenant-accent)] font-bold hover:underline cursor-pointer"
                   >
                     Faça Login
                   </button>
@@ -839,7 +805,7 @@ export default function ClientPortal({
           <button
             onClick={() => setActiveTab("new")}
             className={`flex-1 py-4 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-2 cursor-pointer ${activeTab === "new"
-                ? `border-${currentTheme.accent} text-${currentTheme.accent} bg-white`
+                ? "border-[var(--tenant-accent)] text-[var(--tenant-accent)] bg-white"
                 : "border-transparent text-gray-400 hover:text-gray-600"
               }`}
           >
@@ -849,7 +815,7 @@ export default function ClientPortal({
           <button
             onClick={() => setActiveTab("my")}
             className={`flex-1 py-4 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-2 cursor-pointer ${activeTab === "my"
-                ? `border-${currentTheme.accent} text-${currentTheme.accent} bg-white`
+                ? "border-[var(--tenant-accent)] text-[var(--tenant-accent)] bg-white"
                 : "border-transparent text-gray-400 hover:text-gray-600"
               }`}
           >
@@ -863,17 +829,17 @@ export default function ClientPortal({
       {activeTab === "new" && step < 4 && (
         <div className="px-8 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between text-xs font-medium text-gray-400">
           <div className="flex items-center gap-4 w-full justify-center md:justify-start flex-wrap">
-            <span className={`pb-1 flex items-center gap-1.5 ${step === 1 ? `text-${currentTheme.accent} font-bold border-b-2 border-${currentTheme.accent}` : step > 1 ? "text-gray-900 font-semibold" : ""}`}>
+            <span className={`pb-1 flex items-center gap-1.5 ${step === 1 ? "text-[var(--tenant-accent)] font-bold border-b-2 border-[var(--tenant-accent)]" : step > 1 ? "text-gray-900 font-semibold" : ""}`}>
               {step > 1 ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : null}
               1. Serviço
             </span>
             <span className="text-gray-300">/</span>
-            <span className={`pb-1 flex items-center gap-1.5 ${step === 2 ? `text-${currentTheme.accent} font-bold border-b-2 border-${currentTheme.accent}` : step > 2 ? "text-gray-900 font-semibold" : ""}`}>
+            <span className={`pb-1 flex items-center gap-1.5 ${step === 2 ? "text-[var(--tenant-accent)] font-bold border-b-2 border-[var(--tenant-accent)]" : step > 2 ? "text-gray-900 font-semibold" : ""}`}>
               {step > 2 ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : null}
               2. Data e Hora
             </span>
             <span className="text-gray-300">/</span>
-            <span className={`pb-1 flex items-center gap-1.5 ${step === 3 ? `text-${currentTheme.accent} font-bold border-b-2 border-${currentTheme.accent}` : ""}`}>
+            <span className={`pb-1 flex items-center gap-1.5 ${step === 3 ? "text-[var(--tenant-accent)] font-bold border-b-2 border-[var(--tenant-accent)]" : ""}`}>
               3. Seus Dados
             </span>
           </div>
@@ -926,8 +892,8 @@ export default function ClientPortal({
                             key={service.id}
                             onClick={() => handleSelectService(service)}
                             className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex gap-4 items-start ${isSelected
-                                ? `border-${currentTheme.accent} ${currentTheme.bg} shadow-md`
-                                : "border-gray-200 hover:border-indigo-600 hover:shadow-md hover:translate-y-[-2px] bg-white group"
+                                ? "border-[var(--tenant-accent)] bg-[var(--tenant-accent-soft)] shadow-md"
+                                : "border-gray-200 hover:border-[var(--tenant-accent)] hover:shadow-md hover:translate-y-[-2px] bg-white group"
                               }`}
                           >
                             <span className="text-3xl p-3 bg-gray-50 rounded-xl border border-gray-100 shrink-0 select-none shadow-sm group-hover:scale-105 transition-transform">
@@ -935,7 +901,7 @@ export default function ClientPortal({
                             </span>
                             <div className="space-y-1.5 flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap justify-between">
-                                <h3 className="font-bold text-slate-900 text-sm leading-snug truncate group-hover:text-indigo-600 transition-colors">{service.name}</h3>
+                                <h3 className="font-bold text-slate-900 text-sm leading-snug truncate group-hover:text-[var(--tenant-accent)] transition-colors">{service.name}</h3>
                                 <span className="text-3xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-mono font-bold shrink-0">
                                   {service.durationMinutes} min
                                 </span>
@@ -944,10 +910,10 @@ export default function ClientPortal({
                               <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{service.description || "Atendimento especializado com horário reservado."}</p>
 
                               <div className="flex justify-between items-center pt-2">
-                                <span className="text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition-transform">
+                                <span className="text-xs font-bold text-[var(--tenant-accent)] group-hover:translate-x-1 transition-transform">
                                   Agendar Horário &rarr;
                                 </span>
-                                <span className={`text-xs font-extrabold font-mono text-${currentTheme.accent}`}>
+                                <span className="text-xs font-extrabold font-mono text-[var(--tenant-accent)]">
                                   {formatPrice(service.price)}
                                 </span>
                               </div>
@@ -1046,7 +1012,7 @@ export default function ClientPortal({
                               className={`aspect-square flex items-center justify-center rounded-xl text-xs font-medium transition-all cursor-pointer ${isPast
                                   ? "text-gray-300 cursor-not-allowed"
                                   : isSelected
-                                    ? `bg-${currentTheme.accent} text-white shadow-md font-bold scale-105`
+                                    ? "bg-[var(--tenant-accent)] text-white shadow-md font-bold scale-105"
                                     : isWeekend
                                       ? "text-red-500 hover:bg-red-50 font-bold"
                                       : "text-gray-700 hover:bg-gray-100 font-semibold"
@@ -1063,7 +1029,7 @@ export default function ClientPortal({
                     <div className="lg:col-span-5 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-start min-h-[300px]">
                       {slotsLoading ? (
                         <div className="flex-1 flex flex-col items-center justify-center py-12 text-gray-400">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--tenant-accent)]"></div>
                           <p className="mt-3 text-xs">Buscando horários disponíveis...</p>
                         </div>
                       ) : !selectedDate ? (
@@ -1093,8 +1059,8 @@ export default function ClientPortal({
                                   className={`py-2.5 px-3 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer ${!slot.available
                                       ? "bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed text-left flex flex-col opacity-60"
                                       : selectedSlot?.time === slot.time
-                                        ? `bg-${currentTheme.accent} border-${currentTheme.accent} text-white shadow-sm`
-                                        : "bg-white border-gray-200 text-gray-700 hover:border-indigo-600"
+                                        ? "bg-[var(--tenant-accent)] border-[var(--tenant-accent)] text-white shadow-sm"
+                                        : "bg-white border-gray-200 text-gray-700 hover:border-[var(--tenant-accent)]"
                                     }`}
                                 >
                                   <span>{slot.time}</span>
@@ -1111,7 +1077,7 @@ export default function ClientPortal({
                             >
                               <button
                                 onClick={() => setStep(3)}
-                                className={`w-full py-3 px-4 bg-${currentTheme.accent} text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer`}
+                                className="w-full py-3 px-4 bg-[var(--tenant-accent)] text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                               >
                                 Avançar para Seus Dados &rarr;
                               </button>
@@ -1161,7 +1127,7 @@ export default function ClientPortal({
                             value={clientName}
                             onChange={(e) => setClientName(e.target.value)}
                             placeholder="Seu nome completo"
-                            className="w-full py-2.5 pl-10 pr-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all font-semibold"
+                            className="w-full py-2.5 pl-10 pr-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] transition-all font-semibold"
                           />
                         </div>
                       </div>
@@ -1178,7 +1144,7 @@ export default function ClientPortal({
                               value={clientEmail}
                               onChange={(e) => setClientEmail(e.target.value)}
                               placeholder="seu@email.com"
-                              className="w-full py-2.5 pl-10 pr-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all font-semibold"
+                              className="w-full py-2.5 pl-10 pr-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] transition-all font-semibold"
                             />
                           </div>
                         </div>
@@ -1194,7 +1160,7 @@ export default function ClientPortal({
                               value={clientPhone}
                               onChange={(e) => setClientPhone(e.target.value)}
                               placeholder="(11) 99999-9999"
-                              className="w-full py-2.5 pl-10 pr-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all font-semibold"
+                              className="w-full py-2.5 pl-10 pr-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] transition-all font-semibold"
                             />
                           </div>
                         </div>
@@ -1208,7 +1174,7 @@ export default function ClientPortal({
                           value={notes}
                           onChange={(e) => setNotes(e.target.value)}
                           placeholder="Alguma recomendação especial?"
-                          className="w-full py-2.5 px-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all font-semibold resize-none"
+                          className="w-full py-2.5 px-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] transition-all font-semibold resize-none"
                         />
                       </div>
                     </div>
@@ -1230,13 +1196,13 @@ export default function ClientPortal({
                         )}
                         <div className="flex justify-between items-start gap-4 border-t border-gray-200 pt-2">
                           <span className="text-gray-400">Data e Hora:</span>
-                          <span className={`text-${currentTheme.accent} font-extrabold font-mono text-right`}>
+                          <span className="text-[var(--tenant-accent)] font-extrabold font-mono text-right">
                             {formatDateHuman(selectedDate)} às {selectedSlot.time}
                           </span>
                         </div>
                         <div className="flex justify-between items-baseline gap-4 border-t border-gray-200 pt-3">
                           <span className="text-sm font-bold text-gray-900 font-sans">Valor total:</span>
-                          <span className={`text-lg font-extrabold font-mono text-${currentTheme.accent}`}>
+                          <span className="text-lg font-extrabold font-mono text-[var(--tenant-accent)]">
                             {formatPrice(selectedService.price)}
                           </span>
                         </div>
@@ -1245,7 +1211,7 @@ export default function ClientPortal({
                       <button
                         type="submit"
                         disabled={bookingLoading}
-                        className={`w-full py-3 px-4 bg-${currentTheme.accent} text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer font-sans`}
+                        className="w-full py-3 px-4 bg-[var(--tenant-accent)] text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer font-sans"
                       >
                         {bookingLoading ? (
                           <>
@@ -1293,7 +1259,7 @@ export default function ClientPortal({
                       <p className="text-gray-800">💅 Serviço: <strong>{selectedService?.name}</strong></p>
                       {selectedProvider && <p className="text-gray-800">👤 Profissional: <strong>{selectedProvider.name}</strong></p>}
                       <p className="text-gray-800">📅 Data: <strong>{formatDateHuman(selectedDate)}</strong></p>
-                      <p className="text-gray-800">⏰ Horário: <strong className={`text-${currentTheme.accent} font-mono text-sm`}>{selectedSlot?.time}</strong></p>
+                      <p className="text-gray-800">⏰ Horário: <strong className="text-[var(--tenant-accent)] font-mono text-sm">{selectedSlot?.time}</strong></p>
                       <p className="text-gray-800">💰 Valor: <strong className="font-mono">{selectedService ? formatPrice(selectedService.price) : ""}</strong></p>
                     </div>
                   </div>
@@ -1317,7 +1283,7 @@ export default function ClientPortal({
                           setActiveTab("my");
                           fetchBookings();
                         }}
-                        className={`flex-1 py-2.5 px-4 bg-${currentTheme.accent} text-white rounded-xl font-bold text-xs transition-colors shadow-sm cursor-pointer`}
+                        className="flex-1 py-2.5 px-4 bg-[var(--tenant-accent)] text-white rounded-xl font-bold text-xs transition-colors shadow-sm cursor-pointer"
                       >
                         Ver Meus Agendamentos
                       </button>
@@ -1337,7 +1303,7 @@ export default function ClientPortal({
 
               {myBookingsLoading ? (
                 <div className="py-20 text-center">
-                  <div className={`animate-spin rounded-full h-8 w-8 border-b-2 border-${currentTheme.accent} mx-auto`}></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--tenant-accent)] mx-auto"></div>
                   <p className="text-sm text-gray-500 mt-2 font-medium">Buscando seus agendamentos...</p>
                 </div>
               ) : myBookings.length === 0 ? (
@@ -1346,7 +1312,7 @@ export default function ClientPortal({
                   <p className="text-sm font-semibold">Você ainda não tem nenhum agendamento cadastrado.</p>
                   <button
                     onClick={() => setActiveTab("new")}
-                    className={`px-4 py-2 bg-${currentTheme.accent} text-white rounded-xl text-xs font-bold shadow-md cursor-pointer`}
+                    className="px-4 py-2 bg-[var(--tenant-accent)] text-white rounded-xl text-xs font-bold shadow-md cursor-pointer"
                   >
                     Agendar agora
                   </button>
@@ -1397,7 +1363,7 @@ export default function ClientPortal({
                                 setRescheduleDate("");
                                 setSelectedRescheduleSlot(null);
                               }}
-                              className={`px-3 py-1.5 border border-${currentTheme.accent} text-${currentTheme.accent} hover:bg-${tenant.themeColor}-50 rounded-lg text-2xs font-bold transition-all cursor-pointer`}
+                              className="px-3 py-1.5 border border-[var(--tenant-accent)] text-[var(--tenant-accent)] hover:bg-[var(--tenant-accent-soft)] rounded-lg text-2xs font-bold transition-all cursor-pointer"
                             >
                               Reagendar
                             </button>
@@ -1511,7 +1477,7 @@ export default function ClientPortal({
                           className={`aspect-square flex items-center justify-center rounded text-xs font-semibold cursor-pointer ${isPast
                               ? "text-gray-100 cursor-not-allowed"
                               : isSelected
-                                ? `bg-${currentTheme.accent} text-white font-bold`
+                                ? "bg-[var(--tenant-accent)] text-white font-bold"
                                 : isWeekend
                                   ? "text-red-400 hover:bg-red-50/50"
                                   : "text-gray-700 hover:bg-gray-100"
@@ -1533,7 +1499,7 @@ export default function ClientPortal({
                     </div>
                   ) : rescheduleSlotsLoading ? (
                     <div className="flex-1 flex flex-col items-center justify-center">
-                      <div className={`animate-spin rounded-full h-6 w-6 border-b-2 border-${currentTheme.accent}`}></div>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--tenant-accent)]"></div>
                     </div>
                   ) : rescheduleSlots.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-gray-200 rounded-xl p-4 text-center text-gray-500 text-xs">
@@ -1556,7 +1522,7 @@ export default function ClientPortal({
                               className={`py-2 rounded-lg text-xs font-semibold font-mono border transition-all cursor-pointer ${!slot.available
                                   ? "bg-gray-50 border-gray-100 text-gray-200 cursor-not-allowed"
                                   : selectedRescheduleSlot?.time === slot.time
-                                    ? `bg-${currentTheme.accent} border-${currentTheme.accent} text-white shadow-sm`
+                                    ? "bg-[var(--tenant-accent)] border-[var(--tenant-accent)] text-white shadow-sm"
                                     : "bg-white border-gray-200 text-gray-700 hover:border-gray-400"
                                 }`}
                             >
@@ -1585,7 +1551,7 @@ export default function ClientPortal({
                 <button
                   disabled={!selectedRescheduleSlot}
                   onClick={handleRescheduleConfirm}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold text-white bg-${currentTheme.accent} disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md cursor-pointer`}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold text-white bg-[var(--tenant-accent)] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md cursor-pointer"
                 >
                   Confirmar Reagendamento
                 </button>
