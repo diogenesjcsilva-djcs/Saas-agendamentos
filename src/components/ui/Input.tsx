@@ -53,7 +53,7 @@ export default function Input({
   return (
     <div className="relative">
       <Icon
-        className={`w-4 h-4 text-gray-400 absolute ${s.iconLeft} top-1/2 -translate-y-1/2`}
+        className={`w-4 h-4 text-gray-500 absolute ${s.iconLeft} top-1/2 -translate-y-1/2`}
       />
       <input {...rest} className={field} />
     </div>

@@ -39,7 +39,7 @@ export default function EmptyState({
   return (
     <div
       className={`flex flex-col items-center justify-center text-center ${
-        size === "xs" ? "" : "text-gray-400"
+        size === "xs" ? "" : "text-gray-500"
       } ${SIZES[size]} ${bordered ? BORDERED[size] : ""} ${className}`}
     >
       {icon}

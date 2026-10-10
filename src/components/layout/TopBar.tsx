@@ -92,8 +92,9 @@ export default function TopBar({
           closeMenu();
           onToggleView();
         }}
+        aria-pressed={isProviderMode}
         className={`${
-          fullWidth ? "w-full py-2" : ""
+          fullWidth ? "w-full min-h-11" : ""
         } text-gray-500 hover:text-[var(--tenant-accent)] text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer`}
       >
         {isProviderMode ? (
@@ -108,7 +109,7 @@ export default function TopBar({
   const providerBadge =
     isProviderMode && providerName ? (
       <span className="flex items-center gap-2 bg-gray-50 py-1.5 px-3 rounded-lg border border-gray-200 text-xs whitespace-nowrap">
-        <span className="text-gray-400 text-2xs font-semibold uppercase tracking-wider">
+        <span className="text-gray-500 text-2xs font-semibold uppercase tracking-wider">
           Prestador:
         </span>
         <span className="text-slate-900 font-semibold">{providerName}</span>
@@ -139,7 +140,9 @@ export default function TopBar({
         closeMenu();
         onOpenAuth();
       }}
-      className="px-3.5 py-1.5 rounded-lg text-xs gap-1.5 shadow-md shadow-[color:var(--tenant-accent)]/10"
+      className={`px-3.5 py-1.5 rounded-lg text-xs gap-1.5 shadow-md shadow-[color:var(--tenant-accent)]/10 ${
+        fullWidth ? "min-h-11" : ""
+      }`}
     >
       Entrar / Cadastrar
     </Button>
@@ -169,7 +172,7 @@ export default function TopBar({
             <span className="block text-sm font-bold tracking-tight text-slate-900 truncate group-hover:text-[var(--tenant-accent)] transition-colors">
               {tenant ? tenant.name : "portalagendeai"}
             </span>
-            <span className="block text-3xs text-gray-400 font-mono mt-0.5 truncate">
+            <span className="block text-3xs text-gray-500 font-mono mt-0.5 truncate">
               {tenant ? `${tenant.slug}.portalagendeai.app.br` : "portalagendeai.app.br"}
             </span>
           </span>
@@ -203,13 +206,15 @@ export default function TopBar({
                 closeMenu();
                 onOpenAuth();
               }}
-              className="px-3 py-1.5 rounded-lg text-2xs"
+              className="px-3 min-h-11 rounded-lg text-2xs"
             >
               Entrar
             </Button>
           )}
           <IconButton
             label={menuOpen ? "Fechar menu" : "Abrir menu"}
+            aria-expanded={menuOpen}
+            aria-controls="topbar-mobile-menu"
             variant="outline"
             size="md"
             onClick={() => setMenuOpen((open) => !open)}
@@ -221,7 +226,7 @@ export default function TopBar({
 
       {/* Painel compacto do mobile */}
       {menuOpen && (
-        <div className="sm:hidden border-t border-gray-200 bg-white px-4 py-4 space-y-3">
+        <div id="topbar-mobile-menu" className="sm:hidden border-t border-gray-200 bg-white px-4 py-4 space-y-3">
           {currentUser && (
             <div className="flex items-center gap-2.5 min-w-0">
               {avatar}
@@ -242,7 +247,7 @@ export default function TopBar({
                 closeMenu();
                 onLogout();
               }}
-              className="px-3 py-2 rounded-lg text-xs gap-1.5"
+              className="px-3 min-h-11 rounded-lg text-xs gap-1.5"
             >
               Sair
             </Button>

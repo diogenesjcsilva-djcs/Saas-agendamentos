@@ -34,10 +34,23 @@ const ICON_TONES: Record<AlertVariant, string> = {
   hint: "w-4 h-4 shrink-0",
 };
 
+/**
+ * Como o banner se anuncia. `alert` interrompe o leitor de tela na hora;
+ * `status` espera a frase terminar. `hint` é texto fixo, não anuncia nada.
+ */
+const ROLES: Record<AlertVariant, "alert" | "status" | undefined> = {
+  error: "alert",
+  success: "status",
+  info: "status",
+  hint: undefined,
+};
+
 interface AlertProps {
   variant?: AlertVariant;
   size?: AlertSize;
   icon?: ComponentType<{ className?: string }>;
+  /** Sobrescreve o anúncio padrão do variant. */
+  role?: "alert" | "status";
   className?: string;
   children: ReactNode;
 }
@@ -46,6 +59,7 @@ export default function Alert({
   variant = "error",
   size = "sm",
   icon: Icon,
+  role,
   className = "",
   children,
 }: AlertProps) {
@@ -57,7 +71,7 @@ export default function Alert({
     );
 
   return (
-    <div className={`${VARIANTS[variant][size]} ${className}`}>
+    <div role={role ?? ROLES[variant]} className={`${VARIANTS[variant][size]} ${className}`}>
       {Icon ? <Icon className={ICON_TONES[variant]} /> : null}
       {body}
     </div>
