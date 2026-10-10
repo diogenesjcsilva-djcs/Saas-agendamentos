@@ -6,9 +6,12 @@
 import type { ComponentType } from "react";
 import { FOCUS_RING, SURFACE, type ControlSurface, type ControlTone } from "./controlStyles.js";
 
-export type InputSize = "sm" | "md" | "lg";
+export type InputSize = "xs" | "sm" | "md" | "lg";
 
 const SIZES: Record<InputSize, { field: string; iconField: string; iconLeft: string }> = {
+  // `xs` é o campo de célula: grade de horários, onde a altura tem de bater com
+  // a das caixas de seleção ao lado.
+  xs: { field: "py-1 text-xs", iconField: "pl-9 pr-4", iconLeft: "left-3" },
   sm: { field: "py-2 text-xs", iconField: "pl-9 pr-4", iconLeft: "left-3" },
   md: { field: "py-2.5 text-xs", iconField: "pl-10 pr-4", iconLeft: "left-3.5" },
   lg: { field: "py-2.5 text-sm", iconField: "pl-10 pr-4", iconLeft: "left-3" },

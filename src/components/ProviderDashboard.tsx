@@ -73,6 +73,19 @@ import {
   Palette
 } from "lucide-react";
 import { motion } from "motion/react";
+import Button from "./ui/Button.js";
+import IconButton from "./ui/IconButton.js";
+import Input from "./ui/Input.js";
+import Select from "./ui/Select.js";
+import Textarea from "./ui/Textarea.js";
+import Field from "./ui/Field.js";
+import Card, { cardClasses } from "./ui/Card.js";
+import Alert from "./ui/Alert.js";
+import Badge from "./ui/Badge.js";
+import EmptyState from "./ui/EmptyState.js";
+import Modal from "./ui/Modal.js";
+import Spinner from "./ui/Spinner.js";
+import { getTenantPalette } from "../theme/tenant.js";
 
 interface ProviderDashboardProps {
   provider: Provider;
@@ -85,7 +98,16 @@ interface ProviderDashboardProps {
 
 type TabType = "overview" | "bookings" | "services" | "availability" | "settings";
 
-export default function ProviderDashboard({ 
+/* Graficos no mundo claro. A grade e os eixos sao neutros e fixos; a primeira
+   serie lê a cor do estabelecimento e a segunda fica num cinza, para as duas
+   linhas continuarem distinguiveis em qualquer paleta. O Recharts recebe
+   valores de cor, nao custom properties, por isso `theme/tenant` e lido aqui. */
+const CHART_GRID = "#e5e7eb"; // gray-200
+const CHART_AXIS = "#9ca3af"; // gray-400
+const CHART_SERIES_SECONDARY = "#64748b"; // slate-500
+const CHART_TOOLTIP = { backgroundColor: "#ffffff", border: "1px solid #e5e7eb" };
+
+export default function ProviderDashboard({
   provider, 
   tenant, 
   isNewOnboarding, 
@@ -94,6 +116,9 @@ export default function ProviderDashboard({
   onTenantUpdate 
 }: ProviderDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
+
+  // Cor do estabelecimento resolvida em valor, para os graficos do Recharts.
+  const palette = getTenantPalette(tenant?.themeColor);
   
   // Dynamic Data
   const [services, setServices] = useState<Service[]>([]);
@@ -299,6 +324,8 @@ export default function ProviderDashboard({
     setShowServiceModal(true);
   };
 
+  const closeServiceModal = () => setShowServiceModal(false);
+
   const handleServiceSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -468,13 +495,13 @@ export default function ProviderDashboard({
   const getStatusBadge = (status: Booking["status"]) => {
     switch (status) {
       case "confirmed":
-        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200">Confirmado</span>;
+        return <Badge tone="success">Confirmado</Badge>;
       case "cancelled":
-        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">Cancelado</span>;
+        return <Badge tone="danger">Cancelado</Badge>;
       case "completed":
-        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">Concluído</span>;
+        return <Badge tone="info">Concluído</Badge>;
       default:
-        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-yellow-50 text-yellow-700 border border-yellow-200">Pendente</span>;
+        return <Badge tone="warning">Pendente</Badge>;
     }
   };
 
@@ -487,106 +514,117 @@ export default function ProviderDashboard({
   if (loading) {
     return (
       <div className="w-full flex flex-col items-center justify-center p-20 min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <Spinner size="xl" tone="accent" />
         <p className="text-sm text-gray-500 mt-4 font-semibold">Carregando painel de controle...</p>
       </div>
     );
   }
 
   return (
-    <div id="provider-dashboard-root" className="w-full bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 overflow-hidden text-slate-100 flex flex-col md:flex-row min-h-[650px]">
+    <div
+      id="provider-dashboard-root"
+      className={`${cardClasses({ radius: "2xl", tone: "white", border: "default", elevation: "2xl", padding: "none" })} w-full overflow-hidden text-slate-800 flex flex-col md:flex-row min-h-[650px]`}
+    >
       
       {/* Sidebar Navigation */}
-      <div className="w-full md:w-64 bg-slate-950 p-6 border-b md:border-b-0 md:border-r border-slate-800 shrink-0 space-y-6">
+      <div className="w-full md:w-64 bg-gray-50 p-6 border-b md:border-b-0 md:border-r border-gray-200 shrink-0 space-y-6">
         {/* Profile Card */}
-        <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500 text-white font-bold flex items-center justify-center text-base border border-indigo-400">
+        <div className="flex items-center gap-3 border-b border-gray-200 pb-4">
+          <div className="w-10 h-10 rounded-xl bg-[var(--tenant-accent)] text-white font-bold flex items-center justify-center text-base">
             {provider.name.charAt(0)}
           </div>
           <div className="truncate">
-            <h4 className="font-bold text-sm text-white">{provider.name}</h4>
-            <p className="text-3xs text-slate-400 truncate">{provider.email}</p>
+            <h4 className="font-bold text-sm text-slate-900">{provider.name}</h4>
+            <p className="text-3xs text-gray-500 truncate">{provider.email}</p>
           </div>
         </div>
 
         {/* Tab Buttons */}
         <nav className="flex md:flex-col gap-1 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
-          <button
+          <Button
+            variant="none"
+            size="none"
             onClick={() => setActiveTab("overview")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all text-left w-full whitespace-nowrap shrink-0 ${
-              activeTab === "overview" 
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/15" 
-                : "text-slate-400 hover:text-white hover:bg-slate-900"
+            className={`px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
+              activeTab === "overview"
+                ? "bg-[var(--tenant-accent)] text-white shadow-md"
+                : "text-gray-500 hover:text-slate-900 hover:bg-gray-100"
             }`}
           >
             <TrendingUp className="w-4 h-4 shrink-0" />
             Visão Geral / Gráficos
-          </button>
+          </Button>
 
-          <button
+          <Button
+            variant="none"
+            size="none"
             onClick={() => setActiveTab("bookings")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all text-left w-full whitespace-nowrap shrink-0 ${
-              activeTab === "bookings" 
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/15" 
-                : "text-slate-400 hover:text-white hover:bg-slate-900"
+            className={`px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
+              activeTab === "bookings"
+                ? "bg-[var(--tenant-accent)] text-white shadow-md"
+                : "text-gray-500 hover:text-slate-900 hover:bg-gray-100"
             }`}
           >
             <CalendarCheck className="w-4 h-4 shrink-0" />
             Agendamentos ({bookings.length})
-          </button>
+          </Button>
 
-          <button
+          <Button
+            variant="none"
+            size="none"
             onClick={() => setActiveTab("services")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all text-left w-full whitespace-nowrap shrink-0 ${
-              activeTab === "services" 
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/15" 
-                : "text-slate-400 hover:text-white hover:bg-slate-900"
+            className={`px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
+              activeTab === "services"
+                ? "bg-[var(--tenant-accent)] text-white shadow-md"
+                : "text-gray-500 hover:text-slate-900 hover:bg-gray-100"
             }`}
           >
             <Clock3 className="w-4 h-4 shrink-0" />
             Meus Serviços ({services.length})
-          </button>
+          </Button>
 
-          <button
+          <Button
+            variant="none"
+            size="none"
             onClick={() => setActiveTab("availability")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all text-left w-full whitespace-nowrap shrink-0 ${
-              activeTab === "availability" 
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/15" 
-                : "text-slate-400 hover:text-white hover:bg-slate-900"
+            className={`px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
+              activeTab === "availability"
+                ? "bg-[var(--tenant-accent)] text-white shadow-md"
+                : "text-gray-500 hover:text-slate-900 hover:bg-gray-100"
             }`}
           >
             <Clock className="w-4 h-4 shrink-0" />
             Agenda & Bloqueios
-          </button>
+          </Button>
 
-          <button
+          <Button
+            variant="none"
+            size="none"
             onClick={() => setActiveTab("settings")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all text-left w-full whitespace-nowrap shrink-0 ${
-              activeTab === "settings" 
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/15" 
-                : "text-slate-400 hover:text-white hover:bg-slate-900"
+            className={`px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
+              activeTab === "settings"
+                ? "bg-[var(--tenant-accent)] text-white shadow-md"
+                : "text-gray-500 hover:text-slate-900 hover:bg-gray-100"
             }`}
           >
             <Settings className="w-4 h-4 shrink-0" />
             Configurações
-          </button>
+          </Button>
         </nav>
       </div>
 
       {/* Main Panel Area */}
-      <div className="flex-1 p-8 space-y-6 bg-slate-900/60 overflow-y-auto max-h-[800px]">
+      <div className="flex-1 p-8 space-y-6 bg-gray-50 overflow-y-auto max-h-[800px]">
         {/* Flash Notifications */}
         {successMsg && (
-          <div className="p-3 bg-indigo-500/20 border border-indigo-500/30 rounded-xl text-indigo-200 text-xs font-medium flex items-center gap-2 shadow-lg animate-pulse">
-            <CheckCircle className="w-4 h-4 text-indigo-400" />
+          <Alert variant="success" icon={CheckCircle}>
             {successMsg}
-          </div>
+          </Alert>
         )}
         {error && (
-          <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-xl text-red-200 text-xs font-medium flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-red-400" />
+          <Alert variant="error" icon={AlertTriangle}>
             {error}
-          </div>
+          </Alert>
         )}
 
         {/* ========================================= TAB: OVERVIEW ========================================= */}
@@ -594,116 +632,116 @@ export default function ProviderDashboard({
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold text-white">Dashboard do Prestador</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Visão unificada de seus atendimentos, faturamento e desempenho comercial.</p>
+                <h2 className="text-xl font-bold text-slate-900">Dashboard do Prestador</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Visão unificada de seus atendimentos, faturamento e desempenho comercial.</p>
               </div>
             </div>
 
             {/* Statistics Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-2">
+              <Card elevation="none" padding="md" className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-slate-400 font-medium">Faturamento Estimado</span>
-                  <DollarSign className="w-5 h-5 text-indigo-400" />
+                  <span className="text-xs text-gray-500 font-medium">Faturamento Estimado</span>
+                  <DollarSign className="w-5 h-5 text-[var(--tenant-accent)]" />
                 </div>
-                <h3 className="text-2xl font-black text-white font-mono">{formatPrice(totalRevenue)}</h3>
-                <p className="text-3xs text-slate-500">Soma dos agendamentos confirmados/concluídos</p>
-              </div>
+                <h3 className="text-2xl font-black text-slate-900 font-mono">{formatPrice(totalRevenue)}</h3>
+                <p className="text-3xs text-gray-400">Soma dos agendamentos confirmados/concluídos</p>
+              </Card>
 
-              <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-2">
+              <Card elevation="none" padding="md" className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-slate-400 font-medium">Total de Agendamentos</span>
-                  <Users className="w-5 h-5 text-indigo-400" />
+                  <span className="text-xs text-gray-500 font-medium">Total de Agendamentos</span>
+                  <Users className="w-5 h-5 text-[var(--tenant-accent)]" />
                 </div>
-                <h3 className="text-2xl font-black text-white font-mono">{activeBookings.length}</h3>
-                <p className="text-3xs text-slate-500">Volume de clientes agendados ativos</p>
-              </div>
+                <h3 className="text-2xl font-black text-slate-900 font-mono">{activeBookings.length}</h3>
+                <p className="text-3xs text-gray-400">Volume de clientes agendados ativos</p>
+              </Card>
 
-              <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-2">
+              <Card elevation="none" padding="md" className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-slate-400 font-medium">Serviços Oferecidos</span>
-                  <Clock3 className="w-5 h-5 text-indigo-400" />
+                  <span className="text-xs text-gray-500 font-medium">Serviços Oferecidos</span>
+                  <Clock3 className="w-5 h-5 text-[var(--tenant-accent)]" />
                 </div>
-                <h3 className="text-2xl font-black text-white font-mono">{services.length}</h3>
-                <p className="text-3xs text-slate-500">Quantidade de modalidades criadas</p>
-              </div>
+                <h3 className="text-2xl font-black text-slate-900 font-mono">{services.length}</h3>
+                <p className="text-3xs text-gray-400">Quantidade de modalidades criadas</p>
+              </Card>
             </div>
 
             {/* Recharts Graphs Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Service revenue distribution */}
-              <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">Faturamento por Categoria</h4>
+              <Card padding="lg" elevation="none" className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Faturamento por Categoria</h4>
                 {revenueByServiceData.length === 0 ? (
-                  <p className="text-xs text-slate-500 text-center py-10">Crie serviços para popular o gráfico.</p>
+                  <EmptyState size="xs" bordered={false}>Crie serviços para popular o gráfico.</EmptyState>
                 ) : (
                   <div className="h-64 text-2xs">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={revenueByServiceData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                        <XAxis dataKey="name" stroke="#64748b" />
-                        <YAxis stroke="#64748b" />
-                        <Tooltip contentStyle={{ backgroundColor: "#020617", border: "1px solid #334155" }} labelStyle={{ color: "#ffffff" }} />
-                        <Bar dataKey="Faturamento (R$)" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                        <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
+                        <XAxis dataKey="name" stroke={CHART_AXIS} />
+                        <YAxis stroke={CHART_AXIS} />
+                        <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={{ color: "#111827" }} />
+                        <Bar dataKey="Faturamento (R$)" fill={palette.accent} radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 )}
-              </div>
+              </Card>
 
               {/* Faturamento Trend over 7 days */}
-              <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">Agendamentos nos Últimos 7 Dias</h4>
+              <Card padding="lg" elevation="none" className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Agendamentos nos Últimos 7 Dias</h4>
                 <div className="h-64 text-2xs">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={bookingTrendData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                      <XAxis dataKey="date" stroke="#64748b" />
-                      <YAxis stroke="#64748b" />
-                      <Tooltip contentStyle={{ backgroundColor: "#020617", border: "1px solid #334155" }} />
-                      <Area type="monotone" dataKey="Faturamento (R$)" stroke="#4f46e5" fill="#4f46e5" fillOpacity={0.1} />
-                      <Area type="monotone" dataKey="Agendamentos" stroke="#10b981" fill="#10b981" fillOpacity={0.1} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
+                      <XAxis dataKey="date" stroke={CHART_AXIS} />
+                      <YAxis stroke={CHART_AXIS} />
+                      <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={{ color: "#111827" }} />
+                      <Area type="monotone" dataKey="Faturamento (R$)" stroke={palette.accent} fill={palette.accent} fillOpacity={0.1} />
+                      <Area type="monotone" dataKey="Agendamentos" stroke={CHART_SERIES_SECONDARY} fill={CHART_SERIES_SECONDARY} fillOpacity={0.1} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
-              </div>
+              </Card>
             </div>
 
             {/* Quick Upcoming Appointments List */}
-            <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">Agendamentos Próximos</h4>
+            <Card padding="lg" elevation="none" className="space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Agendamentos Próximos</h4>
               {activeBookings.length === 0 ? (
-                <p className="text-xs text-slate-500 py-4 text-center">Nenhum agendamento ativo registrado.</p>
+                <EmptyState size="xs" bordered={false}>Nenhum agendamento ativo registrado.</EmptyState>
               ) : (
                 <div className="space-y-3">
                   {activeBookings.slice(0, 3).map(b => {
                     const serv = services.find(s => s.id === b.serviceId);
                     const bDate = new Date(b.startsAt);
                     return (
-                      <div key={b.id} className="p-4 bg-slate-900 border border-slate-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div key={b.id} className="p-4 bg-gray-50 border border-gray-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                         <div className="space-y-1">
-                          <span className="font-bold text-white text-sm">{b.clientName}</span>
-                          <div className="flex flex-wrap items-center gap-3 text-slate-400">
+                          <span className="font-bold text-slate-900 text-sm">{b.clientName}</span>
+                          <div className="flex flex-wrap items-center gap-3 text-gray-500">
                             <span>📱 {b.clientPhone}</span>
                             <span>📧 {b.clientEmail}</span>
                           </div>
                           {b.clientAddress && (
-                            <p className="text-3xs text-blue-300 font-medium">📍 {b.clientAddress}</p>
+                            <p className="text-3xs text-blue-600 font-medium">📍 {b.clientAddress}</p>
                           )}
-                          {b.notes && <p className="text-3xs text-slate-500 italic">Obs: "{b.notes}"</p>}
+                          {b.notes && <p className="text-3xs text-gray-400 italic">Obs: "{b.notes}"</p>}
                         </div>
                         <div className="flex sm:flex-col items-baseline sm:items-end justify-between shrink-0">
-                          <span className="text-indigo-400 font-bold font-mono text-xs">
+                          <span className="text-[var(--tenant-accent)] font-bold font-mono text-xs">
                             {bDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} às {b.startsAt.substring(11, 16)}
                           </span>
-                          <span className="text-slate-400 font-medium">{serv?.name} ({formatPrice(serv?.price || 0)})</span>
+                          <span className="text-gray-500 font-medium">{serv?.name} ({formatPrice(serv?.price || 0)})</span>
                         </div>
                       </div>
                     );
                   })}
                 </div>
               )}
-            </div>
+            </Card>
           </div>
         )}
 
@@ -711,45 +749,47 @@ export default function ProviderDashboard({
         {activeTab === "bookings" && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-white">Controle de Agendamentos</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Gerencie os status das reservas e filtre a base de dados.</p>
+              <h2 className="text-xl font-bold text-slate-900">Controle de Agendamentos</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Gerencie os status das reservas e filtre a base de dados.</p>
             </div>
 
             {/* Search and Filters Bar */}
-            <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-slate-950 p-4 rounded-xl border border-slate-800">
-              <div className="relative w-full sm:max-w-xs">
-                <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
+            <Card padding="sm" radius="xl" elevation="none" className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+              <div className="w-full sm:max-w-xs">
+                <Input
+                  icon={Search}
                   type="text"
+                  size="sm"
                   value={bookingSearch}
                   onChange={(e) => setBookingSearch(e.target.value)}
                   placeholder="Buscar cliente, email..."
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 pl-9 pr-4 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
 
               <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end text-xs">
-                <span className="text-slate-500">Filtrar por:</span>
-                <select
+                <span className="text-gray-400">Filtrar por:</span>
+                <Select
                   value={bookingFilterStatus}
                   onChange={(e) => setBookingFilterStatus(e.target.value)}
-                  className="bg-slate-900 border border-slate-800 rounded-lg py-1.5 px-3 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full sm:w-auto"
                 >
                   <option value="all">Todos</option>
                   <option value="confirmed">Confirmado</option>
                   <option value="cancelled">Cancelado</option>
                   <option value="completed">Concluído</option>
-                </select>
+                </Select>
               </div>
-            </div>
+            </Card>
 
             {/* Bookings Table/Cards */}
             {sortedBookings.length === 0 ? (
-              <div className="text-center py-12 border border-dashed border-slate-800 rounded-2xl bg-slate-950">
-                <FileText className="w-12 h-12 text-slate-600 mx-auto mb-2" />
-                <p className="text-sm text-slate-400 font-medium">Nenhum agendamento encontrado.</p>
-                <p className="text-xs text-slate-600 mt-1">Experimente remover os filtros de busca.</p>
-              </div>
+              <EmptyState
+                size="sm"
+                icon={<FileText className="w-12 h-12 text-gray-300 mb-2" />}
+              >
+                <p className="text-sm text-gray-500 font-medium">Nenhum agendamento encontrado.</p>
+                <p className="text-xs text-gray-400 mt-1">Experimente remover os filtros de busca.</p>
+              </EmptyState>
             ) : (
               <div className="space-y-4">
                 {sortedBookings.map(b => {
@@ -758,55 +798,53 @@ export default function ProviderDashboard({
                   const isPast = bDate.getTime() < Date.now();
                   
                   return (
-                    <div 
-                      key={b.id} 
-                      className={`p-5 rounded-2xl border bg-slate-950 flex flex-col md:flex-row md:items-center justify-between gap-5 transition-all hover:border-slate-700 ${
-                        b.status === "cancelled" 
-                          ? "border-slate-900 opacity-60" 
-                          : "border-slate-800"
+                    <div
+                      key={b.id}
+                      className={`p-5 rounded-2xl border bg-white flex flex-col md:flex-row md:items-center justify-between gap-5 transition-all hover:border-gray-300 ${
+                        b.status === "cancelled"
+                          ? "border-gray-100 opacity-60"
+                          : "border-gray-200"
                       }`}
                     >
                       <div className="space-y-2 flex-1">
                         <div className="flex items-center gap-2.5 flex-wrap">
-                          <span className="font-bold text-white text-base">{b.clientName}</span>
+                          <span className="font-bold text-slate-900 text-base">{b.clientName}</span>
                           {getStatusBadge(b.status)}
-                          <span className="text-3xs bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-full text-slate-400 font-mono">
-                            ID: {b.id.replace("booking-", "")}
-                          </span>
+                          <Badge tone="neutral">ID: {b.id.replace("booking-", "")}</Badge>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-400">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-gray-500">
                           <div>📧 {b.clientEmail}</div>
                           <div>📱 {b.clientPhone}</div>
                           <div>💅 {serv?.name || "Serviço excluído"}</div>
                         </div>
 
                         {b.clientAddress ? (
-                          <div className="p-2.5 bg-blue-950/40 border border-blue-800/40 rounded-lg text-blue-300 text-xs flex items-center gap-1.5">
+                          <div className="p-2.5 bg-blue-50 border border-blue-100 rounded-lg text-blue-700 text-xs flex items-center gap-1.5">
                             <span>🚗 <strong>Atendimento no Cliente:</strong> {b.clientAddress}</span>
                           </div>
                         ) : (
-                          <div className="text-3xs text-slate-500 flex items-center gap-1">
+                          <div className="text-3xs text-gray-400 flex items-center gap-1">
                             <span>🏢 Atendimento no estabelecimento</span>
                           </div>
                         )}
 
                         {b.notes && (
-                          <div className="p-2.5 bg-slate-900/50 rounded-lg text-slate-400 text-3xs italic border-l-2 border-slate-700">
+                          <div className="p-2.5 bg-gray-50 rounded-lg text-gray-500 text-3xs italic border-l-2 border-gray-300">
                             " {b.notes} "
                           </div>
                         )}
                       </div>
 
                       {/* Scheduling Date and Action Controls */}
-                      <div className="flex flex-col items-end gap-3 justify-center shrink-0 border-t md:border-t-0 pt-4 md:pt-0 border-slate-800">
+                      <div className="flex flex-col items-end gap-3 justify-center shrink-0 border-t md:border-t-0 pt-4 md:pt-0 border-gray-200">
                         <div className="text-right">
-                          <p className="text-indigo-400 font-extrabold font-mono text-sm">
+                          <p className="text-[var(--tenant-accent)] font-extrabold font-mono text-sm">
                             {bDate.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })}
                           </p>
-                          <p className="text-xs font-bold text-white font-mono mt-0.5">
+                          <p className="text-xs font-bold text-slate-900 font-mono mt-0.5">
                             ⏰ {b.startsAt.substring(11, 16)} às {b.endsAt.substring(11, 16)} 
-                            <span className="text-3xs text-slate-500 font-normal ml-1">
+                            <span className="text-3xs text-gray-400 font-normal ml-1">
                               (+{serv?.bufferMinutes}m buffer)
                             </span>
                           </p>
@@ -815,33 +853,41 @@ export default function ProviderDashboard({
                         {/* Actions buttons */}
                         {b.status === "confirmed" && (
                           <div className="flex items-center gap-1.5 w-full md:w-auto">
-                            <button
+                            <Button
+                              variant="none"
+                              size="none"
                               onClick={() => handleStatusChange(b.id, "completed")}
-                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-3xs font-bold flex items-center gap-1 transition-colors flex-1 md:flex-none justify-center"
+                              className="px-3 py-1.5 bg-[var(--tenant-accent)] hover:bg-[var(--tenant-accent-strong)] text-white rounded-lg text-3xs gap-1 flex-1 md:flex-none"
                               title="Marcar como atendido"
+                              leftIcon={<Check className="w-3.5 h-3.5" />}
                             >
-                              <Check className="w-3.5 h-3.5" /> Concluir
-                            </button>
-                            <button
+                              Concluir
+                            </Button>
+                            <Button
+                              variant="none"
+                              size="none"
                               onClick={() => handleStatusChange(b.id, "cancelled")}
-                              className="px-3 py-1.5 bg-slate-800 hover:bg-red-950/40 hover:text-red-400 text-slate-300 rounded-lg text-3xs font-bold flex items-center gap-1 border border-slate-700 transition-all flex-1 md:flex-none justify-center"
+                              className="px-3 py-1.5 bg-white hover:bg-red-50 hover:text-red-600 text-gray-600 rounded-lg text-3xs gap-1 border border-gray-200 flex-1 md:flex-none"
                               title="Cancelar agendamento"
+                              leftIcon={<XCircle className="w-3.5 h-3.5" />}
                             >
-                              <XCircle className="w-3.5 h-3.5" /> Cancelar
-                            </button>
+                              Cancelar
+                            </Button>
                           </div>
                         )}
                         {b.status === "cancelled" && (
-                          <button
+                          <Button
+                            variant="none"
+                            size="none"
                             onClick={() => handleStatusChange(b.id, "confirmed")}
-                            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-lg text-3xs font-bold border border-slate-800 transition-colors"
+                            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-3xs border border-gray-200"
                           >
                             Reativar
-                          </button>
+                          </Button>
                         )}
                         {b.status === "completed" && (
-                          <span className="text-3xs text-slate-500 italic flex items-center gap-1">
-                            <Check className="w-3 h-3 text-green-500" /> Atendimento Concluído
+                          <span className="text-3xs text-gray-400 italic flex items-center gap-1">
+                            <Check className="w-3 h-3 text-green-600" /> Atendimento Concluído
                           </span>
                         )}
                       </div>
@@ -858,29 +904,31 @@ export default function ProviderDashboard({
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-white">Meus Serviços</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Defina os tipos de atendimentos, preços e tempos de duração e preparação.</p>
+                <h2 className="text-xl font-bold text-slate-900">Meus Serviços</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Defina os tipos de atendimentos, preços e tempos de duração e preparação.</p>
               </div>
-              <button
+              <Button
+                size="none"
                 onClick={openNewServiceModal}
-                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-600/10 transition-all"
+                className="px-3.5 py-2 rounded-xl text-xs gap-1.5"
+                leftIcon={<Plus className="w-4 h-4" />}
               >
-                <Plus className="w-4 h-4" /> Novo Serviço
-              </button>
+                Novo Serviço
+              </Button>
             </div>
 
             {/* List Services */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {services.map(s => (
-                <div key={s.id} className="bg-slate-950 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between gap-4 transition-all hover:border-slate-700">
+                <Card key={s.id} elevation="none" padding="md" className="flex flex-col justify-between gap-4 transition-all hover:border-gray-300">
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-start gap-4">
-                      <h3 className="font-bold text-white text-base leading-snug">{s.name}</h3>
-                      <span className="text-indigo-400 font-extrabold font-mono text-sm whitespace-nowrap">{formatPrice(s.price)}</span>
+                      <h3 className="font-bold text-slate-900 text-base leading-snug">{s.name}</h3>
+                      <span className="text-[var(--tenant-accent)] font-extrabold font-mono text-sm whitespace-nowrap">{formatPrice(s.price)}</span>
                     </div>
-                    <p className="text-xs text-slate-400 leading-relaxed line-clamp-3">{s.description}</p>
+                    <p className="text-xs text-gray-500 leading-relaxed line-clamp-3">{s.description}</p>
                     
-                    <div className="flex items-center gap-4 text-3xs text-slate-500 font-semibold pt-1">
+                    <div className="flex items-center gap-4 text-3xs text-gray-400 font-semibold pt-1">
                       <span className="flex items-center gap-1 font-mono">
                         <Clock className="w-3.5 h-3.5" /> {s.durationMinutes} minutos de serviço
                       </span>
@@ -890,119 +938,111 @@ export default function ProviderDashboard({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-end gap-1.5 border-t border-slate-900 pt-3">
-                    <button
-                      onClick={() => openEditServiceModal(s)}
-                      className="p-1.5 hover:bg-slate-900 rounded-lg text-slate-400 hover:text-white transition-colors"
+                  <div className="flex items-center justify-end gap-1.5 border-t border-gray-100 pt-3">
+                    <IconButton
+                      variant="ghost"
+                      size="md"
+                      label="Editar serviço"
                       title="Editar serviço"
+                      onClick={() => openEditServiceModal(s)}
+                      className="hover:text-slate-900"
                     >
                       <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleServiceDelete(s.id)}
-                      className="p-1.5 hover:bg-red-950/20 rounded-lg text-slate-400 hover:text-red-400 transition-colors"
+                    </IconButton>
+                    <IconButton
+                      variant="ghost"
+                      size="md"
+                      label="Excluir serviço"
                       title="Excluir serviço"
+                      onClick={() => handleServiceDelete(s.id)}
+                      className="hover:bg-red-50 hover:text-red-600"
                     >
                       <Trash2 className="w-4 h-4" />
-                    </button>
+                    </IconButton>
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
 
             {/* Service Modal Form */}
-            {showServiceModal && (
-              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-slate-100">
-                  <div className="p-6 border-b border-slate-800">
-                    <h3 className="font-bold text-white text-base">
-                      {editingServiceId ? "Editar Serviço" : "Novo Serviço"}
-                    </h3>
-                  </div>
-
-                  <form onSubmit={handleServiceSave} className="p-6 space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-3xs uppercase tracking-wider font-semibold text-slate-400">Nome do Serviço *</label>
-                      <input
-                        type="text"
-                        required
-                        value={serviceName}
-                        onChange={(e) => setServiceName(e.target.value)}
-                        placeholder="Ex: Corte Degradê com Navalha"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-3xs uppercase tracking-wider font-semibold text-slate-400">Descrição</label>
-                      <textarea
-                        rows={2}
-                        value={serviceDesc}
-                        onChange={(e) => setServiceDesc(e.target.value)}
-                        placeholder="Descreva o que está incluso no serviço"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-3xs uppercase tracking-wider font-semibold text-slate-400">Duração (min) *</label>
-                        <input
-                          type="number"
-                          required
-                          min={10}
-                          max={360}
-                          value={serviceDuration}
-                          onChange={(e) => setServiceDuration(Number(e.target.value))}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-3xs uppercase tracking-wider font-semibold text-slate-400">Buffer (minutos)</label>
-                        <input
-                          type="number"
-                          required
-                          min={0}
-                          max={60}
-                          value={serviceBuffer}
-                          onChange={(e) => setServiceBuffer(Number(e.target.value))}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-3xs uppercase tracking-wider font-semibold text-slate-400">Preço (R$) *</label>
-                      <input
-                        type="number"
-                        required
-                        min={0}
-                        value={servicePrice}
-                        onChange={(e) => setServicePrice(Number(e.target.value))}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                      />
-                    </div>
-
-                    <div className="flex gap-2 justify-end pt-3 border-t border-slate-800">
-                      <button
-                        type="button"
-                        onClick={() => setShowServiceModal(false)}
-                        className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700 transition-colors"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors"
-                      >
-                        Salvar Serviço
-                      </button>
-                    </div>
-                  </form>
-                </div>
+            <Modal open={showServiceModal} onClose={closeServiceModal} size="md">
+              <div className="border-b border-gray-100 pb-4">
+                <h3 className="font-bold text-slate-900 text-base">
+                  {editingServiceId ? "Editar Serviço" : "Novo Serviço"}
+                </h3>
               </div>
-            )}
+
+              <form onSubmit={handleServiceSave} className="space-y-4">
+                <Field label="Nome do Serviço *">
+                  <Input
+                    type="text"
+                    required
+                    size="sm"
+                    value={serviceName}
+                    onChange={(e) => setServiceName(e.target.value)}
+                    placeholder="Ex: Corte Degradê com Navalha"
+                  />
+                </Field>
+
+                <Field label="Descrição">
+                  <Textarea
+                    rows={2}
+                    value={serviceDesc}
+                    onChange={(e) => setServiceDesc(e.target.value)}
+                    placeholder="Descreva o que está incluso no serviço"
+                  />
+                </Field>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Duração (min) *">
+                    <Input
+                      type="number"
+                      required
+                      size="sm"
+                      min={10}
+                      max={360}
+                      value={serviceDuration}
+                      onChange={(e) => setServiceDuration(Number(e.target.value))}
+                      className="font-mono"
+                    />
+                  </Field>
+
+                  <Field label="Buffer (minutos)">
+                    <Input
+                      type="number"
+                      required
+                      size="sm"
+                      min={0}
+                      max={60}
+                      value={serviceBuffer}
+                      onChange={(e) => setServiceBuffer(Number(e.target.value))}
+                      className="font-mono"
+                    />
+                  </Field>
+                </div>
+
+                <Field label="Preço (R$) *">
+                  <Input
+                    type="number"
+                    required
+                    size="sm"
+                    min={0}
+                    value={servicePrice}
+                    onChange={(e) => setServicePrice(Number(e.target.value))}
+                    className="font-mono"
+                  />
+                </Field>
+
+                <div className="flex gap-2 justify-end pt-4 border-t border-gray-100">
+                  <Button variant="secondary" size="sm" type="button" onClick={closeServiceModal}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" size="sm">
+                    Salvar Serviço
+                  </Button>
+                </div>
+              </form>
+            </Modal>
           </div>
         )}
 
@@ -1010,30 +1050,32 @@ export default function ProviderDashboard({
         {activeTab === "availability" && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-white">Configurar Horários e Disponibilidade</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Gerencie os horários recorrentes de atendimento e cadastre bloqueios ou folgas especiais.</p>
+              <h2 className="text-xl font-bold text-slate-900">Configurar Horários e Disponibilidade</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Gerencie os horários recorrentes de atendimento e cadastre bloqueios ou folgas especiais.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Weekly Rules Grid (7 cols) */}
-              <div className="lg:col-span-7 bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-indigo-400" /> Horário Semanal Recorrente
+              <Card padding="lg" elevation="none" className="lg:col-span-7 space-y-4">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                  <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-[var(--tenant-accent)]" /> Horário Semanal Recorrente
                   </h3>
-                  <button
+                  <Button
+                    size="none"
                     onClick={handleSaveRules}
-                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition-all shadow-md"
+                    className="px-3 py-1.5 rounded-lg text-xs gap-1"
+                    leftIcon={<Save className="w-3.5 h-3.5" />}
                   >
-                    <Save className="w-3.5 h-3.5" /> Salvar Grade
-                  </button>
+                    Salvar Grade
+                  </Button>
                 </div>
 
                 <div className="space-y-4 pt-1">
                   {[0, 1, 2, 3, 4, 5, 6].map(d => {
                     const dayVal = workingDays[d];
                     return (
-                      <div key={d} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-xs">
+                      <div key={d} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs">
                         <div className="flex items-center gap-3">
                           <input
                             type="checkbox"
@@ -1042,37 +1084,45 @@ export default function ProviderDashboard({
                               ...prev,
                               [d]: { ...prev[d], active: e.target.checked }
                             }))}
-                            className="rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 w-4 h-4 cursor-pointer"
+                            className="rounded bg-white border-gray-300 text-[var(--tenant-accent)] focus:ring-0 focus:ring-offset-0 w-4 h-4 cursor-pointer"
                           />
-                          <span className={`font-bold ${dayVal.active ? "text-white" : "text-slate-500"}`}>{dayName(d)}</span>
+                          <span className={`font-bold ${dayVal.active ? "text-slate-900" : "text-gray-400"}`}>{dayName(d)}</span>
                         </div>
 
                         {dayVal.active ? (
                           <div className="flex items-center gap-2 font-mono">
-                            <input
-                              type="text"
-                              value={dayVal.start}
-                              onChange={(e) => setWorkingDays(prev => ({
-                                ...prev,
-                                [d]: { ...prev[d], start: e.target.value }
-                              }))}
-                              placeholder="09:00"
-                              className="w-16 bg-slate-950 border border-slate-800 rounded-lg text-center py-1 text-white"
-                            />
-                            <span className="text-slate-600">às</span>
-                            <input
-                              type="text"
-                              value={dayVal.end}
-                              onChange={(e) => setWorkingDays(prev => ({
-                                ...prev,
-                                [d]: { ...prev[d], end: e.target.value }
-                              }))}
-                              placeholder="18:00"
-                              className="w-16 bg-slate-950 border border-slate-800 rounded-lg text-center py-1 text-white"
-                            />
+                            <div className="w-20">
+                              <Input
+                                type="text"
+                                size="xs"
+                                surface="plain"
+                                value={dayVal.start}
+                                onChange={(e) => setWorkingDays(prev => ({
+                                  ...prev,
+                                  [d]: { ...prev[d], start: e.target.value }
+                                }))}
+                                placeholder="09:00"
+                                className="text-center"
+                              />
+                            </div>
+                            <span className="text-gray-400">às</span>
+                            <div className="w-20">
+                              <Input
+                                type="text"
+                                size="xs"
+                                surface="plain"
+                                value={dayVal.end}
+                                onChange={(e) => setWorkingDays(prev => ({
+                                  ...prev,
+                                  [d]: { ...prev[d], end: e.target.value }
+                                }))}
+                                placeholder="18:00"
+                                className="text-center"
+                              />
+                            </div>
                           </div>
                         ) : (
-                          <span className="text-slate-500 font-semibold italic flex items-center gap-1">
+                          <span className="text-gray-400 font-semibold italic flex items-center gap-1">
                             <CalendarOff className="w-3.5 h-3.5" /> Fechado / Sem Expediente
                           </span>
                         )}
@@ -1080,110 +1130,116 @@ export default function ProviderDashboard({
                     );
                   })}
                 </div>
-              </div>
+              </Card>
 
               {/* Exceptions and Blocked Days Panel (5 cols) */}
               <div className="lg:col-span-5 space-y-6">
                 
                 {/* Add Exception Form */}
-                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-4">
-                  <h3 className="font-bold text-white text-sm border-b border-slate-800 pb-2 flex items-center gap-2">
-                    <CalendarOff className="w-4 h-4 text-indigo-400" /> Cadastrar Bloqueio / Folga
+                <Card padding="lg" elevation="none" className="space-y-4">
+                  <h3 className="font-bold text-slate-900 text-sm border-b border-gray-100 pb-2 flex items-center gap-2">
+                    <CalendarOff className="w-4 h-4 text-[var(--tenant-accent)]" /> Cadastrar Bloqueio / Folga
                   </h3>
 
-                  <form onSubmit={handleAddException} className="space-y-4 text-xs">
-                    <div className="space-y-1">
-                      <label className="font-semibold text-slate-400">Escolha a Data *</label>
-                      <input
+                  <form onSubmit={handleAddException} className="space-y-4">
+                    <Field label="Escolha a Data *">
+                      <Input
                         type="date"
                         required
+                        size="sm"
                         value={exceptDate}
                         onChange={(e) => setExceptDate(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-white font-mono focus:outline-none"
+                        className="font-mono"
                       />
-                    </div>
+                    </Field>
 
                     <div className="flex items-center gap-3 py-1.5">
                       <input
                         type="checkbox"
                         checked={exceptBlocked}
                         onChange={(e) => setExceptBlocked(e.target.checked)}
-                        className="rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 w-4 h-4 cursor-pointer"
+                        className="rounded bg-white border-gray-300 text-[var(--tenant-accent)] focus:ring-0 focus:ring-offset-0 w-4 h-4 cursor-pointer"
                       />
-                      <span className="font-bold text-slate-300">Bloquear o dia inteiro?</span>
+                      <span className="font-bold text-slate-700">Bloquear o dia inteiro?</span>
                     </div>
 
                     {!exceptBlocked && (
-                      <div className="grid grid-cols-2 gap-3 font-mono">
-                        <div className="space-y-1">
-                          <label className="font-semibold text-slate-400 font-sans">Horário Início</label>
-                          <input
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field label="Horário Início">
+                          <Input
                             type="text"
+                            size="sm"
                             value={exceptStart}
                             onChange={(e) => setExceptStart(e.target.value)}
                             placeholder="08:00"
-                            className="w-full bg-slate-900 border border-slate-800 rounded-lg py-1 px-2 text-white text-center"
+                            className="text-center font-mono"
                           />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="font-semibold text-slate-400 font-sans">Horário Fim</label>
-                          <input
+                        </Field>
+                        <Field label="Horário Fim">
+                          <Input
                             type="text"
+                            size="sm"
                             value={exceptEnd}
                             onChange={(e) => setExceptEnd(e.target.value)}
                             placeholder="14:00"
-                            className="w-full bg-slate-900 border border-slate-800 rounded-lg py-1 px-2 text-white text-center"
+                            className="text-center font-mono"
                           />
-                        </div>
+                        </Field>
                       </div>
                     )}
 
-                    <button
+                    <Button
                       type="submit"
+                      fullWidth
+                      size="none"
                       disabled={!exceptDate}
-                      className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg font-bold flex items-center justify-center gap-1 shadow-md transition-colors"
+                      className="py-2 rounded-lg text-xs gap-1"
+                      leftIcon={<Plus className="w-3.5 h-3.5" />}
                     >
-                      <Plus className="w-3.5 h-3.5" /> Adicionar Bloqueio
-                    </button>
+                      Adicionar Bloqueio
+                    </Button>
                   </form>
-                </div>
+                </Card>
 
                 {/* Exceptions List */}
-                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-4">
-                  <h3 className="font-bold text-white text-xs uppercase tracking-wider">Bloqueios Cadastrados</h3>
+                <Card padding="lg" elevation="none" className="space-y-4">
+                  <h3 className="font-bold text-slate-900 text-xs uppercase tracking-wider">Bloqueios Cadastrados</h3>
                   {exceptions.length === 0 ? (
-                    <p className="text-3xs text-slate-600 py-3 italic">Nenhuma exceção ou bloqueio ativo.</p>
+                    <p className="text-3xs text-gray-400 py-3 italic">Nenhuma exceção ou bloqueio ativo.</p>
                   ) : (
                     <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
                       {exceptions.map(e => {
                         const dateObj = new Date(`${e.date}T00:00:00`);
                         return (
-                          <div key={e.id} className="p-3 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between gap-3 text-xs">
+                          <div key={e.id} className="p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between gap-3 text-xs">
                             <div className="space-y-0.5">
-                              <span className="font-mono font-bold text-white">
+                              <span className="font-mono font-bold text-slate-900">
                                 {dateObj.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}
                               </span>
-                              <p className="text-3xs text-slate-500 font-medium">
+                              <p className="text-3xs text-gray-400 font-medium">
                                 {e.isBlocked ? (
-                                  <span className="text-red-400 font-semibold">Dia todo bloqueado</span>
+                                  <span className="text-red-600 font-semibold">Dia todo bloqueado</span>
                                 ) : (
                                   <span>Trabalha: {e.startTime} às {e.endTime}</span>
                                 )}
                               </p>
                             </div>
-                            <button
-                              onClick={() => handleRemoveException(e.id)}
-                              className="p-1 text-slate-500 hover:text-red-400 transition-colors"
+                            <IconButton
+                              variant="ghost"
+                              size="sm"
+                              label="Remover bloqueio"
                               title="Remover bloqueio"
+                              onClick={() => handleRemoveException(e.id)}
+                              className="hover:bg-red-50 hover:text-red-600"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            </IconButton>
                           </div>
                         );
                       })}
                     </div>
                   )}
-                </div>
+                </Card>
 
               </div>
             </div>
@@ -1195,218 +1251,210 @@ export default function ProviderDashboard({
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-indigo-400" />
+                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-[var(--tenant-accent)]" />
                   Configurações da Conta & Estabelecimento
                 </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-gray-500 mt-0.5">
                   Atualize suas credenciais de login, senha, link de divulgação e modalidade de atendimento.
                 </p>
               </div>
             </div>
 
             {settingsError && (
-              <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-red-200 text-xs font-semibold flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+              <Alert variant="error" icon={AlertTriangle}>
                 {settingsError}
-              </div>
+              </Alert>
             )}
 
             <form onSubmit={handleSaveSettings} className="space-y-6">
               
               {/* Card 1: Perfil & Apresentação */}
-              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-5">
-                <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-                  <UserCheck className="w-4 h-4 text-indigo-400" />
-                  <h3 className="font-bold text-white text-sm">Perfil & Apresentação Profissional</h3>
+              <Card padding="lg" elevation="none" className="space-y-5">
+                <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+                  <UserCheck className="w-4 h-4 text-[var(--tenant-accent)]" />
+                  <h3 className="font-bold text-slate-900 text-sm">Perfil & Apresentação Profissional</h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  <div className="space-y-1.5">
-                    <label className="font-bold text-slate-300">Nome do Profissional / Estúdio *</label>
-                    <input
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Field label="Nome do Profissional / Estúdio *" variant="default">
+                    <Input
                       type="text"
                       required
                       value={settingsName}
                       onChange={(e) => setSettingsName(e.target.value)}
                       placeholder="Ex: Juliana Sobrancelhas"
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
-                  </div>
+                  </Field>
 
-                  <div className="space-y-1.5">
-                    <label className="font-bold text-slate-300">Ícone ou Emoji de Avatar</label>
-                    <input
+                  <Field label="Ícone ou Emoji de Avatar" variant="default">
+                    <Input
                       type="text"
                       value={settingsAvatarUrl}
                       onChange={(e) => setSettingsAvatarUrl(e.target.value)}
                       placeholder="Ex: 💅, ✂️, 💄 ou URL da imagem"
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
-                  </div>
+                  </Field>
 
-                  <div className="md:col-span-2 space-y-1.5">
-                    <label className="font-bold text-slate-300">Biografia / Apresentação de Especialidades</label>
-                    <textarea
+                  <Field
+                    label="Biografia / Apresentação de Especialidades"
+                    variant="default"
+                    className="md:col-span-2"
+                  >
+                    <Textarea
                       rows={3}
                       value={settingsBio}
                       onChange={(e) => setSettingsBio(e.target.value)}
                       placeholder="Descreva suas especialidades, cursos e diferenciais para seus clientes..."
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none"
                     />
-                  </div>
+                  </Field>
                 </div>
 
                 {/* Modalidade de Atendimento */}
-                <div className="space-y-2 pt-2 border-t border-slate-800">
-                  <label className="font-bold text-slate-300 text-xs block">
+                <div className="space-y-2 pt-2 border-t border-gray-100">
+                  <span className="font-bold text-gray-700 text-xs block">
                     Onde você atende seus clientes? (Modalidade de Atendimento)
-                  </label>
+                  </span>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <button
+                    <Button
+                      variant="none"
+                      size="none"
                       type="button"
                       onClick={() => setSettingsLocationType("own_space")}
-                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      className={`p-3 rounded-xl justify-start flex-col items-start text-left ${
                         settingsLocationType === "own_space"
-                          ? "bg-indigo-600/20 border-indigo-500 text-white font-bold shadow-sm shadow-indigo-600/20"
-                          : "bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                          ? "bg-[var(--tenant-accent-soft)] border-[var(--tenant-accent)] text-[var(--tenant-accent-strong)] font-bold shadow-sm"
+                          : "bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:text-slate-700"
                       }`}
                     >
-                      <div className="text-sm font-extrabold flex items-center gap-1.5">
+                      <span className="text-sm font-extrabold flex items-center gap-1.5">
                         🏢 Espaço Próprio
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-1 font-normal">
+                      </span>
+                      <span className="text-2xs text-gray-500 mt-1 font-normal">
                         Atendimento apenas no seu estúdio/salão
-                      </p>
-                    </button>
+                      </span>
+                    </Button>
 
-                    <button
+                    <Button
+                      variant="none"
+                      size="none"
                       type="button"
                       onClick={() => setSettingsLocationType("at_client")}
-                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      className={`p-3 rounded-xl justify-start flex-col items-start text-left ${
                         settingsLocationType === "at_client"
-                          ? "bg-indigo-600/20 border-indigo-500 text-white font-bold shadow-sm shadow-indigo-600/20"
-                          : "bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                          ? "bg-[var(--tenant-accent-soft)] border-[var(--tenant-accent)] text-[var(--tenant-accent-strong)] font-bold shadow-sm"
+                          : "bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:text-slate-700"
                       }`}
                     >
-                      <div className="text-sm font-extrabold flex items-center gap-1.5">
+                      <span className="text-sm font-extrabold flex items-center gap-1.5">
                         🚗 A Domicílio
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-1 font-normal">
+                      </span>
+                      <span className="text-2xs text-gray-500 mt-1 font-normal">
                         Atendimento exclusivo no endereço do cliente
-                      </p>
-                    </button>
+                      </span>
+                    </Button>
 
-                    <button
+                    <Button
+                      variant="none"
+                      size="none"
                       type="button"
                       onClick={() => setSettingsLocationType("both")}
-                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      className={`p-3 rounded-xl justify-start flex-col items-start text-left ${
                         settingsLocationType === "both"
-                          ? "bg-indigo-600/20 border-indigo-500 text-white font-bold shadow-sm shadow-indigo-600/20"
-                          : "bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                          ? "bg-[var(--tenant-accent-soft)] border-[var(--tenant-accent)] text-[var(--tenant-accent-strong)] font-bold shadow-sm"
+                          : "bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:text-slate-700"
                       }`}
                     >
-                      <div className="text-sm font-extrabold flex items-center gap-1.5">
+                      <span className="text-sm font-extrabold flex items-center gap-1.5">
                         🔄 Ambos
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-1 font-normal">
+                      </span>
+                      <span className="text-2xs text-gray-500 mt-1 font-normal">
                         O cliente escolhe no agendamento
-                      </p>
-                    </button>
+                      </span>
+                    </Button>
                   </div>
                 </div>
-              </div>
+              </Card>
 
               {/* Card 2: Credenciais & Segurança (Login e Senha) */}
-              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-5">
-                <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-                  <Lock className="w-4 h-4 text-indigo-400" />
-                  <h3 className="font-bold text-white text-sm">Acesso & Segurança da Conta (Login / Senha)</h3>
+              <Card padding="lg" elevation="none" className="space-y-5">
+                <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+                  <Lock className="w-4 h-4 text-[var(--tenant-accent)]" />
+                  <h3 className="font-bold text-slate-900 text-sm">Acesso & Segurança da Conta (Login / Senha)</h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                  <div className="space-y-1.5">
-                    <label className="font-bold text-slate-300">E-mail de Login *</label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                      <input
-                        type="email"
-                        required
-                        value={settingsEmail}
-                        onChange={(e) => setSettingsEmail(e.target.value)}
-                        placeholder="seuemail@exemplo.com"
-                        className="w-full bg-slate-900 border border-slate-800 pl-9 pr-3 py-2.5 rounded-xl text-white font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Field label="E-mail de Login *" variant="default">
+                    <Input
+                      icon={Mail}
+                      type="email"
+                      required
+                      value={settingsEmail}
+                      onChange={(e) => setSettingsEmail(e.target.value)}
+                      placeholder="seuemail@exemplo.com"
+                    />
+                  </Field>
 
-                  <div className="space-y-1.5">
-                    <label className="font-bold text-slate-300">Nova Senha (deixe em branco para manter)</label>
-                    <div className="relative">
-                      <Key className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                      <input
-                        type="password"
-                        value={settingsPassword}
-                        onChange={(e) => setSettingsPassword(e.target.value)}
-                        placeholder="Mínimo 6 caracteres"
-                        className="w-full bg-slate-900 border border-slate-800 pl-9 pr-3 py-2.5 rounded-xl text-white font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
+                  <Field label="Nova Senha (deixe em branco para manter)" variant="default">
+                    <Input
+                      icon={Key}
+                      type="password"
+                      value={settingsPassword}
+                      onChange={(e) => setSettingsPassword(e.target.value)}
+                      placeholder="Mínimo 6 caracteres"
+                    />
+                  </Field>
 
-                  <div className="space-y-1.5">
-                    <label className="font-bold text-slate-300">Confirmar Nova Senha</label>
-                    <div className="relative">
-                      <Key className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                      <input
-                        type="password"
-                        value={settingsConfirmPassword}
-                        onChange={(e) => setSettingsConfirmPassword(e.target.value)}
-                        placeholder="Repita a nova senha"
-                        className="w-full bg-slate-900 border border-slate-800 pl-9 pr-3 py-2.5 rounded-xl text-white font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
+                  <Field label="Confirmar Nova Senha" variant="default">
+                    <Input
+                      icon={Key}
+                      type="password"
+                      value={settingsConfirmPassword}
+                      onChange={(e) => setSettingsConfirmPassword(e.target.value)}
+                      placeholder="Repita a nova senha"
+                    />
+                  </Field>
                 </div>
-              </div>
+              </Card>
 
               {/* Card 3: Link e URL Personalizada */}
-              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-5">
-                <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-                  <Globe className="w-4 h-4 text-indigo-400" />
-                  <h3 className="font-bold text-white text-sm">Link de Agendamento & Divulgação (URL)</h3>
+              <Card padding="lg" elevation="none" className="space-y-5">
+                <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+                  <Globe className="w-4 h-4 text-[var(--tenant-accent)]" />
+                  <h3 className="font-bold text-slate-900 text-sm">Link de Agendamento & Divulgação (URL)</h3>
                 </div>
 
-                <div className="space-y-4 text-xs">
-                  <div className="space-y-1.5">
-                    <label className="font-bold text-slate-300">URL / Slug Personalizado do Portal</label>
+                <div className="space-y-4">
+                  <Field label="URL / Slug Personalizado do Portal" variant="default">
                     <div className="flex items-center gap-2">
-                      <span className="bg-slate-900 text-slate-400 px-3 py-2.5 rounded-xl border border-slate-800 font-mono text-xs select-none">
+                      <span className="bg-gray-50 text-gray-500 px-3 py-2.5 rounded-xl border border-gray-200 font-mono text-xs select-none">
                         portalagendeai.app.br/
                       </span>
-                      <input
+                      <Input
                         type="text"
                         value={settingsSlug}
                         onChange={(e) => setSettingsSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
                         placeholder="meu-estudio"
-                        className="flex-1 bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        className="flex-1 font-mono"
                       />
                     </div>
-                  </div>
+                  </Field>
 
                   {/* Share Preview Banner */}
-                  <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div className="space-y-1 min-w-0">
-                      <span className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider block">
+                      <span className="text-2xs font-bold text-[var(--tenant-accent)] uppercase tracking-wider block">
                         Link público para seus clientes agendarem
                       </span>
-                      <p className="text-xs text-slate-200 font-mono truncate">
+                      <p className="text-xs text-slate-700 font-mono truncate">
                         {window.location.origin}/{settingsSlug || tenant?.slug || "agendar"}
                       </p>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      <button
+                      <Button
+                        variant="none"
+                        size="none"
                         type="button"
                         onClick={() => {
                           const link = `${window.location.origin}/${settingsSlug || tenant?.slug || ""}`;
@@ -1414,12 +1462,12 @@ export default function ProviderDashboard({
                           setCopiedLink(true);
                           setTimeout(() => setCopiedLink(false), 2500);
                         }}
-                        className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                        className="px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-slate-700 rounded-lg text-xs gap-1.5"
                       >
                         {copiedLink ? (
                           <>
-                            <Check className="w-3.5 h-3.5 text-green-400" />
-                            <span className="text-green-400">Copiado!</span>
+                            <Check className="w-3.5 h-3.5 text-green-600" />
+                            <span className="text-green-600">Copiado!</span>
                           </>
                         ) : (
                           <>
@@ -1427,13 +1475,13 @@ export default function ProviderDashboard({
                             <span>Copiar Link</span>
                           </>
                         )}
-                      </button>
+                      </Button>
 
                       <a
                         href={`/${settingsSlug || tenant?.slug || ""}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold flex items-center gap-1.5 transition-colors"
+                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-[var(--tenant-accent)] hover:bg-[var(--tenant-accent-strong)] text-white text-xs font-bold transition-colors"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                         <span>Abrir Portal</span>
@@ -1441,24 +1489,18 @@ export default function ProviderDashboard({
                     </div>
                   </div>
                 </div>
-              </div>
+              </Card>
 
               {/* Botão de Salvar Alterações */}
               <div className="flex justify-end gap-3 pt-2">
-                <button
+                <Button
                   type="submit"
-                  disabled={settingsSaving}
-                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-indigo-600/20 transition-all cursor-pointer"
+                  size="lg"
+                  loading={settingsSaving}
+                  leftIcon={<Save className="w-4 h-4" />}
                 >
-                  {settingsSaving ? (
-                    <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      Salvar Todas as Configurações
-                    </>
-                  )}
-                </button>
+                  Salvar Todas as Configurações
+                </Button>
               </div>
 
             </form>

@@ -5,13 +5,17 @@
 
 import type { ComponentType, ReactNode } from "react";
 
-export type AlertVariant = "error" | "info" | "hint";
+export type AlertVariant = "error" | "success" | "info" | "hint";
 export type AlertSize = "sm" | "md";
 
 const VARIANTS: Record<AlertVariant, Record<AlertSize, string>> = {
   error: {
-    sm: "p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-xs font-semibold",
+    sm: "p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-xs font-semibold flex items-center gap-2",
     md: "p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 flex items-start gap-3",
+  },
+  success: {
+    sm: "p-3 bg-green-50 border border-green-200 rounded-xl text-green-800 text-xs font-semibold flex items-center gap-2",
+    md: "p-4 bg-green-50 border border-green-200 rounded-xl text-green-800 flex items-start gap-3",
   },
   info: {
     sm: "p-3.5 bg-gray-50 border border-gray-200 rounded-xl text-3xs font-semibold text-gray-600 flex items-center justify-center gap-2",
@@ -25,6 +29,7 @@ const VARIANTS: Record<AlertVariant, Record<AlertSize, string>> = {
 
 const ICON_TONES: Record<AlertVariant, string> = {
   error: "w-5 h-5 text-red-600 shrink-0 mt-0.5",
+  success: "w-5 h-5 text-green-600 shrink-0 mt-0.5",
   info: "w-4 h-4 shrink-0",
   hint: "w-4 h-4 shrink-0",
 };

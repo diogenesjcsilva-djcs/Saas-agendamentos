@@ -926,6 +926,9 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.25 }}
+                /* O painel do prestador lê a mesma cor do estabelecimento que o
+                   portal do cliente — um escopo por vez, no elemento que o abre. */
+                style={getTenantThemeVars(selectedTenant?.themeColor)}
               >
                 <ProviderDashboard 
                   provider={selectedProvider} 
