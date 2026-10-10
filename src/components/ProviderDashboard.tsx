@@ -1350,7 +1350,7 @@ export default function ProviderDashboard({
                       <span className="text-sm font-extrabold flex items-center gap-1.5">
                         🏢 Espaço Próprio
                       </span>
-                      <span className="text-2xs text-gray-500 mt-1 font-normal">
+                      <span className="text-2xs text-gray-600 mt-1 font-normal">
                         Atendimento apenas no seu estúdio/salão
                       </span>
                     </Button>
@@ -1369,7 +1369,7 @@ export default function ProviderDashboard({
                       <span className="text-sm font-extrabold flex items-center gap-1.5">
                         🚗 A Domicílio
                       </span>
-                      <span className="text-2xs text-gray-500 mt-1 font-normal">
+                      <span className="text-2xs text-gray-600 mt-1 font-normal">
                         Atendimento exclusivo no endereço do cliente
                       </span>
                     </Button>
@@ -1388,7 +1388,7 @@ export default function ProviderDashboard({
                       <span className="text-sm font-extrabold flex items-center gap-1.5">
                         🔄 Ambos
                       </span>
-                      <span className="text-2xs text-gray-500 mt-1 font-normal">
+                      <span className="text-2xs text-gray-600 mt-1 font-normal">
                         O cliente escolhe no agendamento
                       </span>
                     </Button>
