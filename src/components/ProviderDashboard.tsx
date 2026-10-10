@@ -500,12 +500,12 @@ export default function ProviderDashboard({
       <div className="w-full md:w-64 bg-slate-950 p-6 border-b md:border-b-0 md:border-r border-slate-800 shrink-0 space-y-6">
         {/* Profile Card */}
         <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500 text-white font-bold flex items-center justify-center text-md border border-indigo-400">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500 text-white font-bold flex items-center justify-center text-base border border-indigo-400">
             {provider.name.charAt(0)}
           </div>
           <div className="truncate">
             <h4 className="font-bold text-sm text-white">{provider.name}</h4>
-            <p className="text-4xs text-slate-400 truncate">{provider.email}</p>
+            <p className="text-3xs text-slate-400 truncate">{provider.email}</p>
           </div>
         </div>
 
@@ -607,7 +607,7 @@ export default function ProviderDashboard({
                   <DollarSign className="w-5 h-5 text-indigo-400" />
                 </div>
                 <h3 className="text-2xl font-black text-white font-mono">{formatPrice(totalRevenue)}</h3>
-                <p className="text-4xs text-slate-500">Soma dos agendamentos confirmados/concluídos</p>
+                <p className="text-3xs text-slate-500">Soma dos agendamentos confirmados/concluídos</p>
               </div>
 
               <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-2">
@@ -616,7 +616,7 @@ export default function ProviderDashboard({
                   <Users className="w-5 h-5 text-indigo-400" />
                 </div>
                 <h3 className="text-2xl font-black text-white font-mono">{activeBookings.length}</h3>
-                <p className="text-4xs text-slate-500">Volume de clientes agendados ativos</p>
+                <p className="text-3xs text-slate-500">Volume de clientes agendados ativos</p>
               </div>
 
               <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-2">
@@ -625,7 +625,7 @@ export default function ProviderDashboard({
                   <Clock3 className="w-5 h-5 text-indigo-400" />
                 </div>
                 <h3 className="text-2xl font-black text-white font-mono">{services.length}</h3>
-                <p className="text-4xs text-slate-500">Quantidade de modalidades criadas</p>
+                <p className="text-3xs text-slate-500">Quantidade de modalidades criadas</p>
               </div>
             </div>
 
@@ -688,9 +688,9 @@ export default function ProviderDashboard({
                             <span>📧 {b.clientEmail}</span>
                           </div>
                           {b.clientAddress && (
-                            <p className="text-4xs text-blue-300 font-medium">📍 {b.clientAddress}</p>
+                            <p className="text-3xs text-blue-300 font-medium">📍 {b.clientAddress}</p>
                           )}
-                          {b.notes && <p className="text-4xs text-slate-500 italic">Obs: "{b.notes}"</p>}
+                          {b.notes && <p className="text-3xs text-slate-500 italic">Obs: "{b.notes}"</p>}
                         </div>
                         <div className="flex sm:flex-col items-baseline sm:items-end justify-between shrink-0">
                           <span className="text-indigo-400 font-bold font-mono text-xs">
@@ -786,13 +786,13 @@ export default function ProviderDashboard({
                             <span>🚗 <strong>Atendimento no Cliente:</strong> {b.clientAddress}</span>
                           </div>
                         ) : (
-                          <div className="text-4xs text-slate-500 flex items-center gap-1">
+                          <div className="text-3xs text-slate-500 flex items-center gap-1">
                             <span>🏢 Atendimento no estabelecimento</span>
                           </div>
                         )}
 
                         {b.notes && (
-                          <div className="p-2.5 bg-slate-900/50 rounded-lg text-slate-400 text-4xs italic border-l-2 border-slate-700">
+                          <div className="p-2.5 bg-slate-900/50 rounded-lg text-slate-400 text-3xs italic border-l-2 border-slate-700">
                             " {b.notes} "
                           </div>
                         )}
@@ -840,7 +840,7 @@ export default function ProviderDashboard({
                           </button>
                         )}
                         {b.status === "completed" && (
-                          <span className="text-4xs text-slate-500 italic flex items-center gap-1">
+                          <span className="text-3xs text-slate-500 italic flex items-center gap-1">
                             <Check className="w-3 h-3 text-green-500" /> Atendimento Concluído
                           </span>
                         )}
@@ -1152,18 +1152,18 @@ export default function ProviderDashboard({
                 <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-4">
                   <h3 className="font-bold text-white text-xs uppercase tracking-wider">Bloqueios Cadastrados</h3>
                   {exceptions.length === 0 ? (
-                    <p className="text-4xs text-slate-600 py-3 italic">Nenhuma exceção ou bloqueio ativo.</p>
+                    <p className="text-3xs text-slate-600 py-3 italic">Nenhuma exceção ou bloqueio ativo.</p>
                   ) : (
                     <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
                       {exceptions.map(e => {
                         const dateObj = new Date(`${e.date}T00:00:00`);
                         return (
-                          <div key={e.id} className="p-3 bg-slate-900 rounded-xl border border-slate-850 flex items-center justify-between gap-3 text-xs">
+                          <div key={e.id} className="p-3 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between gap-3 text-xs">
                             <div className="space-y-0.5">
                               <span className="font-mono font-bold text-white">
                                 {dateObj.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}
                               </span>
-                              <p className="text-4xs text-slate-500 font-medium">
+                              <p className="text-3xs text-slate-500 font-medium">
                                 {e.isBlocked ? (
                                   <span className="text-red-400 font-semibold">Dia todo bloqueado</span>
                                 ) : (
@@ -1258,7 +1258,7 @@ export default function ProviderDashboard({
                 </div>
 
                 {/* Modalidade de Atendimento */}
-                <div className="space-y-2 pt-2 border-t border-slate-850">
+                <div className="space-y-2 pt-2 border-t border-slate-800">
                   <label className="font-bold text-slate-300 text-xs block">
                     Onde você atende seus clientes? (Modalidade de Atendimento)
                   </label>

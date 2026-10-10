@@ -206,7 +206,7 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
         <div className="border-t border-gray-100 pt-5 space-y-4">
           <div>
             <h4 className="text-xs font-extrabold text-slate-900 text-left">Acesso do Administrador</h4>
-            <p className="text-4xs text-gray-500 text-left">
+            <p className="text-3xs text-gray-500 text-left">
               Crie as credenciais de login e senha para gerenciar a agenda deste estabelecimento.
             </p>
           </div>
@@ -742,13 +742,13 @@ export default function App() {
                     Agendamentos Inteligentes <br />
                     <span className="bg-gradient-to-r from-indigo-600 to-indigo-500 bg-clip-text text-transparent">para o seu negócio</span>
                   </h2>
-                  <p className="text-sm text-gray-505 max-w-lg mx-auto leading-relaxed">
+                  <p className="text-sm text-gray-500 max-w-lg mx-auto leading-relaxed">
                     Crie a página de agendamentos da sua barbearia, clínica, salão ou estúdio em segundos. Ofereça reservas online aos seus clientes e gerencie tudo em um painel unificado.
                   </p>
                   <div className="flex justify-center gap-4">
                     <button
                       onClick={() => navigateTo("/cadastrar")}
-                      className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-505 hover:from-indigo-700 hover:to-indigo-600 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 hover:-translate-y-0.5 cursor-pointer"
+                      className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 hover:-translate-y-0.5 cursor-pointer"
                     >
                       Cadastrar Estabelecimento
                     </button>
@@ -790,7 +790,7 @@ export default function App() {
                                 <h4 className="font-extrabold text-slate-900 text-base group-hover:text-indigo-600 transition-colors text-left">
                                   {tenant.name}
                                 </h4>
-                                <p className="text-4xs text-slate-450 font-mono mt-1 text-left">
+                                <p className="text-3xs text-slate-400 font-mono mt-1 text-left">
                                   portalagendeai.app.br/{tenant.slug}
                                 </p>
                               </div>
@@ -863,7 +863,7 @@ export default function App() {
                         value={authEmail}
                         onChange={(e) => setAuthEmail(e.target.value)}
                         placeholder="nome@empresa.com"
-                        className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-505/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
+                        className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
                       />
                     </div>
                   </div>
@@ -877,7 +877,7 @@ export default function App() {
                         value={authPassword}
                         onChange={(e) => setAuthPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-505/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
+                        className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
                       />
                     </div>
                   </div>
@@ -895,7 +895,7 @@ export default function App() {
                   </button>
                 </form>
 
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-4xs leading-relaxed text-slate-500 font-medium">
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-3xs leading-relaxed text-slate-500 font-medium">
                   <span className="font-bold text-slate-700 block mb-1">Dica de teste (Prestadores pré-configurados):</span>
                   Use as contas a seguir para testar o painel:<br/>
                   • Carlos Barber: <code>carlos@imperial.com</code> (Senha: <code>12345678</code>)<br/>
@@ -1066,7 +1066,7 @@ export default function App() {
 
               {/* Social Dividers & Intuitive Buttons */}
               <div className="relative flex items-center justify-center my-4">
-                <div className="border-t border-gray-150 w-full"></div>
+                <div className="border-t border-gray-200 w-full"></div>
                 <span className="absolute bg-white px-3 text-3xs text-gray-400 font-bold uppercase tracking-wider">ou continuar com</span>
               </div>
 
@@ -1077,7 +1077,7 @@ export default function App() {
                     setSocialError(null);
                     setSocialAuthOpen("google");
                   }}
-                  className="w-full py-2.5 bg-white hover:bg-gray-50 border border-gray-250 text-gray-700 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2"
+                  className="w-full py-2.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.57h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.48C21.68,11.75 21.56,11.4 21.35,11.1z" fill="#4285F4" />
@@ -1169,7 +1169,7 @@ export default function App() {
                     </div>
                   )}
 
-                  <div className="divide-y divide-gray-150 border border-gray-150 rounded-2xl overflow-hidden text-xs">
+                  <div className="divide-y divide-gray-200 border border-gray-200 rounded-2xl overflow-hidden text-xs">
                     {/* Option 1 */}
                     <button
                       onClick={() => handleSocialAuthSubmit("diogenes.silva@gmail.com", "Diógenes Silva", "google")}
@@ -1185,7 +1185,7 @@ export default function App() {
 
                     {/* Custom input option */}
                     <div className="p-4 bg-gray-50/50 space-y-3">
-                      <p className="text-gray-400 font-bold uppercase tracking-wider text-5xs">Ou usar outra conta</p>
+                      <p className="text-gray-400 font-bold uppercase tracking-wider text-3xs">Ou usar outra conta</p>
                       <div className="space-y-2">
                         <input
                           type="text"
@@ -1242,21 +1242,21 @@ export default function App() {
                     </div>
                   )}
 
-                  <div className="bg-slate-950 border border-slate-850 rounded-2xl p-5 space-y-4 text-xs">
+                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-4 text-xs">
                     <div className="space-y-1">
                       <p className="font-bold text-white flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Perfil Básico (Obrigatório)
                       </p>
-                      <p className="text-4xs text-slate-500">Nome de usuário, tipo de conta e e-mail cadastrado.</p>
+                      <p className="text-3xs text-slate-500">Nome de usuário, tipo de conta e e-mail cadastrado.</p>
                     </div>
 
                     <div className="border-t border-slate-900 pt-4 space-y-3">
-                      <p className="text-5xs text-slate-500 font-bold uppercase tracking-wider">Conta a ser conectada:</p>
+                      <p className="text-3xs text-slate-500 font-bold uppercase tracking-wider">Conta a ser conectada:</p>
                       <div className="flex items-center gap-3 bg-slate-900 p-3 rounded-xl border border-slate-800">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center font-bold text-xs text-white">D</div>
                         <div>
                           <p className="font-bold text-white">@diogenes_silva</p>
-                          <p className="text-5xs text-slate-500">diogenes.instagram@instagram.com</p>
+                          <p className="text-3xs text-slate-500">diogenes.instagram@instagram.com</p>
                         </div>
                       </div>
                     </div>
@@ -1265,7 +1265,7 @@ export default function App() {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => setSocialAuthOpen(null)}
-                      className="flex-1 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-850 text-slate-400 hover:text-white text-xs font-bold transition-all"
+                      className="flex-1 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-bold transition-all"
                     >
                       Não Autorizar
                     </button>

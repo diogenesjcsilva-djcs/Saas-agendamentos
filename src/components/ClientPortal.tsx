@@ -569,7 +569,7 @@ export default function ClientPortal({
           </p>
         </div>
 
-        <div className="p-3.5 bg-gray-50 border border-gray-150 rounded-xl text-3xs font-semibold text-gray-600 flex items-center justify-center gap-2">
+        <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl text-3xs font-semibold text-gray-600 flex items-center justify-center gap-2">
           <span className="w-3.5 h-3.5 border-2 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin"></span>
           <span>Redirecionando para a página principal em <strong>{countdown}s</strong>...</span>
         </div>
@@ -606,26 +606,26 @@ export default function ClientPortal({
 
             <div className="space-y-4 text-xs font-semibold text-slate-700">
               <div className="flex items-center gap-3">
-                <span className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-650 flex items-center justify-center font-bold">⚡</span>
+                <span className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">⚡</span>
                 <span>Agendamento rápido em menos de 1 minuto</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-650 flex items-center justify-center font-bold">🔄</span>
+                <span className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">🔄</span>
                 <span>Reagende ou cancele de forma 100% online</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-650 flex items-center justify-center font-bold">🔔</span>
+                <span className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">🔔</span>
                 <span>Histórico completo de visitas no seu portal</span>
               </div>
             </div>
           </div>
 
-          <div className="md:col-span-6 bg-white border border-gray-150 rounded-2xl p-6 md:p-8 shadow-sm space-y-5">
+          <div className="md:col-span-6 bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-sm space-y-5">
             <div className="text-center space-y-1">
               <h3 className="font-extrabold text-slate-900 text-base">
                 {authMode === "login" ? "Entrar na sua Conta" : "Criar sua Conta"}
               </h3>
-              <p className="text-4xs text-gray-500">
+              <p className="text-3xs text-gray-500">
                 {authMode === "login"
                   ? "Entre para ver seus agendamentos e agendar mais rápido."
                   : "Cadastre-se para acompanhar seu histórico de reservas."
@@ -644,14 +644,14 @@ export default function ClientPortal({
                 <>
                   {/* Account Type Selection */}
                   <div className="space-y-1">
-                    <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider block font-semibold">Tipo de Conta</label>
+                    <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block font-semibold">Tipo de Conta</label>
                     <div className="grid grid-cols-2 gap-2 bg-gray-50 p-1 rounded-xl border border-gray-200">
                       <button
                         type="button"
                         onClick={() => setRegisterRole("client")}
                         className={`py-1.5 rounded-lg text-3xs font-bold transition-all ${registerRole === "client"
-                            ? "bg-white text-indigo-650 shadow-sm border border-gray-150"
-                            : "text-gray-400 hover:text-gray-650"
+                            ? "bg-white text-indigo-600 shadow-sm border border-gray-200"
+                            : "text-gray-400 hover:text-gray-600"
                           }`}
                       >
                         Sou Cliente
@@ -660,8 +660,8 @@ export default function ClientPortal({
                         type="button"
                         onClick={() => setRegisterRole("provider")}
                         className={`py-1.5 rounded-lg text-3xs font-bold transition-all ${registerRole === "provider"
-                            ? "bg-white text-indigo-650 shadow-sm border border-gray-150"
-                            : "text-gray-400 hover:text-gray-650"
+                            ? "bg-white text-indigo-600 shadow-sm border border-gray-200"
+                            : "text-gray-400 hover:text-gray-600"
                           }`}
                       >
                         Sou Profissional
@@ -671,7 +671,7 @@ export default function ClientPortal({
 
                   {/* Name field */}
                   <div className="space-y-1">
-                    <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider">Nome Completo</label>
+                    <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider">Nome Completo</label>
                     <div className="relative">
                       <User className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                       <input
@@ -689,7 +689,7 @@ export default function ClientPortal({
                   {registerRole === "provider" && (
                     <>
                       <div className="space-y-1">
-                        <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider">Especialidade / Categoria</label>
+                        <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider">Especialidade / Categoria</label>
                         <select
                           value={registerCategoryId}
                           onChange={(e) => setRegisterCategoryId(e.target.value)}
@@ -704,7 +704,7 @@ export default function ClientPortal({
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider">Biografia / Apresentação</label>
+                        <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider">Biografia / Apresentação</label>
                         <textarea
                           value={registerBio}
                           onChange={(e) => setRegisterBio(e.target.value)}
@@ -719,7 +719,7 @@ export default function ClientPortal({
               )}
 
               <div className="space-y-1">
-                <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider">E-mail</label>
+                <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider">E-mail</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                   <input
@@ -734,7 +734,7 @@ export default function ClientPortal({
               </div>
 
               <div className="space-y-1">
-                <label className="text-4xs font-bold text-gray-400 uppercase tracking-wider">Senha</label>
+                <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider">Senha</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                   <input
@@ -762,15 +762,15 @@ export default function ClientPortal({
             </form>
 
             <div className="relative flex items-center justify-center my-3">
-              <div className="border-t border-gray-150 w-full"></div>
-              <span className="absolute bg-white px-2 text-5xs text-gray-400 font-bold uppercase tracking-wider">ou</span>
+              <div className="border-t border-gray-200 w-full"></div>
+              <span className="absolute bg-white px-2 text-3xs text-gray-400 font-bold uppercase tracking-wider">ou</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setSocialAuthOpen("google")}
-                className="py-2 bg-white hover:bg-gray-50 border border-gray-250 text-gray-700 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
                   <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.57h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.48C21.68,11.75 21.56,11.4 21.35,11.1z" fill="#4285F4" />
@@ -927,7 +927,7 @@ export default function ClientPortal({
                             onClick={() => handleSelectService(service)}
                             className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex gap-4 items-start ${isSelected
                                 ? `border-${currentTheme.accent} ${currentTheme.bg} shadow-md`
-                                : "border-gray-150 hover:border-indigo-600 hover:shadow-md hover:translate-y-[-2px] bg-white group"
+                                : "border-gray-200 hover:border-indigo-600 hover:shadow-md hover:translate-y-[-2px] bg-white group"
                               }`}
                           >
                             <span className="text-3xl p-3 bg-gray-50 rounded-xl border border-gray-100 shrink-0 select-none shadow-sm group-hover:scale-105 transition-transform">
@@ -936,7 +936,7 @@ export default function ClientPortal({
                             <div className="space-y-1.5 flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap justify-between">
                                 <h3 className="font-bold text-slate-900 text-sm leading-snug truncate group-hover:text-indigo-600 transition-colors">{service.name}</h3>
-                                <span className="text-5xs bg-gray-100 text-gray-650 px-2 py-0.5 rounded-full font-mono font-bold shrink-0">
+                                <span className="text-3xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-mono font-bold shrink-0">
                                   {service.durationMinutes} min
                                 </span>
                               </div>
@@ -990,7 +990,7 @@ export default function ClientPortal({
 
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Calendar Card */}
-                    <div className="lg:col-span-7 bg-white border border-gray-150 rounded-2xl p-5 shadow-sm space-y-4">
+                    <div className="lg:col-span-7 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4">
                       <div className="flex items-center justify-between">
                         <h3 className="font-bold text-slate-900 capitalize text-sm">
                           {currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
@@ -1044,7 +1044,7 @@ export default function ClientPortal({
                               disabled={isPast}
                               onClick={() => selectDateHandler(day)}
                               className={`aspect-square flex items-center justify-center rounded-xl text-xs font-medium transition-all cursor-pointer ${isPast
-                                  ? "text-gray-250 cursor-not-allowed"
+                                  ? "text-gray-300 cursor-not-allowed"
                                   : isSelected
                                     ? `bg-${currentTheme.accent} text-white shadow-md font-bold scale-105`
                                     : isWeekend
@@ -1060,7 +1060,7 @@ export default function ClientPortal({
                     </div>
 
                     {/* Time Slots Card */}
-                    <div className="lg:col-span-5 bg-white border border-gray-150 rounded-2xl p-5 shadow-sm flex flex-col justify-start min-h-[300px]">
+                    <div className="lg:col-span-5 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-start min-h-[300px]">
                       {slotsLoading ? (
                         <div className="flex-1 flex flex-col items-center justify-center py-12 text-gray-400">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
@@ -1091,7 +1091,7 @@ export default function ClientPortal({
                                   disabled={!slot.available}
                                   onClick={() => setSelectedSlot(slot)}
                                   className={`py-2.5 px-3 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer ${!slot.available
-                                      ? "bg-gray-50 border-gray-100 text-gray-350 cursor-not-allowed text-left flex flex-col opacity-60"
+                                      ? "bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed text-left flex flex-col opacity-60"
                                       : selectedSlot?.time === slot.time
                                         ? `bg-${currentTheme.accent} border-${currentTheme.accent} text-white shadow-sm`
                                         : "bg-white border-gray-200 text-gray-700 hover:border-indigo-600"
@@ -1111,7 +1111,7 @@ export default function ClientPortal({
                             >
                               <button
                                 onClick={() => setStep(3)}
-                                className={`w-full py-3 px-4 bg-${currentTheme.accent} hover:bg-opacity-95 text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer`}
+                                className={`w-full py-3 px-4 bg-${currentTheme.accent} text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer`}
                               >
                                 Avançar para Seus Dados &rarr;
                               </button>
@@ -1214,7 +1214,7 @@ export default function ClientPortal({
                     </div>
 
                     {/* Booking Summary Box */}
-                    <div className="md:col-span-5 bg-gray-50 border border-gray-150 rounded-2xl p-6 self-start space-y-4">
+                    <div className="md:col-span-5 bg-gray-50 border border-gray-200 rounded-2xl p-6 self-start space-y-4">
                       <h3 className="font-bold text-slate-900 text-sm border-b border-gray-200 pb-2">Resumo da Reserva</h3>
 
                       <div className="space-y-3 text-xs">
@@ -1245,7 +1245,7 @@ export default function ClientPortal({
                       <button
                         type="submit"
                         disabled={bookingLoading}
-                        className={`w-full py-3 px-4 bg-${currentTheme.accent} hover:bg-opacity-95 text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer font-sans`}
+                        className={`w-full py-3 px-4 bg-${currentTheme.accent} text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer font-sans`}
                       >
                         {bookingLoading ? (
                           <>
@@ -1283,7 +1283,7 @@ export default function ClientPortal({
                     </p>
                   </div>
 
-                  <div className="bg-gray-50 border border-gray-150 rounded-2xl p-5 text-left space-y-3 text-xs">
+                  <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 text-left space-y-3 text-xs">
                     <div className="flex justify-between border-b border-gray-200 pb-2">
                       <span className="font-semibold text-gray-500 uppercase tracking-wider text-3xs">Código de Reserva</span>
                       <span className="font-mono font-bold text-gray-900">{successBooking.id}</span>
@@ -1365,14 +1365,14 @@ export default function ClientPortal({
                       <div
                         key={booking.id}
                         className={`p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${isCancelled
-                            ? "bg-gray-50/50 border-gray-150 opacity-60"
-                            : "bg-white border-gray-150 shadow-sm"
+                            ? "bg-gray-50/50 border-gray-200 opacity-60"
+                            : "bg-white border-gray-200 shadow-sm"
                           }`}
                       >
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-2">
                             <h3 className="font-bold text-gray-900 text-sm">{booking.serviceName}</h3>
-                            <span className={`text-4xs font-extrabold uppercase px-2 py-0.5 rounded-full ${isCancelled
+                            <span className={`text-3xs font-extrabold uppercase px-2 py-0.5 rounded-full ${isCancelled
                                 ? "bg-red-50 text-red-500 border border-red-100"
                                 : isCompleted
                                   ? "bg-green-50 text-green-500 border border-green-100"
@@ -1476,7 +1476,7 @@ export default function ClientPortal({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-7 gap-0.5 text-center text-4xs font-bold text-gray-400">
+                  <div className="grid grid-cols-7 gap-0.5 text-center text-3xs font-bold text-gray-400">
                     <div>Dom</div>
                     <div>Seg</div>
                     <div>Ter</div>
@@ -1514,7 +1514,7 @@ export default function ClientPortal({
                                 ? `bg-${currentTheme.accent} text-white font-bold`
                                 : isWeekend
                                   ? "text-red-400 hover:bg-red-50/50"
-                                  : "text-gray-700 hover:bg-gray-150"
+                                  : "text-gray-700 hover:bg-gray-100"
                             }`}
                         >
                           {day}
@@ -1527,7 +1527,7 @@ export default function ClientPortal({
                 {/* Available Slots */}
                 <div className="flex flex-col min-h-[220px]">
                   {!rescheduleDate ? (
-                    <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-gray-200 rounded-xl p-4 text-center text-gray-450 text-xs">
+                    <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-gray-200 rounded-xl p-4 text-center text-gray-500 text-xs">
                       <CalendarIcon className="w-8 h-8 mb-2 stroke-1" />
                       <p>Escolha uma nova data.</p>
                     </div>
@@ -1536,7 +1536,7 @@ export default function ClientPortal({
                       <div className={`animate-spin rounded-full h-6 w-6 border-b-2 border-${currentTheme.accent}`}></div>
                     </div>
                   ) : rescheduleSlots.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-gray-200 rounded-xl p-4 text-center text-gray-450 text-xs">
+                    <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-gray-200 rounded-xl p-4 text-center text-gray-500 text-xs">
                       <AlertCircle className="w-6 h-6 mb-1 stroke-1" />
                       <p>Nenhum horário disponível.</p>
                     </div>
@@ -1554,7 +1554,7 @@ export default function ClientPortal({
                               disabled={!slot.available}
                               onClick={() => setSelectedRescheduleSlot(slot)}
                               className={`py-2 rounded-lg text-xs font-semibold font-mono border transition-all cursor-pointer ${!slot.available
-                                  ? "bg-gray-50 border-gray-105 text-gray-200 cursor-not-allowed"
+                                  ? "bg-gray-50 border-gray-100 text-gray-200 cursor-not-allowed"
                                   : selectedRescheduleSlot?.time === slot.time
                                     ? `bg-${currentTheme.accent} border-${currentTheme.accent} text-white shadow-sm`
                                     : "bg-white border-gray-200 text-gray-700 hover:border-gray-400"
@@ -1585,7 +1585,7 @@ export default function ClientPortal({
                 <button
                   disabled={!selectedRescheduleSlot}
                   onClick={handleRescheduleConfirm}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold text-white bg-${currentTheme.accent} hover:bg-opacity-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md cursor-pointer`}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold text-white bg-${currentTheme.accent} disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md cursor-pointer`}
                 >
                   Confirmar Reagendamento
                 </button>
