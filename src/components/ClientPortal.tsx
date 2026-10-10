@@ -39,6 +39,18 @@ import {
   Check
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import Alert from "./ui/Alert.js";
+import Badge from "./ui/Badge.js";
+import Button from "./ui/Button.js";
+import Card from "./ui/Card.js";
+import EmptyState from "./ui/EmptyState.js";
+import Field from "./ui/Field.js";
+import IconButton from "./ui/IconButton.js";
+import Input from "./ui/Input.js";
+import Modal from "./ui/Modal.js";
+import Select from "./ui/Select.js";
+import Spinner from "./ui/Spinner.js";
+import Textarea from "./ui/Textarea.js";
 
 interface ClientPortalProps {
   tenant: Tenant;
@@ -486,6 +498,12 @@ export default function ClientPortal({
     }
   };
 
+  const closeReschedule = () => {
+    setReschedulingBooking(null);
+    setRescheduleDate("");
+    setSelectedRescheduleSlot(null);
+  };
+
   const handleRescheduleConfirm = async () => {
     if (!reschedulingBooking || !selectedRescheduleSlot) return;
     try {
@@ -524,7 +542,14 @@ export default function ClientPortal({
 
   if (invalidLinkError) {
     return (
-      <div id="client-portal-root" className="w-full max-w-md mx-auto bg-white rounded-3xl shadow-xl border border-gray-100 p-8 text-center space-y-6 my-10">
+      <Card
+        id="client-portal-root"
+        radius="3xl"
+        border="light"
+        elevation="xl"
+        padding="xl"
+        className="w-full max-w-md mx-auto text-center space-y-6 my-10"
+      >
         <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto text-3xl select-none font-bold shadow-inner">
           ⚠️
         </div>
@@ -535,12 +560,15 @@ export default function ClientPortal({
           </p>
         </div>
 
-        <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl text-3xs font-semibold text-gray-600 flex items-center justify-center gap-2">
-          <span className="w-3.5 h-3.5 border-2 border-[var(--tenant-accent)]/30 border-t-[var(--tenant-accent)] rounded-full animate-spin"></span>
+        <Alert variant="info" size="sm">
+          <Spinner size="xs" tone="accentRing" />
           <span>Redirecionando para a página principal em <strong>{countdown}s</strong>...</span>
-        </div>
+        </Alert>
 
-        <button
+        <Button
+          variant="neutral"
+          size="md"
+          fullWidth
           onClick={() => {
             if (onNavigateHome) {
               onNavigateHome();
@@ -549,17 +577,23 @@ export default function ClientPortal({
               window.location.href = "/";
             }
           }}
-          className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
         >
           Ir para a Página Principal Agora
-        </button>
-      </div>
+        </Button>
+      </Card>
     );
   }
 
   if (!currentUser) {
     return (
-      <div id="client-portal-root" className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+      <Card
+        id="client-portal-root"
+        radius="2xl"
+        border="light"
+        elevation="xl"
+        padding="none"
+        className="w-full max-w-4xl mx-auto overflow-hidden"
+      >
         {/* Auth Required Screen */}
         <div className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
           <div className="md:col-span-6 space-y-6">
@@ -586,7 +620,7 @@ export default function ClientPortal({
             </div>
           </div>
 
-          <div className="md:col-span-6 bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-sm space-y-5">
+          <Card radius="2xl" border="default" elevation="sm" padding="lg" className="md:col-span-6 md:p-8 space-y-5">
             <div className="text-center space-y-1">
               <h3 className="font-extrabold text-slate-900 text-base">
                 {authMode === "login" ? "Entrar na sua Conta" : "Criar sua Conta"}
@@ -600,131 +634,115 @@ export default function ClientPortal({
             </div>
 
             <form onSubmit={authMode === "login" ? handleLogin : onRegisterSubmit} className="space-y-3.5">
-              {authError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-xs font-semibold">
-                  {authError}
-                </div>
-              )}
+              {authError && <Alert variant="error">{authError}</Alert>}
 
               {authMode === "register" && (
                 <>
                   {/* Account Type Selection */}
-                  <div className="space-y-1">
-                    <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block font-semibold">Tipo de Conta</label>
+                  <Field label="Tipo de Conta">
                     <div className="grid grid-cols-2 gap-2 bg-gray-50 p-1 rounded-xl border border-gray-200">
-                      <button
+                      <Button
                         type="button"
+                        variant="none"
+                        size="none"
                         onClick={() => setRegisterRole("client")}
-                        className={`py-1.5 rounded-lg text-3xs font-bold transition-all ${registerRole === "client"
-                            ? "bg-white text-[var(--tenant-accent)] shadow-sm border border-gray-200"
-                            : "text-gray-400 hover:text-gray-600"
+                        className={`py-1.5 rounded-lg text-3xs ${registerRole === "client"
+                          ? "bg-white text-[var(--tenant-accent)] shadow-sm border border-gray-200"
+                          : "text-gray-400 hover:text-gray-600"
                           }`}
                       >
                         Sou Cliente
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
+                        variant="none"
+                        size="none"
                         onClick={() => setRegisterRole("provider")}
-                        className={`py-1.5 rounded-lg text-3xs font-bold transition-all ${registerRole === "provider"
-                            ? "bg-white text-[var(--tenant-accent)] shadow-sm border border-gray-200"
-                            : "text-gray-400 hover:text-gray-600"
+                        className={`py-1.5 rounded-lg text-3xs ${registerRole === "provider"
+                          ? "bg-white text-[var(--tenant-accent)] shadow-sm border border-gray-200"
+                          : "text-gray-400 hover:text-gray-600"
                           }`}
                       >
                         Sou Profissional
-                      </button>
+                      </Button>
                     </div>
-                  </div>
+                  </Field>
 
                   {/* Name field */}
-                  <div className="space-y-1">
-                    <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider">Nome Completo</label>
-                    <div className="relative">
-                      <User className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
-                      <input
-                        type="text"
-                        required
-                        value={authName}
-                        onChange={(e) => setAuthName(e.target.value)}
-                        placeholder={registerRole === "provider" ? "Nome do Profissional" : "Seu nome"}
-                        className="w-full bg-gray-50 border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-xs focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] focus:outline-none transition-all font-semibold"
-                      />
-                    </div>
-                  </div>
+                  <Field label="Nome Completo">
+                    <Input
+                      icon={User}
+                      size="sm"
+                      type="text"
+                      required
+                      value={authName}
+                      onChange={(e) => setAuthName(e.target.value)}
+                      placeholder={registerRole === "provider" ? "Nome do Profissional" : "Seu nome"}
+                    />
+                  </Field>
 
                   {/* Provider custom fields */}
                   {registerRole === "provider" && (
                     <>
-                      <div className="space-y-1">
-                        <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider">Especialidade / Categoria</label>
-                        <select
+                      <Field label="Especialidade / Categoria">
+                        <Select
                           value={registerCategoryId}
                           onChange={(e) => setRegisterCategoryId(e.target.value)}
-                          className="w-full bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-xs focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] focus:outline-none transition-all font-semibold cursor-pointer"
                         >
                           {categories.map((cat) => (
                             <option key={cat.id} value={cat.id}>
                               {cat.imageUrl} {cat.name}
                             </option>
                           ))}
-                        </select>
-                      </div>
+                        </Select>
+                      </Field>
 
-                      <div className="space-y-1">
-                        <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider">Biografia / Apresentação</label>
-                        <textarea
+                      <Field label="Biografia / Apresentação">
+                        <Textarea
                           value={registerBio}
                           onChange={(e) => setRegisterBio(e.target.value)}
                           placeholder="Fale um pouco sobre sua experiência e serviços..."
                           rows={2}
-                          className="w-full bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-xs focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] focus:outline-none transition-all font-semibold resize-none"
                         />
-                      </div>
+                      </Field>
                     </>
                   )}
                 </>
               )}
 
-              <div className="space-y-1">
-                <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider">E-mail</label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
-                  <input
-                    type="email"
-                    required
-                    value={authEmail}
-                    onChange={(e) => setAuthEmail(e.target.value)}
-                    placeholder="seuemail@provedor.com"
-                    className="w-full bg-gray-50 border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-xs focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] focus:outline-none transition-all font-semibold"
-                  />
-                </div>
-              </div>
+              <Field label="E-mail">
+                <Input
+                  icon={Mail}
+                  size="sm"
+                  type="email"
+                  required
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  placeholder="seuemail@provedor.com"
+                />
+              </Field>
 
-              <div className="space-y-1">
-                <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider">Senha</label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
-                  <input
-                    type="password"
-                    required
-                    value={authPassword}
-                    onChange={(e) => setAuthPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full bg-gray-50 border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-xs focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] focus:outline-none transition-all font-semibold"
-                  />
-                </div>
-              </div>
+              <Field label="Senha">
+                <Input
+                  icon={Lock}
+                  size="sm"
+                  type="password"
+                  required
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </Field>
 
-              <button
+              <Button
                 type="submit"
-                disabled={authLoading}
-                className="w-full py-2 bg-[var(--tenant-accent)] hover:bg-[var(--tenant-accent-strong)] text-white rounded-xl text-xs font-bold shadow-md transition-colors flex items-center justify-center gap-2 shadow-[color:var(--tenant-accent)]/10 font-sans cursor-pointer"
+                size="sm"
+                fullWidth
+                loading={authLoading}
+                className="shadow-[color:var(--tenant-accent)]/10"
               >
-                {authLoading ? (
-                  <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-                ) : (
-                  <>{authMode === "login" ? "Entrar" : "Criar Conta"}</>
-                )}
-              </button>
+                {authMode === "login" ? "Entrar" : "Criar Conta"}
+              </Button>
             </form>
 
             <div className="relative flex items-center justify-center my-3">
@@ -733,10 +751,12 @@ export default function ClientPortal({
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="none"
+                className="py-2 text-xs rounded-xl gap-1.5"
                 onClick={() => setSocialAuthOpen("google")}
-                className="py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
                   <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.57h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.48C21.68,11.75 21.56,11.4 21.35,11.1z" fill="#4285F4" />
@@ -745,12 +765,14 @@ export default function ClientPortal({
                   <path d="M12,6.08c1.41,0 2.69,0.49 3.69,1.44l2.76,-2.76C16.78,3.2 14.6,2.38 12,2.38c-3.65,0 -6.91,1.74 -8.5,4.62l3.4,2.66C7.62,7.68 9.63,6.08 12,6.08z" fill="#EA4335" />
                 </svg>
                 Google
-              </button>
+              </Button>
 
-              <button
+              <Button
                 type="button"
+                variant="none"
+                size="none"
                 onClick={() => setSocialAuthOpen("instagram")}
-                className="py-2 bg-gradient-to-r from-purple-600 via-pink-500 to-yellow-500 hover:opacity-90 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="py-2 text-xs rounded-xl gap-1.5 bg-gradient-to-r from-purple-600 via-pink-500 to-yellow-500 hover:opacity-90 text-white shadow-md"
               >
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
                   <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
@@ -758,70 +780,83 @@ export default function ClientPortal({
                   <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
                 </svg>
                 Instagram
-              </button>
+              </Button>
             </div>
 
             <div className="text-center text-xs border-t border-gray-100 pt-3">
               {authMode === "login" ? (
                 <p className="text-gray-500">
                   Ainda não tem conta?{" "}
-                  <button
+                  <Button
+                    variant="link"
+                    size="none"
                     onClick={() => {
                       setAuthMode("register");
                       setAuthError(null);
                     }}
-                    className="text-[var(--tenant-accent)] font-bold hover:underline cursor-pointer"
                   >
                     Cadastre-se
-                  </button>
+                  </Button>
                 </p>
               ) : (
                 <p className="text-gray-500">
                   Já tem uma conta?{" "}
-                  <button
+                  <Button
+                    variant="link"
+                    size="none"
                     onClick={() => {
                       setAuthMode("login");
                       setAuthError(null);
                     }}
-                    className="text-[var(--tenant-accent)] font-bold hover:underline cursor-pointer"
                   >
                     Faça Login
-                  </button>
+                  </Button>
                 </p>
               )}
             </div>
-          </div>
+          </Card>
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div id="client-portal-root" className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+    <Card
+      id="client-portal-root"
+      radius="2xl"
+      border="light"
+      elevation="xl"
+      padding="none"
+      className="w-full max-w-4xl mx-auto overflow-hidden"
+    >
 
       {/* Tabs Switcher for Authenticated Clients */}
       {currentUser && currentUser.role === "client" && (
         <div className="flex border-b border-gray-100 bg-gray-50/50">
-          <button
+          <Button
+            variant="none"
+            size="none"
             onClick={() => setActiveTab("new")}
-            className={`flex-1 py-4 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-2 cursor-pointer ${activeTab === "new"
-                ? "border-[var(--tenant-accent)] text-[var(--tenant-accent)] bg-white"
-                : "border-transparent text-gray-400 hover:text-gray-600"
+            className={`flex-1 py-4 text-xs border-b-2 gap-2 ${activeTab === "new"
+              ? "border-[var(--tenant-accent)] text-[var(--tenant-accent)] bg-white"
+              : "border-transparent text-gray-400 hover:text-gray-600"
               }`}
           >
             <CalendarDays className="w-4 h-4" />
             Novo Agendamento
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="none"
+            size="none"
             onClick={() => setActiveTab("my")}
-            className={`flex-1 py-4 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-2 cursor-pointer ${activeTab === "my"
-                ? "border-[var(--tenant-accent)] text-[var(--tenant-accent)] bg-white"
-                : "border-transparent text-gray-400 hover:text-gray-600"
+            className={`flex-1 py-4 text-xs border-b-2 gap-2 ${activeTab === "my"
+              ? "border-[var(--tenant-accent)] text-[var(--tenant-accent)] bg-white"
+              : "border-transparent text-gray-400 hover:text-gray-600"
               }`}
           >
             <FileText className="w-4 h-4" />
             Meus Agendamentos
-          </button>
+          </Button>
         </div>
       )}
 
@@ -849,10 +884,9 @@ export default function ClientPortal({
       {/* Main Tab Content */}
       <div className="p-8">
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-            <div className="text-sm font-medium">{error}</div>
-          </div>
+          <Alert variant="error" size="md" icon={AlertCircle} className="mb-6">
+            {error}
+          </Alert>
         )}
 
         <AnimatePresence mode="wait">
@@ -878,10 +912,10 @@ export default function ClientPortal({
                   {/* Services Grid (Strictly filtered by selected provider) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredServices.length === 0 ? (
-                      <div className="col-span-full py-12 border border-dashed border-gray-200 rounded-2xl text-center text-gray-400 space-y-2">
+                      <EmptyState size="sm" className="col-span-full">
                         <AlertCircle className="w-10 h-10 stroke-1 mx-auto text-amber-500" />
                         <p className="text-xs font-semibold">Nenhum serviço encontrado para este prestador.</p>
-                      </div>
+                      </EmptyState>
                     ) : (
                       filteredServices.map(service => {
                         const isSelected = selectedService?.id === service.id;
@@ -902,9 +936,9 @@ export default function ClientPortal({
                             <div className="space-y-1.5 flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap justify-between">
                                 <h3 className="font-bold text-slate-900 text-sm leading-snug truncate group-hover:text-[var(--tenant-accent)] transition-colors">{service.name}</h3>
-                                <span className="text-3xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-mono font-bold shrink-0">
+                                <Badge tone="neutral" className="shrink-0">
                                   {service.durationMinutes} min
-                                </span>
+                                </Badge>
                               </div>
 
                               <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{service.description || "Atendimento especializado com horário reservado."}</p>
@@ -936,15 +970,17 @@ export default function ClientPortal({
                   className="space-y-6"
                 >
                   <div className="flex items-center gap-3">
-                    <button
+                    <IconButton
+                      label="Voltar para a escolha do serviço"
+                      variant="ghost"
+                      size="lg"
                       onClick={() => {
                         setSelectedService(null);
                         setStep(1);
                       }}
-                      className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors cursor-pointer"
                     >
                       <ArrowLeft className="w-5 h-5" />
-                    </button>
+                    </IconButton>
                     <div>
                       <h2 className="text-xl font-bold text-gray-900">Selecione Data e Horário</h2>
                       <p className="text-sm text-gray-500 mt-0.5">
@@ -956,24 +992,28 @@ export default function ClientPortal({
 
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Calendar Card */}
-                    <div className="lg:col-span-7 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4">
+                    <Card radius="2xl" border="default" elevation="sm" padding="md" className="lg:col-span-7 space-y-4">
                       <div className="flex items-center justify-between">
                         <h3 className="font-bold text-slate-900 capitalize text-sm">
                           {currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
                         </h3>
                         <div className="flex gap-1.5">
-                          <button
+                          <IconButton
+                            label="Mês anterior"
+                            variant="outline"
+                            size="md"
                             onClick={handlePrevMonth}
-                            className="p-1.5 hover:bg-gray-100 rounded-lg border border-gray-200 text-gray-600 transition-colors cursor-pointer"
                           >
                             <ChevronLeft className="w-4 h-4" />
-                          </button>
-                          <button
+                          </IconButton>
+                          <IconButton
+                            label="Próximo mês"
+                            variant="outline"
+                            size="md"
                             onClick={handleNextMonth}
-                            className="p-1.5 hover:bg-gray-100 rounded-lg border border-gray-200 text-gray-600 transition-colors cursor-pointer"
                           >
                             <ChevronRight className="w-4 h-4" />
-                          </button>
+                          </IconButton>
                         </div>
                       </div>
 
@@ -1023,25 +1063,25 @@ export default function ClientPortal({
                           );
                         })}
                       </div>
-                    </div>
+                    </Card>
 
                     {/* Time Slots Card */}
-                    <div className="lg:col-span-5 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-start min-h-[300px]">
+                    <Card radius="2xl" border="default" elevation="sm" padding="md" className="lg:col-span-5 flex flex-col justify-start min-h-[300px]">
                       {slotsLoading ? (
                         <div className="flex-1 flex flex-col items-center justify-center py-12 text-gray-400">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--tenant-accent)]"></div>
+                          <Spinner size="lg" tone="accent" />
                           <p className="mt-3 text-xs">Buscando horários disponíveis...</p>
                         </div>
                       ) : !selectedDate ? (
-                        <div className="flex-1 flex flex-col items-center justify-center py-12 text-center text-gray-400 space-y-2">
+                        <EmptyState size="sm" bordered={false} className="flex-1">
                           <CalendarIcon className="w-8 h-8 text-gray-300" />
                           <p className="text-xs font-semibold">Escolha uma data ao lado para listar os horários disponíveis.</p>
-                        </div>
+                        </EmptyState>
                       ) : slots.length === 0 ? (
-                        <div className="flex-1 flex flex-col items-center justify-center py-12 text-center text-gray-400 space-y-2">
+                        <EmptyState size="sm" bordered={false} className="flex-1">
                           <AlertCircle className="w-8 h-8 text-amber-500" />
                           <p className="text-xs font-semibold">Nenhum horário disponível para esta data.</p>
-                        </div>
+                        </EmptyState>
                       ) : (
                         <div className="space-y-4 flex-1 flex flex-col justify-between">
                           <div className="space-y-3">
@@ -1075,17 +1115,14 @@ export default function ClientPortal({
                               animate={{ opacity: 1, y: 0 }}
                               className="pt-4 border-t border-gray-100"
                             >
-                              <button
-                                onClick={() => setStep(3)}
-                                className="w-full py-3 px-4 bg-[var(--tenant-accent)] text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                              >
+                              <Button fullWidth size="lg" onClick={() => setStep(3)}>
                                 Avançar para Seus Dados &rarr;
-                              </button>
+                              </Button>
                             </motion.div>
                           )}
                         </div>
                       )}
-                    </div>
+                    </Card>
                   </div>
                 </motion.div>
               )}
@@ -1100,14 +1137,16 @@ export default function ClientPortal({
                   className="space-y-6"
                 >
                   <div className="flex items-center gap-3">
-                    <button
+                    <IconButton
+                      label="Voltar para a escolha de data e horário"
+                      variant="ghost"
+                      size="lg"
                       onClick={() => {
                         setStep(2);
                       }}
-                      className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors cursor-pointer"
                     >
                       <ArrowLeft className="w-5 h-5" />
-                    </button>
+                    </IconButton>
                     <div>
                       <h2 className="text-xl font-bold text-gray-900">Preencha seus dados de contato</h2>
                       <p className="text-sm text-gray-500 mt-0.5">Informe os dados para confirmar a reserva.</p>
@@ -1116,71 +1155,65 @@ export default function ClientPortal({
 
                   <form onSubmit={handleBookingSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-8">
                     <div className="md:col-span-7 space-y-4">
-                      <div className="space-y-1.5">
-                        <label htmlFor="client-name" className="text-xs font-semibold text-gray-700 block">Nome Completo *</label>
-                        <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input
-                            id="client-name"
-                            type="text"
-                            required
-                            value={clientName}
-                            onChange={(e) => setClientName(e.target.value)}
-                            placeholder="Seu nome completo"
-                            className="w-full py-2.5 pl-10 pr-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] transition-all font-semibold"
-                          />
-                        </div>
-                      </div>
+                      <Field label="Nome Completo *" htmlFor="client-name" variant="default">
+                        <Input
+                          id="client-name"
+                          icon={User}
+                          size="lg"
+                          surface="plain"
+                          type="text"
+                          required
+                          value={clientName}
+                          onChange={(e) => setClientName(e.target.value)}
+                          placeholder="Seu nome completo"
+                        />
+                      </Field>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label htmlFor="client-email" className="text-xs font-semibold text-gray-700 block">E-mail *</label>
-                          <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                              id="client-email"
-                              type="email"
-                              required
-                              value={clientEmail}
-                              onChange={(e) => setClientEmail(e.target.value)}
-                              placeholder="seu@email.com"
-                              className="w-full py-2.5 pl-10 pr-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] transition-all font-semibold"
-                            />
-                          </div>
-                        </div>
+                        <Field label="E-mail *" htmlFor="client-email" variant="default">
+                          <Input
+                            id="client-email"
+                            icon={Mail}
+                            size="lg"
+                            surface="plain"
+                            type="email"
+                            required
+                            value={clientEmail}
+                            onChange={(e) => setClientEmail(e.target.value)}
+                            placeholder="seu@email.com"
+                          />
+                        </Field>
 
-                        <div className="space-y-1.5">
-                          <label htmlFor="client-phone" className="text-xs font-semibold text-gray-700 block">Celular / WhatsApp *</label>
-                          <div className="relative">
-                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                              id="client-phone"
-                              type="tel"
-                              required
-                              value={clientPhone}
-                              onChange={(e) => setClientPhone(e.target.value)}
-                              placeholder="(11) 99999-9999"
-                              className="w-full py-2.5 pl-10 pr-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] transition-all font-semibold"
-                            />
-                          </div>
-                        </div>
+                        <Field label="Celular / WhatsApp *" htmlFor="client-phone" variant="default">
+                          <Input
+                            id="client-phone"
+                            icon={Phone}
+                            size="lg"
+                            surface="plain"
+                            type="tel"
+                            required
+                            value={clientPhone}
+                            onChange={(e) => setClientPhone(e.target.value)}
+                            placeholder="(11) 99999-9999"
+                          />
+                        </Field>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <label htmlFor="client-notes" className="text-xs font-semibold text-gray-700 block">Observações (Opcional)</label>
-                        <textarea
+                      <Field label="Observações (Opcional)" htmlFor="client-notes" variant="default">
+                        <Textarea
                           id="client-notes"
+                          size="lg"
+                          surface="plain"
                           rows={3}
                           value={notes}
                           onChange={(e) => setNotes(e.target.value)}
                           placeholder="Alguma recomendação especial?"
-                          className="w-full py-2.5 px-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--tenant-accent)]/20 focus:border-[var(--tenant-accent)] transition-all font-semibold resize-none"
                         />
-                      </div>
+                      </Field>
                     </div>
 
                     {/* Booking Summary Box */}
-                    <div className="md:col-span-5 bg-gray-50 border border-gray-200 rounded-2xl p-6 self-start space-y-4">
+                    <Card tone="muted" radius="2xl" border="default" elevation="none" padding="lg" className="md:col-span-5 self-start space-y-4">
                       <h3 className="font-bold text-slate-900 text-sm border-b border-gray-200 pb-2">Resumo da Reserva</h3>
 
                       <div className="space-y-3 text-xs">
@@ -1208,24 +1241,18 @@ export default function ClientPortal({
                         </div>
                       </div>
 
-                      <button
+                      <Button
                         type="submit"
-                        disabled={bookingLoading}
-                        className="w-full py-3 px-4 bg-[var(--tenant-accent)] text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer font-sans"
+                        size="lg"
+                        fullWidth
+                        loading={bookingLoading}
+                        loadingTone="white"
+                        loadingLabel="Confirmando agendamento..."
+                        leftIcon={<CheckCircle className="w-4 h-4" />}
                       >
-                        {bookingLoading ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            Confirmando agendamento...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle className="w-4 h-4" />
-                            Finalizar e Confirmar Reserva
-                          </>
-                        )}
-                      </button>
-                    </div>
+                        Finalizar e Confirmar Reserva
+                      </Button>
+                    </Card>
                   </form>
                 </motion.div>
               )}
@@ -1249,7 +1276,7 @@ export default function ClientPortal({
                     </p>
                   </div>
 
-                  <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 text-left space-y-3 text-xs">
+                  <Card tone="muted" radius="2xl" border="default" elevation="none" padding="md" className="text-left space-y-3 text-xs">
                     <div className="flex justify-between border-b border-gray-200 pb-2">
                       <span className="font-semibold text-gray-500 uppercase tracking-wider text-3xs">Código de Reserva</span>
                       <span className="font-mono font-bold text-gray-900">{successBooking.id}</span>
@@ -1262,10 +1289,13 @@ export default function ClientPortal({
                       <p className="text-gray-800">⏰ Horário: <strong className="text-[var(--tenant-accent)] font-mono text-sm">{selectedSlot?.time}</strong></p>
                       <p className="text-gray-800">💰 Valor: <strong className="font-mono">{selectedService ? formatPrice(selectedService.price) : ""}</strong></p>
                     </div>
-                  </div>
+                  </Card>
 
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <button
+                    <Button
+                      variant="outline"
+                      size="md"
+                      className="flex-1"
                       onClick={() => {
                         setSelectedService(null);
                         setSelectedDate("");
@@ -1273,20 +1303,20 @@ export default function ClientPortal({
                         setStep(1);
                         setError(null);
                       }}
-                      className="flex-1 py-2.5 px-4 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-xl font-bold text-xs transition-colors cursor-pointer"
                     >
                       Novo Agendamento
-                    </button>
+                    </Button>
                     {currentUser && (
-                      <button
+                      <Button
+                        size="md"
+                        className="flex-1"
                         onClick={() => {
                           setActiveTab("my");
                           fetchBookings();
                         }}
-                        className="flex-1 py-2.5 px-4 bg-[var(--tenant-accent)] text-white rounded-xl font-bold text-xs transition-colors shadow-sm cursor-pointer"
                       >
                         Ver Meus Agendamentos
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </motion.div>
@@ -1303,20 +1333,20 @@ export default function ClientPortal({
 
               {myBookingsLoading ? (
                 <div className="py-20 text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--tenant-accent)] mx-auto"></div>
+                  <Spinner size="lg" tone="accent" className="mx-auto" />
                   <p className="text-sm text-gray-500 mt-2 font-medium">Buscando seus agendamentos...</p>
                 </div>
               ) : myBookings.length === 0 ? (
-                <div className="border border-dashed border-gray-200 rounded-2xl p-12 text-center text-gray-400 space-y-3">
+                <EmptyState size="md">
                   <CalendarIcon className="w-12 h-12 stroke-1 mx-auto text-gray-300" />
                   <p className="text-sm font-semibold">Você ainda não tem nenhum agendamento cadastrado.</p>
-                  <button
+                  <Button
+                    size="sm"
                     onClick={() => setActiveTab("new")}
-                    className="px-4 py-2 bg-[var(--tenant-accent)] text-white rounded-xl text-xs font-bold shadow-md cursor-pointer"
                   >
                     Agendar agora
-                  </button>
-                </div>
+                  </Button>
+                </EmptyState>
               ) : (
                 <div className="space-y-4">
                   {myBookings.map((booking) => {
@@ -1328,24 +1358,21 @@ export default function ClientPortal({
                     const isCompleted = booking.status === "completed";
 
                     return (
-                      <div
+                      <Card
                         key={booking.id}
-                        className={`p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${isCancelled
-                            ? "bg-gray-50/50 border-gray-200 opacity-60"
-                            : "bg-white border-gray-200 shadow-sm"
-                          }`}
+                        tone={isCancelled ? "mutedSoft" : "white"}
+                        radius="2xl"
+                        border="default"
+                        elevation={isCancelled ? "none" : "sm"}
+                        padding="md"
+                        className={`transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${isCancelled ? "opacity-60" : ""}`}
                       >
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-2">
                             <h3 className="font-bold text-gray-900 text-sm">{booking.serviceName}</h3>
-                            <span className={`text-3xs font-extrabold uppercase px-2 py-0.5 rounded-full ${isCancelled
-                                ? "bg-red-50 text-red-500 border border-red-100"
-                                : isCompleted
-                                  ? "bg-green-50 text-green-500 border border-green-100"
-                                  : "bg-blue-50 text-blue-500 border border-blue-100"
-                              }`}>
+                            <Badge tone={isCancelled ? "danger" : isCompleted ? "success" : "info"}>
                               {booking.status === "confirmed" ? "confirmado" : booking.status}
-                            </span>
+                            </Badge>
                           </div>
 
                           <div className="text-xs text-gray-500 space-y-0.5">
@@ -1356,26 +1383,30 @@ export default function ClientPortal({
 
                         {!isCancelled && !isCompleted && (
                           <div className="flex items-center gap-2 border-t md:border-t-0 pt-3 md:pt-0 border-gray-100 shrink-0">
-                            <button
+                            <Button
+                              variant="accent"
+                              size="none"
+                              className="px-3 py-1.5 rounded-lg text-2xs"
                               onClick={() => {
                                 setReschedulingBooking(booking);
                                 setRescheduleMonth(new Date());
                                 setRescheduleDate("");
                                 setSelectedRescheduleSlot(null);
                               }}
-                              className="px-3 py-1.5 border border-[var(--tenant-accent)] text-[var(--tenant-accent)] hover:bg-[var(--tenant-accent-soft)] rounded-lg text-2xs font-bold transition-all cursor-pointer"
                             >
                               Reagendar
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                              variant="danger"
+                              size="none"
+                              className="px-3 py-1.5 rounded-lg text-2xs"
                               onClick={() => handleCancel(booking.id)}
-                              className="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg text-2xs font-bold transition-all cursor-pointer"
                             >
                               Cancelar
-                            </button>
+                            </Button>
                           </div>
                         )}
-                      </div>
+                      </Card>
                     );
                   })}
                 </div>
@@ -1386,180 +1417,162 @@ export default function ClientPortal({
       </div>
 
       {/* Reschedule Modal (Pop-up) */}
-      <AnimatePresence>
-        {reschedulingBooking && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white border border-gray-100 shadow-2xl rounded-3xl p-8 max-w-2xl w-full space-y-6 relative"
-            >
-              <button
-                onClick={() => {
-                  setReschedulingBooking(null);
-                  setRescheduleDate("");
-                  setSelectedRescheduleSlot(null);
-                }}
-                className="absolute right-6 top-6 text-gray-400 hover:text-gray-600 font-bold text-sm cursor-pointer"
-              >
-                ✕
-              </button>
+      <Modal
+        open={!!reschedulingBooking}
+        onClose={closeReschedule}
+        size="lg"
+        showClose
+      >
+        <div>
+          <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">Reagendar Agendamento</h3>
+          <p className="text-xs text-gray-500 mt-1">
+            Selecione um novo horário para o serviço: <strong>{reschedulingBooking?.serviceName}</strong>.
+          </p>
+        </div>
 
-              <div>
-                <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">Reagendar Agendamento</h3>
-                <p className="text-xs text-gray-500 mt-1">
-                  Selecione um novo horário para o serviço: <strong>{reschedulingBooking.serviceName}</strong>.
-                </p>
+        {rescheduleError && <Alert variant="error">{rescheduleError}</Alert>}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Custom calendar for reschedule */}
+          <Card radius="xl" border="light" elevation="sm" padding="sm" className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold text-gray-900 text-xs">
+                {rescheduleMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+              </h4>
+              <div className="flex items-center gap-1">
+                <IconButton
+                  label="Mês anterior"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReschedulePrevMonth}
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </IconButton>
+                <IconButton
+                  label="Próximo mês"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRescheduleNextMonth}
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </IconButton>
               </div>
+            </div>
 
-              {rescheduleError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-xs font-semibold">
-                  {rescheduleError}
-                </div>
-              )}
+            <div className="grid grid-cols-7 gap-0.5 text-center text-3xs font-bold text-gray-400">
+              <div>Dom</div>
+              <div>Seg</div>
+              <div>Ter</div>
+              <div>Qua</div>
+              <div>Qui</div>
+              <div>Sex</div>
+              <div>Sáb</div>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Custom calendar for reschedule */}
-                <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-gray-900 text-xs">
-                      {rescheduleMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
-                    </h4>
-                    <div className="flex items-center gap-1">
+            <div className="grid grid-cols-7 gap-0.5 text-center">
+              {Array.from({ length: firstDayOfMonth(rescheduleMonth) }).map((_, i) => (
+                <div key={`empty-res-${i}`} className="aspect-square"></div>
+              ))}
+
+              {Array.from({ length: daysInMonth(rescheduleMonth) }).map((_, i) => {
+                const day = i + 1;
+                const year = rescheduleMonth.getFullYear();
+                const month = (rescheduleMonth.getMonth() + 1).toString().padStart(2, "0");
+                const dayStr = day.toString().padStart(2, "0");
+                const dateStr = `${year}-${month}-${dayStr}`;
+                const isSelected = rescheduleDate === dateStr;
+
+                const todayStr = getTodayLocalDateString();
+                const isPast = dateStr < todayStr;
+                const isWeekend = new Date(year, rescheduleMonth.getMonth(), day).getDay() === 0;
+
+                return (
+                  <button
+                    key={`resday-${day}`}
+                    disabled={isPast}
+                    onClick={() => selectRescheduleDateHandler(day)}
+                    className={`aspect-square flex items-center justify-center rounded text-xs font-semibold cursor-pointer ${isPast
+                        ? "text-gray-100 cursor-not-allowed"
+                        : isSelected
+                          ? "bg-[var(--tenant-accent)] text-white font-bold"
+                          : isWeekend
+                            ? "text-red-400 hover:bg-red-50/50"
+                            : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                  >
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+
+          {/* Available Slots */}
+          <div className="flex flex-col min-h-[220px]">
+            {!rescheduleDate ? (
+              <EmptyState size="xs" className="flex-1">
+                <CalendarIcon className="w-8 h-8 mb-2 stroke-1" />
+                <p>Escolha uma nova data.</p>
+              </EmptyState>
+            ) : rescheduleSlotsLoading ? (
+              <div className="flex-1 flex flex-col items-center justify-center">
+                <Spinner size="md" tone="accent" />
+              </div>
+            ) : rescheduleSlots.length === 0 ? (
+              <EmptyState size="xs" className="flex-1">
+                <AlertCircle className="w-6 h-6 mb-1 stroke-1" />
+                <p>Nenhum horário disponível.</p>
+              </EmptyState>
+            ) : (
+              <div className="space-y-3 flex-1 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-gray-800 text-xs border-b border-gray-50 pb-1 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-gray-400" />
+                    Horários Disponíveis ({formatDateHuman(rescheduleDate)})
+                  </h4>
+                  <div className="grid grid-cols-2 gap-1.5 max-h-[160px] overflow-y-auto pr-1">
+                    {rescheduleSlots.map(slot => (
                       <button
-                        onClick={handleReschedulePrevMonth}
-                        className="p-1 hover:bg-gray-50 rounded text-gray-600 border border-gray-100 cursor-pointer"
+                        key={slot.time}
+                        disabled={!slot.available}
+                        onClick={() => setSelectedRescheduleSlot(slot)}
+                        className={`py-2 rounded-lg text-xs font-semibold font-mono border transition-all cursor-pointer ${!slot.available
+                            ? "bg-gray-50 border-gray-100 text-gray-200 cursor-not-allowed"
+                            : selectedRescheduleSlot?.time === slot.time
+                              ? "bg-[var(--tenant-accent)] border-[var(--tenant-accent)] text-white shadow-sm"
+                              : "bg-white border-gray-200 text-gray-700 hover:border-gray-400"
+                          }`}
                       >
-                        <ChevronLeft className="w-3.5 h-3.5" />
+                        {slot.time}
                       </button>
-                      <button
-                        onClick={handleRescheduleNextMonth}
-                        className="p-1 hover:bg-gray-50 rounded text-gray-600 border border-gray-100 cursor-pointer"
-                      >
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-0.5 text-center text-3xs font-bold text-gray-400">
-                    <div>Dom</div>
-                    <div>Seg</div>
-                    <div>Ter</div>
-                    <div>Qua</div>
-                    <div>Qui</div>
-                    <div>Sex</div>
-                    <div>Sáb</div>
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-0.5 text-center">
-                    {Array.from({ length: firstDayOfMonth(rescheduleMonth) }).map((_, i) => (
-                      <div key={`empty-res-${i}`} className="aspect-square"></div>
                     ))}
-
-                    {Array.from({ length: daysInMonth(rescheduleMonth) }).map((_, i) => {
-                      const day = i + 1;
-                      const year = rescheduleMonth.getFullYear();
-                      const month = (rescheduleMonth.getMonth() + 1).toString().padStart(2, "0");
-                      const dayStr = day.toString().padStart(2, "0");
-                      const dateStr = `${year}-${month}-${dayStr}`;
-                      const isSelected = rescheduleDate === dateStr;
-
-                      const todayStr = getTodayLocalDateString();
-                      const isPast = dateStr < todayStr;
-                      const isWeekend = new Date(year, rescheduleMonth.getMonth(), day).getDay() === 0;
-
-                      return (
-                        <button
-                          key={`resday-${day}`}
-                          disabled={isPast}
-                          onClick={() => selectRescheduleDateHandler(day)}
-                          className={`aspect-square flex items-center justify-center rounded text-xs font-semibold cursor-pointer ${isPast
-                              ? "text-gray-100 cursor-not-allowed"
-                              : isSelected
-                                ? "bg-[var(--tenant-accent)] text-white font-bold"
-                                : isWeekend
-                                  ? "text-red-400 hover:bg-red-50/50"
-                                  : "text-gray-700 hover:bg-gray-100"
-                            }`}
-                        >
-                          {day}
-                        </button>
-                      );
-                    })}
                   </div>
                 </div>
-
-                {/* Available Slots */}
-                <div className="flex flex-col min-h-[220px]">
-                  {!rescheduleDate ? (
-                    <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-gray-200 rounded-xl p-4 text-center text-gray-500 text-xs">
-                      <CalendarIcon className="w-8 h-8 mb-2 stroke-1" />
-                      <p>Escolha uma nova data.</p>
-                    </div>
-                  ) : rescheduleSlotsLoading ? (
-                    <div className="flex-1 flex flex-col items-center justify-center">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--tenant-accent)]"></div>
-                    </div>
-                  ) : rescheduleSlots.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-gray-200 rounded-xl p-4 text-center text-gray-500 text-xs">
-                      <AlertCircle className="w-6 h-6 mb-1 stroke-1" />
-                      <p>Nenhum horário disponível.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3 flex-1 flex flex-col justify-between">
-                      <div className="space-y-2">
-                        <h4 className="font-semibold text-gray-800 text-xs border-b border-gray-50 pb-1 flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-gray-400" />
-                          Horários Disponíveis ({formatDateHuman(rescheduleDate)})
-                        </h4>
-                        <div className="grid grid-cols-2 gap-1.5 max-h-[160px] overflow-y-auto pr-1">
-                          {rescheduleSlots.map(slot => (
-                            <button
-                              key={slot.time}
-                              disabled={!slot.available}
-                              onClick={() => setSelectedRescheduleSlot(slot)}
-                              className={`py-2 rounded-lg text-xs font-semibold font-mono border transition-all cursor-pointer ${!slot.available
-                                  ? "bg-gray-50 border-gray-100 text-gray-200 cursor-not-allowed"
-                                  : selectedRescheduleSlot?.time === slot.time
-                                    ? "bg-[var(--tenant-accent)] border-[var(--tenant-accent)] text-white shadow-sm"
-                                    : "bg-white border-gray-200 text-gray-700 hover:border-gray-400"
-                                }`}
-                            >
-                              {slot.time}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
               </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3 border-t border-gray-100 pt-4">
-                <button
-                  onClick={() => {
-                    setReschedulingBooking(null);
-                    setRescheduleDate("");
-                    setSelectedRescheduleSlot(null);
-                  }}
-                  className="flex-1 py-2 rounded-xl text-xs font-bold border border-gray-200 hover:bg-gray-50 text-gray-700 transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  disabled={!selectedRescheduleSlot}
-                  onClick={handleRescheduleConfirm}
-                  className="flex-1 py-2 rounded-xl text-xs font-bold text-white bg-[var(--tenant-accent)] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md cursor-pointer"
-                >
-                  Confirmar Reagendamento
-                </button>
-              </div>
-            </motion.div>
+            )}
           </div>
-        )}
-      </AnimatePresence>
-    </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-3 border-t border-gray-100 pt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={closeReschedule}
+          >
+            Cancelar
+          </Button>
+          <Button
+            size="sm"
+            className="flex-1"
+            disabled={!selectedRescheduleSlot}
+            onClick={handleRescheduleConfirm}
+          >
+            Confirmar Reagendamento
+          </Button>
+        </div>
+      </Modal>
+    </Card>
   );
 }

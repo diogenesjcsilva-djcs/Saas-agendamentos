@@ -20,6 +20,14 @@ import {
   Lock
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import Alert from "./components/ui/Alert.js";
+import Button from "./components/ui/Button.js";
+import Card, { cardClasses } from "./components/ui/Card.js";
+import Field from "./components/ui/Field.js";
+import Input from "./components/ui/Input.js";
+import Modal from "./components/ui/Modal.js";
+import Spinner from "./components/ui/Spinner.js";
+import Textarea from "./components/ui/Textarea.js";
 
 interface TenantRegistrationFormProps {
   onCancel: () => void;
@@ -103,7 +111,7 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
   };
 
   return (
-    <div className="max-w-xl w-full mx-auto bg-white border border-gray-100 shadow-xl rounded-3xl p-8 space-y-6">
+    <Card radius="3xl" border="light" elevation="xl" padding="xl" className="max-w-xl w-full mx-auto space-y-6">
       <div className="space-y-2">
         <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">Cadastrar Novo Estabelecimento</h3>
         <p className="text-xs text-gray-500">
@@ -112,85 +120,83 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-xs font-semibold">
-            {error}
-          </div>
-        )}
+        {error && <Alert variant="error">{error}</Alert>}
 
-        <div className="space-y-1">
-          <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left">Nome do Estabelecimento</label>
-          <input
+        <Field label="Nome do Estabelecimento" className="text-left">
+          <Input
+            tone="brand"
+            size="md"
             type="text"
             required
             value={name}
             onChange={(e) => handleNameChange(e.target.value)}
             placeholder="Ex: Barbearia Imperial, Clínica Sorella..."
-            className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
           />
-        </div>
+        </Field>
 
-        <div className="space-y-1">
-          <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left">Link de Acesso (Slug)</label>
+        <Field label="Link de Acesso (Slug)" className="text-left">
           <div className="flex rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-600 transition-all">
             <span className="bg-gray-100/80 px-3 py-2.5 border-r border-gray-200 text-gray-400 text-2xs font-semibold select-none flex items-center">
               portalagendeai.app.br/
             </span>
-            <input
+            <Input
+              bare
+              size="md"
               type="text"
               required
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
               placeholder="barbearia-imperial"
-              className="w-full bg-transparent px-3 py-2.5 text-xs focus:outline-none font-semibold"
             />
           </div>
           {isSlugTaken && (
             <p className="text-3xs text-red-600 font-semibold mt-1 text-left">⚠️ Este link de acesso já está em uso por outro parceiro.</p>
           )}
-        </div>
+        </Field>
 
-        <div className="space-y-1">
-          <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left">Descrição das Atividades</label>
-          <textarea
+        <Field label="Descrição das Atividades" className="text-left">
+          <Textarea
+            tone="brand"
+            size="md"
             required
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Ex: Oferecemos cortes clássicos, estética masculina e cuidados com a barba."
             rows={3}
-            className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold resize-none"
           />
-        </div>
+        </Field>
 
-        <div className="space-y-2">
-          <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left font-sans">Escolha o Logo (Emoji)</label>
+        <Field label="Escolha o Logo (Emoji)" className="space-y-2 text-left">
           <div className="flex flex-wrap gap-2.5 p-3.5 bg-gray-50 rounded-2xl border border-gray-100 justify-start">
             {emojis.map((emoji) => (
-              <button
+              <Button
                 key={emoji}
                 type="button"
+                variant="none"
+                size="none"
                 onClick={() => setLogoUrl(emoji)}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all border shrink-0 select-none cursor-pointer ${
+                className={`w-10 h-10 rounded-xl text-xl border shrink-0 select-none ${
                   logoUrl === emoji
                     ? "bg-white border-indigo-600 shadow-md scale-105"
                     : "border-transparent hover:bg-white hover:border-gray-200"
                 }`}
               >
                 {emoji}
-              </button>
+              </Button>
             ))}
           </div>
-        </div>
+        </Field>
 
-        <div className="space-y-2">
-          <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left">Tema de Cores da Marca</label>
+        <Field label="Tema de Cores da Marca" className="space-y-2 text-left">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {themes.map((t) => (
-              <button
+              <Button
                 key={t.value}
                 type="button"
+                variant="none"
+                size="none"
                 onClick={() => setThemeColor(t.value)}
-                className={`p-3 rounded-2xl flex items-center gap-2 border text-2xs font-bold transition-all cursor-pointer ${
+                className={`p-3 rounded-2xl justify-start gap-2 border text-2xs font-bold ${
                   themeColor === t.value
                     ? "bg-indigo-50/20 border-indigo-600 shadow-sm"
                     : "bg-white border-gray-100 hover:border-gray-200"
@@ -198,10 +204,10 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
               >
                 <span className={`w-3.5 h-3.5 rounded-full ${t.preview} shrink-0`}></span>
                 <span className="text-slate-800 truncate">{t.label}</span>
-              </button>
+              </Button>
             ))}
           </div>
-        </div>
+        </Field>
 
         {/* Divider and Admin credentials section */}
         <div className="border-t border-gray-100 pt-5 space-y-4">
@@ -212,68 +218,63 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
             </p>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left">Nome Completo do Responsável</label>
-            <input
+          <Field label="Nome Completo do Responsável" className="text-left">
+            <Input
+              tone="brand"
+              size="md"
               type="text"
               required
               value={ownerName}
               onChange={(e) => setOwnerName(e.target.value)}
               placeholder="Ex: Carlos Augusto Silva, Dra. Heloísa..."
-              className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
             />
-          </div>
+          </Field>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left font-semibold">E-mail / Login de Acesso</label>
-              <input
+            <Field label="E-mail / Login de Acesso" className="text-left">
+              <Input
+                tone="brand"
+                size="md"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="nome@empresa.com"
-                className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
               />
-            </div>
+            </Field>
 
-            <div className="space-y-1">
-              <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left font-semibold">Senha de Acesso</label>
-              <input
+            <Field label="Senha de Acesso" className="text-left">
+              <Input
+                tone="brand"
+                size="md"
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Mínimo 6 caracteres"
                 minLength={6}
-                className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
               />
-            </div>
+            </Field>
           </div>
         </div>
 
         <div className="flex gap-4 pt-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-slate-800 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-          >
+          <Button variant="muted" size="md" className="flex-1" type="button" onClick={onCancel}>
             Cancelar
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="neutral"
+            size="md"
+            className="flex-1"
             type="submit"
             disabled={loading || !!isSlugTaken}
-            className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            loading={loading}
           >
-            {loading ? (
-              <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-            ) : (
-              "Criar Estabelecimento"
-            )}
-          </button>
+            Criar Estabelecimento
+          </Button>
         </div>
       </form>
-    </div>
+    </Card>
   );
 }
 
@@ -557,7 +558,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-slate-700">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <Spinner size="xl" tone="brand" />
         <p className="mt-4 font-semibold text-sm">Carregando ambiente multi-tenant...</p>
       </div>
     );
@@ -684,9 +685,9 @@ export default function App() {
 
 
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 font-medium text-xs">
+          <Alert variant="error" size="md" className="rounded-2xl">
             {error}
-          </div>
+          </Alert>
         )}
 
         {/* Dynamic Display of components */}
@@ -699,7 +700,7 @@ export default function App() {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
-                className="max-w-md w-full mx-auto bg-white border border-gray-100 shadow-xl rounded-3xl p-8 text-center space-y-6 mt-10"
+                className={`${cardClasses({ radius: "3xl", border: "light", elevation: "xl", padding: "xl" })} max-w-md w-full mx-auto text-center space-y-6 mt-10`}
               >
                 <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto text-3xl select-none font-bold">
                   ⚠️
@@ -711,18 +712,12 @@ export default function App() {
                   </p>
                 </div>
                 <div className="flex flex-col gap-3">
-                  <button
-                    onClick={() => navigateTo("/")}
-                    className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
-                  >
+                  <Button variant="neutral" size="md" fullWidth onClick={() => navigateTo("/")}>
                     Voltar para a Página Inicial
-                  </button>
-                  <button
-                    onClick={() => navigateTo("/cadastrar")}
-                    className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                  >
+                  </Button>
+                  <Button variant="muted" size="md" fullWidth onClick={() => navigateTo("/cadastrar")}>
                     Cadastrar Novo Estabelecimento
-                  </button>
+                  </Button>
                 </div>
               </motion.div>
             ) : pathname === "/" ? (
@@ -747,12 +742,14 @@ export default function App() {
                     Crie a página de agendamentos da sua barbearia, clínica, salão ou estúdio em segundos. Ofereça reservas online aos seus clientes e gerencie tudo em um painel unificado.
                   </p>
                   <div className="flex justify-center gap-4">
-                    <button
+                    <Button
+                      variant="none"
+                      size="lg"
                       onClick={() => navigateTo("/cadastrar")}
-                      className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 hover:-translate-y-0.5 cursor-pointer"
+                      className="bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white shadow-lg shadow-indigo-600/20 hover:-translate-y-0.5"
                     >
                       Cadastrar Estabelecimento
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
@@ -773,9 +770,13 @@ export default function App() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {tenants.map(tenant => {
                         return (
-                          <div
+                          <Card
                             key={tenant.id}
-                            className="bg-white rounded-3xl border border-gray-100 p-6 flex flex-col justify-between hover:shadow-xl hover:border-gray-200/60 hover:-translate-y-1 transition-all group duration-300"
+                            radius="3xl"
+                            border="light"
+                            elevation="none"
+                            padding="lg"
+                            className="flex flex-col justify-between hover:shadow-xl hover:border-gray-200/60 hover:-translate-y-1 transition-all group duration-300"
                           >
                             <div className="space-y-4">
                               <span className="text-4xl p-3 bg-slate-50 rounded-2xl border border-slate-100/50 inline-block shadow-sm select-none">
@@ -794,13 +795,16 @@ export default function App() {
                               </p>
                             </div>
 
-                            <button
+                            <Button
+                              variant="soft"
+                              size="none"
+                              fullWidth
+                              className="mt-6 py-2.5 rounded-xl text-xs"
                               onClick={() => navigateTo(`/${tenant.slug}`)}
-                              className="w-full mt-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm border border-transparent bg-[var(--tenant-accent-soft)] text-[var(--tenant-accent-strong)] hover:bg-[var(--tenant-accent)] hover:text-white cursor-pointer"
                             >
                               Acessar Agendamentos
-                            </button>
-                          </div>
+                            </Button>
+                          </Card>
                         );
                       })}
                     </div>
@@ -825,7 +829,7 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.25 }}
-                className="max-w-md w-full mx-auto bg-white border border-gray-100 shadow-xl rounded-3xl p-8 space-y-6 mt-10"
+                className={`${cardClasses({ radius: "3xl", border: "light", elevation: "xl", padding: "xl" })} max-w-md w-full mx-auto space-y-6 mt-10`}
               >
                 <div className="text-center space-y-2">
                   <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center mx-auto shadow-inner text-lg font-bold">
@@ -838,59 +842,49 @@ export default function App() {
                 </div>
 
                 <form onSubmit={handleLogin} className="space-y-4">
-                  {authError && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-xs font-semibold">
-                      {authError}
-                    </div>
-                  )}
-                  <div className="space-y-1">
-                    <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left">E-mail Corporativo</label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
-                      <input
-                        type="email"
-                        required
-                        value={authEmail}
-                        onChange={(e) => setAuthEmail(e.target.value)}
-                        placeholder="nome@empresa.com"
-                        className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider block text-left">Senha</label>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
-                      <input
-                        type="password"
-                        required
-                        value={authPassword}
-                        onChange={(e) => setAuthPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
-                      />
-                    </div>
-                  </div>
+                  {authError && <Alert variant="error">{authError}</Alert>}
+                  <Field label="E-mail Corporativo" className="text-left">
+                    <Input
+                      icon={Mail}
+                      tone="brand"
+                      size="md"
+                      type="email"
+                      required
+                      value={authEmail}
+                      onChange={(e) => setAuthEmail(e.target.value)}
+                      placeholder="nome@empresa.com"
+                    />
+                  </Field>
+                  <Field label="Senha" className="text-left">
+                    <Input
+                      icon={Lock}
+                      tone="brand"
+                      size="md"
+                      type="password"
+                      required
+                      value={authPassword}
+                      onChange={(e) => setAuthPassword(e.target.value)}
+                      placeholder="••••••••"
+                    />
+                  </Field>
 
-                  <button
+                  <Button
+                    variant="neutral"
+                    size="md"
+                    fullWidth
                     type="submit"
-                    disabled={authLoading}
-                    className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                    loading={authLoading}
                   >
-                    {authLoading ? (
-                      <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-                    ) : (
-                      <>Acessar Painel</>
-                    )}
-                  </button>
+                    Acessar Painel
+                  </Button>
                 </form>
 
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-3xs leading-relaxed text-slate-500 font-medium">
+                <Alert variant="hint">
                   <span className="font-bold text-slate-700 block mb-1">Dica de teste (Prestadores pré-configurados):</span>
                   Use as contas a seguir para testar o painel:<br/>
                   • Carlos Barber: <code>carlos@imperial.com</code> (Senha: <code>12345678</code>)<br/>
                   • Dra. Heloísa: <code>heloisa@aura.com</code> (Senha: <code>12345678</code>)
-                </div>
+                </Alert>
               </motion.div>
             ) : viewMode === "client" && selectedTenant ? (
               <motion.div
@@ -959,327 +953,315 @@ export default function App() {
       </main>
 
       {/* Auth Modal (Pop-up for client login/registration from client view) */}
-      <AnimatePresence>
-        {authModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white border border-gray-100 shadow-2xl rounded-3xl p-8 max-w-sm w-full space-y-6 relative"
-            >
-              <button
+      <Modal
+        open={authModalOpen}
+        onClose={() => {
+          setAuthModalOpen(false);
+          setAuthError(null);
+        }}
+        size="sm"
+        showClose
+      >
+        <div className="text-center space-y-2">
+          <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
+            {authMode === "login" ? "Entrar na sua Conta" : "Criar sua Conta"}
+          </h3>
+          <p className="text-xs text-gray-500">
+            {authMode === "login" 
+              ? "Entre para ver seus agendamentos e agendar mais rápido." 
+              : "Cadastre-se para acompanhar seu histórico de reservas."
+            }
+          </p>
+        </div>
+
+        <form onSubmit={authMode === "login" ? handleLogin : handleRegister} className="space-y-4">
+          {authError && <Alert variant="error">{authError}</Alert>}
+
+          {authMode === "register" && (
+            <Field label="Nome Completo">
+              <Input
+                icon={User}
+                tone="brand"
+                size="md"
+                type="text"
+                required
+                value={authName}
+                onChange={(e) => setAuthName(e.target.value)}
+                placeholder="Seu nome"
+              />
+            </Field>
+          )}
+
+          <Field label="E-mail">
+            <Input
+              icon={Mail}
+              tone="brand"
+              size="md"
+              type="email"
+              required
+              value={authEmail}
+              onChange={(e) => setAuthEmail(e.target.value)}
+              placeholder="seuemail@provedor.com"
+            />
+          </Field>
+
+          <Field label="Senha">
+            <Input
+              icon={Lock}
+              tone="brand"
+              size="md"
+              type="password"
+              required
+              value={authPassword}
+              onChange={(e) => setAuthPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </Field>
+
+          <Button
+            variant="brand"
+            size="md"
+            fullWidth
+            type="submit"
+            loading={authLoading}
+          >
+            {authMode === "login" ? "Entrar" : "Criar Conta"}
+          </Button>
+        </form>
+
+        {/* Social Dividers & Intuitive Buttons */}
+        <div className="relative flex items-center justify-center my-4">
+          <div className="border-t border-gray-200 w-full"></div>
+          <span className="absolute bg-white px-3 text-3xs text-gray-400 font-bold uppercase tracking-wider">ou continuar com</span>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            fullWidth
+            onClick={() => {
+              setSocialError(null);
+              setSocialAuthOpen("google");
+            }}
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.57h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.48C21.68,11.75 21.56,11.4 21.35,11.1z" fill="#4285F4" />
+              <path d="M12,20.62c2.6,0 4.78,-0.86 6.37,-2.33l-3.3,-2.57c-0.91,0.61 -2.07,0.98 -3.07,0.98 -2.37,0 -4.38,-1.6 -5.1,-3.75H3.5v2.66C5.09,18.88 8.35,20.62 12,20.62z" fill="#34A853" />
+              <path d="M6.9,13.06c-0.18,-0.54 -0.28,-1.11 -0.28,-1.7s0.1,-1.16 0.28,-1.7V7H3.5c-0.6,1.19 -0.94,2.53 -0.94,3.96S2.9,13.7 3.5,14.88L6.9,13.06z" fill="#FBBC05" />
+              <path d="M12,6.08c1.41,0 2.69,0.49 3.69,1.44l2.76,-2.76C16.78,3.2 14.6,2.38 12,2.38c-3.65,0 -6.91,1.74 -8.5,4.62l3.4,2.66C7.62,7.68 9.63,6.08 12,6.08z" fill="#EA4335" />
+            </svg>
+            Google
+          </Button>
+
+          <Button
+            type="button"
+            variant="none"
+            size="md"
+            fullWidth
+            onClick={() => {
+              setSocialError(null);
+              setSocialAuthOpen("instagram");
+            }}
+            className="bg-gradient-to-r from-purple-600 via-pink-500 to-yellow-500 hover:opacity-90 text-white shadow-md"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+            </svg>
+            Instagram
+          </Button>
+        </div>
+
+        <div className="text-center text-xs border-t border-gray-100 pt-4">
+          {authMode === "login" ? (
+            <p className="text-gray-500">
+              Ainda não tem conta?{" "}
+              <Button
+                variant="brandLink"
+                size="none"
                 onClick={() => {
-                  setAuthModalOpen(false);
+                  setAuthMode("register");
                   setAuthError(null);
                 }}
-                className="absolute right-6 top-6 text-gray-400 hover:text-gray-600 font-bold text-sm"
               >
-                ✕
-              </button>
+                Cadastre-se
+              </Button>
+            </p>
+          ) : (
+            <p className="text-gray-500">
+              Já tem uma conta?{" "}
+              <Button
+                variant="brandLink"
+                size="none"
+                onClick={() => {
+                  setAuthMode("login");
+                  setAuthError(null);
+                }}
+              >
+                Faça Login
+              </Button>
+            </p>
+          )}
+        </div>
+      </Modal>
 
-              <div className="text-center space-y-2">
-                <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
-                  {authMode === "login" ? "Entrar na sua Conta" : "Criar sua Conta"}
-                </h3>
-                <p className="text-xs text-gray-500">
-                  {authMode === "login" 
-                    ? "Entre para ver seus agendamentos e agendar mais rápido." 
-                    : "Cadastre-se para acompanhar seu histórico de reservas."
-                  }
-                </p>
-              </div>
-
-              <form onSubmit={authMode === "login" ? handleLogin : handleRegister} className="space-y-4">
-                {authError && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-xs font-semibold">
-                    {authError}
-                  </div>
-                )}
-
-                {authMode === "register" && (
-                  <div className="space-y-1">
-                    <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider">Nome Completo</label>
-                    <div className="relative">
-                      <User className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
-                      <input
-                        type="text"
-                        required
-                        value={authName}
-                        onChange={(e) => setAuthName(e.target.value)}
-                        placeholder="Seu nome"
-                        className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-1">
-                  <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider">E-mail</label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
-                    <input
-                      type="email"
-                      required
-                      value={authEmail}
-                      onChange={(e) => setAuthEmail(e.target.value)}
-                      placeholder="seuemail@provedor.com"
-                      className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-3xs font-bold text-gray-400 uppercase tracking-wider">Senha</label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
-                    <input
-                      type="password"
-                      required
-                      value={authPassword}
-                      onChange={(e) => setAuthPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2.5 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-none transition-all font-semibold"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={authLoading}
-                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition-colors flex items-center justify-center gap-2 shadow-indigo-600/10"
-                >
-                  {authLoading ? (
-                    <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-                  ) : (
-                    <>{authMode === "login" ? "Entrar" : "Criar Conta"}</>
-                  )}
-                </button>
-              </form>
-
-              {/* Social Dividers & Intuitive Buttons */}
-              <div className="relative flex items-center justify-center my-4">
-                <div className="border-t border-gray-200 w-full"></div>
-                <span className="absolute bg-white px-3 text-3xs text-gray-400 font-bold uppercase tracking-wider">ou continuar com</span>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSocialError(null);
-                    setSocialAuthOpen("google");
-                  }}
-                  className="w-full py-2.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.57h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.48C21.68,11.75 21.56,11.4 21.35,11.1z" fill="#4285F4" />
-                    <path d="M12,20.62c2.6,0 4.78,-0.86 6.37,-2.33l-3.3,-2.57c-0.91,0.61 -2.07,0.98 -3.07,0.98 -2.37,0 -4.38,-1.6 -5.1,-3.75H3.5v2.66C5.09,18.88 8.35,20.62 12,20.62z" fill="#34A853" />
-                    <path d="M6.9,13.06c-0.18,-0.54 -0.28,-1.11 -0.28,-1.7s0.1,-1.16 0.28,-1.7V7H3.5c-0.6,1.19 -0.94,2.53 -0.94,3.96S2.9,13.7 3.5,14.88L6.9,13.06z" fill="#FBBC05" />
-                    <path d="M12,6.08c1.41,0 2.69,0.49 3.69,1.44l2.76,-2.76C16.78,3.2 14.6,2.38 12,2.38c-3.65,0 -6.91,1.74 -8.5,4.62l3.4,2.66C7.62,7.68 9.63,6.08 12,6.08z" fill="#EA4335" />
-                  </svg>
-                  Google
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSocialError(null);
-                    setSocialAuthOpen("instagram");
-                  }}
-                  className="w-full py-2.5 bg-gradient-to-r from-purple-600 via-pink-500 to-yellow-500 hover:opacity-90 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center justify-center gap-2"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                  </svg>
-                  Instagram
-                </button>
-              </div>
-
-              <div className="text-center text-xs border-t border-gray-100 pt-4">
-                {authMode === "login" ? (
-                  <p className="text-gray-500">
-                    Ainda não tem conta?{" "}
-                    <button
-                      onClick={() => {
-                        setAuthMode("register");
-                        setAuthError(null);
-                      }}
-                      className="text-indigo-600 font-bold hover:underline"
-                    >
-                      Cadastre-se
-                    </button>
-                  </p>
-                ) : (
-                  <p className="text-gray-500">
-                    Já tem uma conta?{" "}
-                    <button
-                      onClick={() => {
-                        setAuthMode("login");
-                        setAuthError(null);
-                      }}
-                      className="text-indigo-600 font-bold hover:underline"
-                    >
-                      Faça Login
-                    </button>
-                  </p>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       {/* Social Authentication Simulator Modals */}
-      <AnimatePresence>
-        {socialAuthOpen && (
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[60] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="max-w-md w-full overflow-hidden shadow-2xl rounded-3xl"
-            >
-              {socialAuthOpen === "google" ? (
-                // GOOGLE OAUTH SIMULATOR
-                <div className="bg-white border border-gray-200 text-gray-800 p-8 space-y-6">
-                  <div className="flex flex-col items-center text-center space-y-3">
-                    <svg className="w-8 h-8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.57h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.48C21.68,11.75 21.56,11.4 21.35,11.1z" fill="#4285F4" />
-                      <path d="M12,20.62c2.6,0 4.78,-0.86 6.37,-2.33l-3.3,-2.57c-0.91,0.61 -2.07,0.98 -3.07,0.98 -2.37,0 -4.38,-1.6 -5.1,-3.75H3.5v2.66C5.09,18.88 8.35,20.62 12,20.62z" fill="#34A853" />
-                      <path d="M6.9,13.06c-0.18,-0.54 -0.28,-1.11 -0.28,-1.7s0.1,-1.16 0.28,-1.7V7H3.5c-0.6,1.19 -0.94,2.53 -0.94,3.96S2.9,13.7 3.5,14.88L6.9,13.06z" fill="#FBBC05" />
-                      <path d="M12,6.08c1.41,0 2.69,0.49 3.69,1.44l2.76,-2.76C16.78,3.2 14.6,2.38 12,2.38c-3.65,0 -6.91,1.74 -8.5,4.62l3.4,2.66C7.62,7.68 9.63,6.08 12,6.08z" fill="#EA4335" />
-                    </svg>
-                    <h3 className="text-lg font-bold text-gray-900 leading-tight">Escolha uma conta</h3>
-                    <p className="text-xs text-gray-500">para prosseguir para <span className="text-gray-900 font-semibold">Scheduler SaaS</span></p>
-                  </div>
+      <Modal
+        open={!!socialAuthOpen}
+        onClose={() => setSocialAuthOpen(null)}
+        size="md"
+        scrim="strong"
+        layer="top"
+        bare
+      >
+        {socialAuthOpen === "google" ? (
+          // GOOGLE OAUTH SIMULATOR
+          <div className="bg-white border border-gray-200 text-gray-800 p-8 space-y-6">
+            <div className="flex flex-col items-center text-center space-y-3">
+              <svg className="w-8 h-8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.57h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.48C21.68,11.75 21.56,11.4 21.35,11.1z" fill="#4285F4" />
+                <path d="M12,20.62c2.6,0 4.78,-0.86 6.37,-2.33l-3.3,-2.57c-0.91,0.61 -2.07,0.98 -3.07,0.98 -2.37,0 -4.38,-1.6 -5.1,-3.75H3.5v2.66C5.09,18.88 8.35,20.62 12,20.62z" fill="#34A853" />
+                <path d="M6.9,13.06c-0.18,-0.54 -0.28,-1.11 -0.28,-1.7s0.1,-1.16 0.28,-1.7V7H3.5c-0.6,1.19 -0.94,2.53 -0.94,3.96S2.9,13.7 3.5,14.88L6.9,13.06z" fill="#FBBC05" />
+                <path d="M12,6.08c1.41,0 2.69,0.49 3.69,1.44l2.76,-2.76C16.78,3.2 14.6,2.38 12,2.38c-3.65,0 -6.91,1.74 -8.5,4.62l3.4,2.66C7.62,7.68 9.63,6.08 12,6.08z" fill="#EA4335" />
+              </svg>
+              <h3 className="text-lg font-bold text-gray-900 leading-tight">Escolha uma conta</h3>
+              <p className="text-xs text-gray-500">para prosseguir para <span className="text-gray-900 font-semibold">Scheduler SaaS</span></p>
+            </div>
 
-                  {socialError && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-xs font-semibold">
-                      {socialError}
-                    </div>
-                  )}
+            {socialError && <Alert variant="error">{socialError}</Alert>}
 
-                  <div className="divide-y divide-gray-200 border border-gray-200 rounded-2xl overflow-hidden text-xs">
-                    {/* Option 1 */}
-                    <button
-                      onClick={() => handleSocialAuthSubmit("diogenes.silva@gmail.com", "Diógenes Silva", "google")}
-                      disabled={socialLoading}
-                      className="w-full p-4 hover:bg-gray-50 transition-colors text-left flex items-center justify-between"
-                    >
-                      <div>
-                        <p className="font-bold text-gray-900">Diógenes Silva</p>
-                        <p className="text-gray-500 font-medium">diogenes.silva@gmail.com</p>
-                      </div>
-                      <span className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs border border-indigo-100">DS</span>
-                    </button>
+            <div className="divide-y divide-gray-200 border border-gray-200 rounded-2xl overflow-hidden text-xs">
+              {/* Option 1 */}
+              <Button
+                variant="none"
+                size="none"
+                disabled={socialLoading}
+                onClick={() => handleSocialAuthSubmit("diogenes.silva@gmail.com", "Diógenes Silva", "google")}
+                className="w-full p-4 text-left justify-start hover:bg-gray-50 transition-colors"
+              >
+                <div>
+                  <p className="font-bold text-gray-900">Diógenes Silva</p>
+                  <p className="text-gray-500 font-medium">diogenes.silva@gmail.com</p>
+                </div>
+                {/* `ml-auto` em vez de `justify-between`: o `justify-center` da base
+                    do Button vem depois no CSS e venceria o `justify-between`. */}
+                <span className="ml-auto w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs border border-indigo-100">DS</span>
+              </Button>
 
-                    {/* Custom input option */}
-                    <div className="p-4 bg-gray-50/50 space-y-3">
-                      <p className="text-gray-400 font-bold uppercase tracking-wider text-3xs">Ou usar outra conta</p>
-                      <div className="space-y-2">
-                        <input
-                          type="text"
-                          placeholder="Seu nome"
-                          value={socialName}
-                          onChange={(e) => setSocialName(e.target.value)}
-                          className="w-full bg-white border border-gray-200 px-3 py-1.5 rounded-lg text-xs focus:ring-1 focus:ring-indigo-600 focus:outline-none"
-                        />
-                        <input
-                          type="email"
-                          placeholder="seu.email@gmail.com"
-                          value={socialEmail}
-                          onChange={(e) => setSocialEmail(e.target.value)}
-                          className="w-full bg-white border border-gray-200 px-3 py-1.5 rounded-lg text-xs focus:ring-1 focus:ring-indigo-600 focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          disabled={socialLoading || !socialEmail || !socialName}
-                          onClick={() => handleSocialAuthSubmit(socialEmail, socialName, "google")}
-                          className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-2xs font-bold transition-colors disabled:opacity-50"
-                        >
-                          Entrar com e-mail customizado
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+              {/* Custom input option */}
+              <div className="p-4 bg-gray-50/50 space-y-3">
+                <p className="text-gray-400 font-bold uppercase tracking-wider text-3xs">Ou usar outra conta</p>
+                <div className="space-y-2">
+                  <Input
+                    tone="brand"
+                    size="sm"
+                    surface="plain"
+                    type="text"
+                    placeholder="Seu nome"
+                    value={socialName}
+                    onChange={(e) => setSocialName(e.target.value)}
+                  />
+                  <Input
+                    tone="brand"
+                    size="sm"
+                    surface="plain"
+                    type="email"
+                    placeholder="seu.email@gmail.com"
+                    value={socialEmail}
+                    onChange={(e) => setSocialEmail(e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    variant="none"
+                    size="none"
+                    disabled={socialLoading || !socialEmail || !socialName}
+                    onClick={() => handleSocialAuthSubmit(socialEmail, socialName, "google")}
+                    className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-2xs"
+                  >
+                    Entrar com e-mail customizado
+                  </Button>
+                </div>
+              </div>
+            </div>
 
-                  <div className="flex justify-between items-center text-3xs text-gray-400 pt-2 font-medium">
-                    <span>Termos de Serviço</span>
-                    <button onClick={() => setSocialAuthOpen(null)} className="text-indigo-600 hover:underline font-bold text-xs">Cancelar</button>
-                    <span>Privacidade</span>
+            <div className="flex justify-between items-center text-3xs text-gray-400 pt-2 font-medium">
+              <span>Termos de Serviço</span>
+              <Button variant="brandLink" size="none" className="text-xs" onClick={() => setSocialAuthOpen(null)}>Cancelar</Button>
+              <span>Privacidade</span>
+            </div>
+          </div>
+        ) : (
+          // INSTAGRAM AUTH SIMULATOR
+          <div className="bg-slate-900 border border-slate-800 text-slate-200 p-8 space-y-6">
+            <div className="flex flex-col items-center text-center space-y-3">
+              <div className="w-12 h-12 bg-gradient-to-tr from-purple-600 via-pink-500 to-yellow-500 rounded-2xl flex items-center justify-center text-white shadow-md">
+                <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-white leading-tight">Autorização do Instagram</h3>
+              <p className="text-xs text-slate-400">
+                <span className="text-white font-semibold">Scheduler SaaS</span> gostaria de obter as seguintes informações da sua conta do Instagram:
+              </p>
+            </div>
+
+            {socialError && (
+              <div className="p-3 bg-red-950/20 border border-red-500/30 rounded-xl text-red-200 text-xs font-semibold">
+                {socialError}
+              </div>
+            )}
+
+            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-4 text-xs">
+              <div className="space-y-1">
+                <p className="font-bold text-white flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Perfil Básico (Obrigatório)
+                </p>
+                <p className="text-3xs text-slate-500">Nome de usuário, tipo de conta e e-mail cadastrado.</p>
+              </div>
+
+              <div className="border-t border-slate-900 pt-4 space-y-3">
+                <p className="text-3xs text-slate-500 font-bold uppercase tracking-wider">Conta a ser conectada:</p>
+                <div className="flex items-center gap-3 bg-slate-900 p-3 rounded-xl border border-slate-800">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center font-bold text-xs text-white">D</div>
+                  <div>
+                    <p className="font-bold text-white">@diogenes_silva</p>
+                    <p className="text-3xs text-slate-500">diogenes.instagram@instagram.com</p>
                   </div>
                 </div>
-              ) : (
-                // INSTAGRAM AUTH SIMULATOR
-                <div className="bg-slate-900 border border-slate-800 text-slate-200 p-8 space-y-6">
-                  <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-12 h-12 bg-gradient-to-tr from-purple-600 via-pink-500 to-yellow-500 rounded-2xl flex items-center justify-center text-white shadow-md">
-                      <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                      </svg>
-                    </div>
-                    <h3 className="text-lg font-bold text-white leading-tight">Autorização do Instagram</h3>
-                    <p className="text-xs text-slate-400">
-                      <span className="text-white font-semibold">Scheduler SaaS</span> gostaria de obter as seguintes informações da sua conta do Instagram:
-                    </p>
-                  </div>
+              </div>
+            </div>
 
-                  {socialError && (
-                    <div className="p-3 bg-red-950/20 border border-red-500/30 rounded-xl text-red-200 text-xs font-semibold">
-                      {socialError}
-                    </div>
-                  )}
-
-                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-4 text-xs">
-                    <div className="space-y-1">
-                      <p className="font-bold text-white flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Perfil Básico (Obrigatório)
-                      </p>
-                      <p className="text-3xs text-slate-500">Nome de usuário, tipo de conta e e-mail cadastrado.</p>
-                    </div>
-
-                    <div className="border-t border-slate-900 pt-4 space-y-3">
-                      <p className="text-3xs text-slate-500 font-bold uppercase tracking-wider">Conta a ser conectada:</p>
-                      <div className="flex items-center gap-3 bg-slate-900 p-3 rounded-xl border border-slate-800">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center font-bold text-xs text-white">D</div>
-                        <div>
-                          <p className="font-bold text-white">@diogenes_silva</p>
-                          <p className="text-3xs text-slate-500">diogenes.instagram@instagram.com</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setSocialAuthOpen(null)}
-                      className="flex-1 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-bold transition-all"
-                    >
-                      Não Autorizar
-                    </button>
-                    <button
-                      disabled={socialLoading}
-                      onClick={() => handleSocialAuthSubmit("diogenes.instagram@instagram.com", "Diógenes Silva (Instagram)", "instagram")}
-                      className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2"
-                    >
-                      {socialLoading ? (
-                        <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-                      ) : (
-                        <>Autorizar e Entrar</>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </motion.div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="none"
+                size="none"
+                className="flex-1 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white text-xs"
+                onClick={() => setSocialAuthOpen(null)}
+              >
+                Não Autorizar
+              </Button>
+              <Button
+                variant="none"
+                size="none"
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white text-xs shadow-md"
+                disabled={socialLoading}
+                loading={socialLoading}
+                loadingSize="xs"
+                onClick={() => handleSocialAuthSubmit("diogenes.instagram@instagram.com", "Diógenes Silva (Instagram)", "instagram")}
+              >
+                Autorizar e Entrar
+              </Button>
+            </div>
           </div>
         )}
-      </AnimatePresence>
+      </Modal>
+
 
       {/* Humble footer */}
       <footer className="bg-white border-t border-gray-100 py-6 px-8 text-center text-3xs text-gray-400 font-medium mt-auto">
