@@ -614,7 +614,7 @@ export default function ProviderDashboard({
       </div>
 
       {/* Main Panel Area */}
-      <div className="flex-1 p-8 space-y-6 bg-gray-50 overflow-y-auto max-h-[800px]">
+      <div className="flex-1 p-8 space-y-6 bg-gray-50">
         {/* Flash Notifications */}
         {successMsg && (
           <Alert variant="success" icon={CheckCircle}>
@@ -632,7 +632,7 @@ export default function ProviderDashboard({
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Dashboard do Prestador</h2>
+                <h1 className="text-xl font-bold text-slate-900">Dashboard do Prestador</h1>
                 <p className="text-xs text-gray-500 mt-0.5">Visão unificada de seus atendimentos, faturamento e desempenho comercial.</p>
               </div>
             </div>
@@ -749,7 +749,7 @@ export default function ProviderDashboard({
         {activeTab === "bookings" && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Controle de Agendamentos</h2>
+              <h1 className="text-xl font-bold text-slate-900">Controle de Agendamentos</h1>
               <p className="text-xs text-gray-500 mt-0.5">Gerencie os status das reservas e filtre a base de dados.</p>
             </div>
 
@@ -904,7 +904,7 @@ export default function ProviderDashboard({
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Meus Serviços</h2>
+                <h1 className="text-xl font-bold text-slate-900">Meus Serviços</h1>
                 <p className="text-xs text-gray-500 mt-0.5">Defina os tipos de atendimentos, preços e tempos de duração e preparação.</p>
               </div>
               <Button
@@ -1050,7 +1050,7 @@ export default function ProviderDashboard({
         {activeTab === "availability" && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Configurar Horários e Disponibilidade</h2>
+              <h1 className="text-xl font-bold text-slate-900">Configurar Horários e Disponibilidade</h1>
               <p className="text-xs text-gray-500 mt-0.5">Gerencie os horários recorrentes de atendimento e cadastre bloqueios ou folgas especiais.</p>
             </div>
 
@@ -1207,7 +1207,7 @@ export default function ProviderDashboard({
                   {exceptions.length === 0 ? (
                     <p className="text-3xs text-gray-400 py-3 italic">Nenhuma exceção ou bloqueio ativo.</p>
                   ) : (
-                    <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                    <div className="space-y-2">
                       {exceptions.map(e => {
                         const dateObj = new Date(`${e.date}T00:00:00`);
                         return (
@@ -1251,10 +1251,10 @@ export default function ProviderDashboard({
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                   <Settings className="w-5 h-5 text-[var(--tenant-accent)]" />
                   Configurações da Conta & Estabelecimento
-                </h2>
+                </h1>
                 <p className="text-xs text-gray-500 mt-0.5">
                   Atualize suas credenciais de login, senha, link de divulgação e modalidade de atendimento.
                 </p>

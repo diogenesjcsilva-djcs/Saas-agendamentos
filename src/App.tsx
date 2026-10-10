@@ -9,10 +9,7 @@ import { getTenants, getProviders, login, register, getMe, socialLogin, getTenan
 import ClientPortal from "./components/ClientPortal.js";
 import ProviderDashboard from "./components/ProviderDashboard.js";
 import { getTenantThemeVars } from "./theme/tenant.js";
-import { 
-  Users, 
-  Compass, 
-  PlayCircle,
+import {
   LogIn,
   LogOut,
   User,
@@ -28,6 +25,8 @@ import Input from "./components/ui/Input.js";
 import Modal from "./components/ui/Modal.js";
 import Spinner from "./components/ui/Spinner.js";
 import Textarea from "./components/ui/Textarea.js";
+import TopBar from "./components/layout/TopBar.js";
+import PageContainer from "./components/layout/PageContainer.js";
 
 interface TenantRegistrationFormProps {
   onCancel: () => void;
@@ -113,7 +112,7 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
   return (
     <Card radius="3xl" border="light" elevation="xl" padding="xl" className="max-w-xl w-full mx-auto space-y-6">
       <div className="space-y-2">
-        <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">Cadastrar Novo Estabelecimento</h3>
+        <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Cadastrar Novo Estabelecimento</h1>
         <p className="text-xs text-gray-500">
           Preencha os dados abaixo para gerar a sua página de agendamentos personalizada.
         </p>
@@ -567,120 +566,62 @@ export default function App() {
   // Check if provider view is locked for non-providers
   const isProviderViewLocked = viewMode === "provider" && (!currentUser || currentUser.role !== "provider");
 
+  /* O estabelecimento que a barra superior anuncia vem da rota, não do estado:
+     o `handleLogout` deixa um tenant selecionado mesmo na home, e a barra não
+     pode anunciar estabelecimento numa tela que não é dele. */
+  const routeSlug = pathname.startsWith("/") ? pathname.slice(1) : pathname;
+  const isTenantRoute = !!routeSlug && routeSlug !== "cadastrar" && !is404;
+  const topBarTenant = isTenantRoute ? selectedTenant : null;
+
+  /* Uma largura por tela: o portal do cliente é um cartão estreito, o resto
+     ocupa a largura de trabalho. */
+  const pageWidth: "wide" | "narrow" =
+    isTenantRoute && viewMode === "client" ? "narrow" : "wide";
+
+  /* O atalho entre os dois portais morava dentro da barra; a barra agora só
+     desenha, então a regra (que depende de prestador e sessão) fica aqui. */
+  const handleToggleView = () => {
+    const nextMode = viewMode === "client" ? "provider" : "client";
+    if (nextMode === "provider" && !selectedProvider) {
+      if (currentUser?.role === "provider" && currentUser.providerId) {
+        const match = providers.find((p) => p.id === currentUser.providerId);
+        if (match) setSelectedProvider(match);
+        else if (providers.length > 0) setSelectedProvider(providers[0]);
+      } else if (providers.length > 0) {
+        setSelectedProvider(providers[0]);
+      }
+    }
+    setViewMode(nextMode);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-indigo-500 selection:text-white font-sans antialiased text-gray-800">
       
-      {/* Top Interactive Banner / Demo Switcher */}
-      <div className="bg-slate-900 border-b border-slate-800 text-white py-3 px-6 shadow-md z-10 sticky top-0 backdrop-blur-md bg-slate-900/95">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          {/* Logo & Subdomain info */}
-          <div 
-            onClick={() => navigateTo("/")} 
-            className="flex items-center gap-3 shrink-0 cursor-pointer group"
-          >
-            <span className="text-xl bg-indigo-600/20 p-2 rounded-xl text-indigo-400 border border-indigo-500/10 shadow-inner leading-none select-none group-hover:scale-105 transition-transform">
-              🗓️
-            </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-sm font-bold tracking-tight text-white leading-none whitespace-nowrap group-hover:text-indigo-400 transition-colors">portalagendeai</h1>
-              </div>
-              <p className="text-[10px] text-slate-400 font-mono mt-1.5 whitespace-nowrap">
-                {selectedTenant 
-                  ? `${selectedTenant.slug}.portalagendeai.app.br`
-                  : `portalagendeai.app.br`
-                }
-              </p>
-            </div>
-          </div>
-
-          {/* User Session Area */}
-          <div className="flex items-center gap-4 shrink-0 flex-wrap sm:flex-nowrap">
-            {/* Discreet Provider / Client Switcher */}
-            {selectedTenant && (
-              <button
-                onClick={() => {
-                  const nextMode = viewMode === "client" ? "provider" : "client";
-                  if (nextMode === "provider" && !selectedProvider) {
-                    if (currentUser?.role === "provider" && currentUser.providerId) {
-                      const match = providers.find(p => p.id === currentUser.providerId);
-                      if (match) setSelectedProvider(match);
-                      else if (providers.length > 0) setSelectedProvider(providers[0]);
-                    } else if (providers.length > 0) {
-                      setSelectedProvider(providers[0]);
-                    }
-                  }
-                  setViewMode(nextMode);
-                }}
-                className="text-slate-400 hover:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors mr-2 whitespace-nowrap cursor-pointer"
-              >
-                {viewMode === "client" ? (
-                  <>
-                    <Users className="w-3.5 h-3.5 shrink-0" />
-                    <span>Área do Prestador</span>
-                  </>
-                ) : (
-                  <>
-                    <Compass className="w-3.5 h-3.5 shrink-0" />
-                    <span>Voltar ao Portal</span>
-                  </>
-                )}
-              </button>
-            )}
-            {/* Provider selector (only visible for provider portal when logged in as provider) */}
-            {viewMode === "provider" && currentUser?.role === "provider" && (
-              <div className="flex items-center gap-2 bg-slate-950/60 py-1.5 px-3 rounded-lg border border-slate-800 text-xs whitespace-nowrap">
-                <span className="text-slate-500 text-[10px] font-semibold uppercase tracking-wider">Prestador:</span>
-                <span className="text-white font-semibold">
-                  {selectedProvider?.name}
-                </span>
-              </div>
-            )}
-
-            {/* Session Action */}
-            {currentUser ? (
-              <div className="flex items-center gap-3 whitespace-nowrap shrink-0">
-                {currentUser.avatarUrl ? (
-                  <img 
-                    src={currentUser.avatarUrl} 
-                    alt={currentUser.name} 
-                    className="w-7 h-7 rounded-full border border-slate-700 shadow-sm shrink-0" 
-                  />
-                ) : (
-                  <span className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 select-none">
-                    {currentUser.name.charAt(0)}
-                  </span>
-                )}
-                <span className="text-slate-300 text-xs hidden sm:inline">
-                  Olá, <strong className="text-white">{currentUser.name.replace(/\s*\((instagram|google)\)/i, "")}</strong>
-                </span>
-                <button
-                  onClick={handleLogout}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0"
-                >
-                  <LogOut className="w-3.5 h-3.5 shrink-0" />
-                  Sair
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => {
-                  setAuthMode("login");
-                  setAuthModalOpen(true);
-                }}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-md shadow-indigo-600/10 whitespace-nowrap shrink-0"
-              >
-                <LogIn className="w-3.5 h-3.5 shrink-0" />
-                Entrar / Cadastrar
-              </button>
-            )}
-          </div>
-
-        </div>
-      </div>
+      <TopBar
+        tenant={topBarTenant}
+        width={pageWidth}
+        viewMode={viewMode}
+        onToggleView={isTenantRoute ? handleToggleView : null}
+        providerName={
+          viewMode === "provider" && currentUser?.role === "provider"
+            ? selectedProvider?.name
+            : null
+        }
+        currentUser={currentUser}
+        onLogout={handleLogout}
+        onOpenAuth={() => {
+          setAuthMode("login");
+          setAuthModalOpen(true);
+        }}
+        onHome={() => navigateTo("/")}
+        /* A barra lê a cor do estabelecimento, mas só quando há um na rota:
+           na home ela tem de cair no índigo padrão. */
+        style={getTenantThemeVars(topBarTenant?.themeColor)}
+      />
 
       {/* Main Container Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8 space-y-8 flex flex-col justify-start">
+      <main className="flex-1 flex flex-col">
+        <PageContainer width={pageWidth} className="flex-1 space-y-8 flex flex-col justify-start">
         
 
 
@@ -706,7 +647,7 @@ export default function App() {
                   ⚠️
                 </div>
                 <div className="space-y-2">
-                  <h2 className="text-xl font-bold text-gray-900">Estabelecimento não encontrado</h2>
+                  <h1 className="text-xl font-bold text-gray-900">Estabelecimento não encontrado</h1>
                   <p className="text-xs text-gray-500">
                     O link digitado não corresponde a nenhuma empresa ativa na plataforma. Certifique-se de que digitou o endereço corretamente.
                   </p>
@@ -734,10 +675,10 @@ export default function App() {
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold rounded-full select-none">
                     ✨ Nova Plataforma Multi-Estabelecimentos
                   </span>
-                  <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-tight max-w-2xl mx-auto">
+                  <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-tight max-w-2xl mx-auto">
                     Agendamentos Inteligentes <br />
                     <span className="bg-gradient-to-r from-indigo-600 to-indigo-500 bg-clip-text text-transparent">para o seu negócio</span>
-                  </h2>
+                  </h1>
                   <p className="text-sm text-gray-500 max-w-lg mx-auto leading-relaxed">
                     Crie a página de agendamentos da sua barbearia, clínica, salão ou estúdio em segundos. Ofereça reservas online aos seus clientes e gerencie tudo em um painel unificado.
                   </p>
@@ -835,7 +776,7 @@ export default function App() {
                   <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center mx-auto shadow-inner text-lg font-bold">
                     💼
                   </div>
-                  <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">Painel de Prestadores</h2>
+                  <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">Painel de Prestadores</h1>
                   <p className="text-xs text-gray-500">
                     Acesso restrito. Faça login com suas credenciais de prestador para gerenciar sua agenda.
                   </p>
@@ -953,6 +894,7 @@ export default function App() {
           </AnimatePresence>
         </div>
 
+        </PageContainer>
       </main>
 
       {/* Auth Modal (Pop-up for client login/registration from client view) */}

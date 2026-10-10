@@ -554,7 +554,7 @@ export default function ClientPortal({
           ⚠️
         </div>
         <div className="space-y-2">
-          <h2 className="text-xl font-bold text-gray-900">Link Inválido ou Indisponível</h2>
+          <h1 className="text-xl font-bold text-gray-900">Link Inválido ou Indisponível</h1>
           <p className="text-xs text-gray-600 leading-relaxed font-medium">
             {invalidLinkError}
           </p>
@@ -592,13 +592,13 @@ export default function ClientPortal({
         border="light"
         elevation="xl"
         padding="none"
-        className="w-full max-w-4xl mx-auto overflow-hidden"
+        className="w-full overflow-hidden"
       >
         {/* Auth Required Screen */}
         <div className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
           <div className="md:col-span-6 space-y-6">
             <div className="space-y-2">
-              <h2 className="text-2xl font-extrabold text-slate-950 tracking-tight">Faça login para agendar</h2>
+              <h1 className="text-2xl font-extrabold text-slate-950 tracking-tight">Faça login para agendar</h1>
               <p className="text-sm text-gray-500 leading-relaxed">
                 Para garantir uma experiência segura, rápida e possibilitar o reagendamento ou cancelamento online, solicitamos o login antes de escolher os serviços.
               </p>
@@ -620,11 +620,11 @@ export default function ClientPortal({
             </div>
           </div>
 
-          <Card radius="2xl" border="default" elevation="sm" padding="lg" className="md:col-span-6 md:p-8 space-y-5">
+          <section className="md:col-span-6 rounded-2xl bg-gray-50 p-6 md:p-8 space-y-5">
             <div className="text-center space-y-1">
-              <h3 className="font-extrabold text-slate-900 text-base">
+              <h2 className="font-extrabold text-slate-900 text-base">
                 {authMode === "login" ? "Entrar na sua Conta" : "Criar sua Conta"}
-              </h3>
+              </h2>
               <p className="text-3xs text-gray-500">
                 {authMode === "login"
                   ? "Entre para ver seus agendamentos e agendar mais rápido."
@@ -814,7 +814,7 @@ export default function ClientPortal({
                 </p>
               )}
             </div>
-          </Card>
+          </section>
         </div>
       </Card>
     );
@@ -827,7 +827,7 @@ export default function ClientPortal({
       border="light"
       elevation="xl"
       padding="none"
-      className="w-full max-w-4xl mx-auto overflow-hidden"
+      className="w-full overflow-hidden"
     >
 
       {/* Tabs Switcher for Authenticated Clients */}
@@ -903,7 +903,7 @@ export default function ClientPortal({
                   className="space-y-6"
                 >
                   <div className="border-b border-gray-100 pb-4">
-                    <h2 className="text-xl font-bold text-gray-900">Escolha o Serviço</h2>
+                    <h1 className="text-xl font-bold text-gray-900">Escolha o Serviço</h1>
                     <p className="text-sm text-gray-500 mt-1">
                       Serviços disponíveis com <strong className="text-slate-900 font-bold">{selectedProvider ? selectedProvider.name : "o profissional"}</strong>.
                     </p>
@@ -982,7 +982,7 @@ export default function ClientPortal({
                       <ArrowLeft className="w-5 h-5" />
                     </IconButton>
                     <div>
-                      <h2 className="text-xl font-bold text-gray-900">Selecione Data e Horário</h2>
+                      <h1 className="text-xl font-bold text-gray-900">Selecione Data e Horário</h1>
                       <p className="text-sm text-gray-500 mt-0.5">
                         Disponibilidades para <strong className="text-slate-900 font-bold">{selectedService.name}</strong>
                         {selectedProvider ? <> com <strong className="text-slate-900 font-bold">{selectedProvider.name}</strong></> : null}.
@@ -992,7 +992,7 @@ export default function ClientPortal({
 
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Calendar Card */}
-                    <Card radius="2xl" border="default" elevation="sm" padding="md" className="lg:col-span-7 space-y-4">
+                    <section className="lg:col-span-7 space-y-4">
                       <div className="flex items-center justify-between">
                         <h3 className="font-bold text-slate-900 capitalize text-sm">
                           {currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
@@ -1063,10 +1063,10 @@ export default function ClientPortal({
                           );
                         })}
                       </div>
-                    </Card>
+                    </section>
 
                     {/* Time Slots Card */}
-                    <Card radius="2xl" border="default" elevation="sm" padding="md" className="lg:col-span-5 flex flex-col justify-start min-h-[300px]">
+                    <section className="lg:col-span-5 flex flex-col justify-start min-h-[300px] lg:border-l lg:border-gray-100 lg:pl-8">
                       {slotsLoading ? (
                         <div className="flex-1 flex flex-col items-center justify-center py-12 text-gray-400">
                           <Spinner size="lg" tone="accent" />
@@ -1090,7 +1090,7 @@ export default function ClientPortal({
                               Horários em {formatDateHuman(selectedDate)}
                             </h4>
 
-                            <div className="grid grid-cols-2 gap-2 max-h-[250px] overflow-y-auto pr-1">
+                            <div className="grid grid-cols-2 gap-2">
                               {slots.map(slot => (
                                 <button
                                   key={slot.time}
@@ -1122,7 +1122,7 @@ export default function ClientPortal({
                           )}
                         </div>
                       )}
-                    </Card>
+                    </section>
                   </div>
                 </motion.div>
               )}
@@ -1148,7 +1148,7 @@ export default function ClientPortal({
                       <ArrowLeft className="w-5 h-5" />
                     </IconButton>
                     <div>
-                      <h2 className="text-xl font-bold text-gray-900">Preencha seus dados de contato</h2>
+                      <h1 className="text-xl font-bold text-gray-900">Preencha seus dados de contato</h1>
                       <p className="text-sm text-gray-500 mt-0.5">Informe os dados para confirmar a reserva.</p>
                     </div>
                   </div>
@@ -1213,7 +1213,7 @@ export default function ClientPortal({
                     </div>
 
                     {/* Booking Summary Box */}
-                    <Card tone="muted" radius="2xl" border="default" elevation="none" padding="lg" className="md:col-span-5 self-start space-y-4">
+                    <section className="md:col-span-5 self-start space-y-4 rounded-2xl bg-gray-50 p-6">
                       <h3 className="font-bold text-slate-900 text-sm border-b border-gray-200 pb-2">Resumo da Reserva</h3>
 
                       <div className="space-y-3 text-xs">
@@ -1252,7 +1252,7 @@ export default function ClientPortal({
                       >
                         Finalizar e Confirmar Reserva
                       </Button>
-                    </Card>
+                    </section>
                   </form>
                 </motion.div>
               )}
@@ -1270,13 +1270,13 @@ export default function ClientPortal({
                   </div>
 
                   <div className="space-y-2">
-                    <h2 className="text-2xl font-extrabold text-slate-900">Agendamento Realizado!</h2>
+                    <h1 className="text-2xl font-extrabold text-slate-900">Agendamento Realizado!</h1>
                     <p className="text-sm text-gray-500 leading-relaxed">
                       Seu horário está confirmado e reservado com sucesso.
                     </p>
                   </div>
 
-                  <Card tone="muted" radius="2xl" border="default" elevation="none" padding="md" className="text-left space-y-3 text-xs">
+                  <section className="text-left space-y-3 text-xs rounded-2xl bg-gray-50 p-5">
                     <div className="flex justify-between border-b border-gray-200 pb-2">
                       <span className="font-semibold text-gray-500 uppercase tracking-wider text-3xs">Código de Reserva</span>
                       <span className="font-mono font-bold text-gray-900">{successBooking.id}</span>
@@ -1289,7 +1289,7 @@ export default function ClientPortal({
                       <p className="text-gray-800">⏰ Horário: <strong className="text-[var(--tenant-accent)] font-mono text-sm">{selectedSlot?.time}</strong></p>
                       <p className="text-gray-800">💰 Valor: <strong className="font-mono">{selectedService ? formatPrice(selectedService.price) : ""}</strong></p>
                     </div>
-                  </Card>
+                  </section>
 
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button
@@ -1327,7 +1327,7 @@ export default function ClientPortal({
             // TAB MY BOOKINGS (CLIENT BOOKING HISTORY LIST)
             <div key="tab-my" className="space-y-6">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Seus Agendamentos</h2>
+                <h1 className="text-xl font-bold text-gray-900">Seus Agendamentos</h1>
                 <p className="text-sm text-gray-500 mt-1">Veja seus horários reservados, reagende ou cancele os agendamentos abaixo.</p>
               </div>
 
@@ -1348,7 +1348,7 @@ export default function ClientPortal({
                   </Button>
                 </EmptyState>
               ) : (
-                <div className="space-y-4">
+                <div className="divide-y divide-gray-100 border-t border-gray-100">
                   {myBookings.map((booking) => {
                     const start = new Date(booking.startsAt);
                     const formattedDate = start.toLocaleDateString("pt-BR", { day: "numeric", month: "short", year: "numeric" });
@@ -1358,14 +1358,9 @@ export default function ClientPortal({
                     const isCompleted = booking.status === "completed";
 
                     return (
-                      <Card
+                      <div
                         key={booking.id}
-                        tone={isCancelled ? "mutedSoft" : "white"}
-                        radius="2xl"
-                        border="default"
-                        elevation={isCancelled ? "none" : "sm"}
-                        padding="md"
-                        className={`transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${isCancelled ? "opacity-60" : ""}`}
+                        className={`py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 ${isCancelled ? "opacity-60" : ""}`}
                       >
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-2">
@@ -1406,7 +1401,7 @@ export default function ClientPortal({
                             </Button>
                           </div>
                         )}
-                      </Card>
+                      </div>
                     );
                   })}
                 </div>
@@ -1434,7 +1429,7 @@ export default function ClientPortal({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Custom calendar for reschedule */}
-          <Card radius="xl" border="light" elevation="sm" padding="sm" className="space-y-3">
+          <section className="space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="font-semibold text-gray-900 text-xs">
                 {rescheduleMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
@@ -1505,7 +1500,7 @@ export default function ClientPortal({
                 );
               })}
             </div>
-          </Card>
+          </section>
 
           {/* Available Slots */}
           <div className="flex flex-col min-h-[220px]">
