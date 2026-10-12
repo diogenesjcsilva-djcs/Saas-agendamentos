@@ -1067,7 +1067,7 @@ export default function ClientPortal({
                               aria-label={formatDateHuman(dateStr)}
                               onClick={() => selectDateHandler(day)}
                               className={`min-h-11 aspect-square flex items-center justify-center rounded-xl text-xs font-medium transition-all cursor-pointer ${isPast
-                                  ? "text-gray-300 cursor-not-allowed"
+                                  ? "text-gray-400 cursor-not-allowed"
                                   : isSelected
                                     ? "bg-[var(--tenant-accent)] text-white shadow-md font-bold scale-105"
                                     : isWeekend
@@ -1508,7 +1508,7 @@ export default function ClientPortal({
                     aria-label={formatDateHuman(dateStr)}
                     onClick={() => selectRescheduleDateHandler(day)}
                     className={`min-h-11 aspect-square flex items-center justify-center rounded text-xs font-semibold cursor-pointer ${isPast
-                        ? "text-gray-100 cursor-not-allowed"
+                        ? "text-gray-400 cursor-not-allowed"
                         : isSelected
                           ? "bg-[var(--tenant-accent)] text-white font-bold"
                           : isWeekend
