@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { cardClasses } from "./Card.js";
@@ -28,6 +29,19 @@ const LAYERS: Record<ModalLayer, string> = {
   top: "z-[60]",
 };
 
+/**
+ * Candidatos a receber foco dentro do painel. O que está desabilitado ou
+ * escondido é descartado em `focusables()`, para o seletor ficar sem `:not()`.
+ */
+const FOCUSABLE = "a[href], button, input, select, textarea, [tabindex]";
+
+/**
+ * Modais abertos, na ordem de abertura. Dois podem estar abertos ao mesmo
+ * tempo (o de autenticação social abre por cima do de login), e só o de cima
+ * deve reagir ao Escape e prender o Tab.
+ */
+const openModals: object[] = [];
+
 interface ModalProps {
   open: boolean;
   onClose: () => void;
@@ -40,6 +54,10 @@ interface ModalProps {
   bare?: boolean;
   /** Desenha o ✕ no canto superior direito. */
   showClose?: boolean;
+  /** `id` do título visível. Dá nome ao diálogo para o leitor de tela. */
+  labelledBy?: string;
+  /** Alternativa ao `labelledBy`, quando o título não existe no DOM. */
+  ariaLabel?: string;
   className?: string;
 }
 
@@ -52,8 +70,82 @@ export default function Modal({
   layer = "base",
   bare = false,
   showClose = false,
+  labelledBy,
+  ariaLabel,
   className = "",
 }: ModalProps) {
+  const panelRef = useRef<any>(null);
+  const token = useRef<any>({});
+
+  useEffect(() => {
+    if (!open) return;
+
+    const me = token.current;
+    openModals.push(me);
+    const isTopmost = () => openModals[openModals.length - 1] === me;
+
+    // Onde o foco estava antes de abrir, para devolver no fechamento.
+    const previouslyFocused = document.activeElement as any;
+
+    // O projeto não tem @types/react, então o que vem do DOM chega como
+    // `unknown` e precisa ser anotado na mão.
+    const focusables = (): any[] => {
+      const panel = panelRef.current as any;
+      if (!panel) return [];
+      return (Array.from(panel.querySelectorAll(FOCUSABLE)) as any[]).filter(
+        (el: any) =>
+          !el.hasAttribute("disabled") &&
+          el.tabIndex !== -1 &&
+          (el.offsetParent !== null || el === document.activeElement),
+      );
+    };
+
+    // O foco entra no painel: primeiro controle, ou o próprio painel.
+    const first = focusables()[0];
+    (first ?? panelRef.current)?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!isTopmost()) return;
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const nodes = focusables();
+      if (nodes.length === 0) {
+        event.preventDefault();
+        panelRef.current?.focus();
+        return;
+      }
+
+      const firstNode = nodes[0];
+      const lastNode = nodes[nodes.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey) {
+        if (active === firstNode || active === panelRef.current) {
+          event.preventDefault();
+          lastNode.focus();
+        }
+      } else if (active === lastNode || !panelRef.current?.contains(active)) {
+        event.preventDefault();
+        firstNode.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      const index = openModals.indexOf(me);
+      if (index >= 0) openModals.splice(index, 1);
+      previouslyFocused?.focus?.();
+    };
+  }, [open, onClose]);
+
   const panel = bare
     ? cardClasses({ radius: "3xl", tone: "none", border: "none", elevation: "2xl", padding: "none" })
     : cardClasses({ radius: "3xl", tone: "white", border: "light", elevation: "2xl", padding: "xl" });
@@ -67,10 +159,16 @@ export default function Modal({
           {/* O próprio painel é animado — sem wrapper, senão a caixa muda de
               tamanho na animação e o ✕ sai do lugar. */}
           <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={labelledBy}
+            aria-label={labelledBy ? undefined : ariaLabel}
+            tabIndex={-1}
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className={`w-full ${SIZES[size]} ${panel} ${
+            className={`w-full ${SIZES[size]} ${panel} focus:outline-none ${
               bare ? "overflow-hidden" : "space-y-6 relative"
             } ${className}`}
           >

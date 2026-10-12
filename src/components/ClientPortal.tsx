@@ -543,7 +543,7 @@ export default function ClientPortal({
   if (invalidLinkError) {
     return (
       <Card
-        id="client-portal-root"
+        id="client-portal-invalid"
         radius="3xl"
         border="light"
         elevation="xl"
@@ -587,7 +587,7 @@ export default function ClientPortal({
   if (!currentUser) {
     return (
       <Card
-        id="client-portal-root"
+        id="client-portal-auth"
         radius="2xl"
         border="light"
         elevation="xl"
@@ -639,16 +639,22 @@ export default function ClientPortal({
               {authMode === "register" && (
                 <>
                   {/* Account Type Selection */}
-                  <Field label="Tipo de Conta">
-                    <div className="grid grid-cols-2 gap-2 bg-gray-50 p-1 rounded-xl border border-gray-200">
+                  <Field label="Tipo de Conta" labelId="portal-account-type-label">
+                    <div
+                      role="radiogroup"
+                      aria-labelledby="portal-account-type-label"
+                      className="grid grid-cols-2 gap-2 bg-gray-50 p-1 rounded-xl border border-gray-200"
+                    >
                       <Button
                         type="button"
                         variant="none"
                         size="none"
                         onClick={() => setRegisterRole("client")}
+                        role="radio"
+                        aria-checked={registerRole === "client"}
                         className={`py-1.5 rounded-lg text-3xs ${registerRole === "client"
                           ? "bg-white text-[var(--tenant-accent)] shadow-sm border border-gray-200"
-                          : "text-gray-400 hover:text-gray-600"
+                          : "text-gray-500 hover:text-gray-600"
                           }`}
                       >
                         Sou Cliente
@@ -658,9 +664,11 @@ export default function ClientPortal({
                         variant="none"
                         size="none"
                         onClick={() => setRegisterRole("provider")}
+                        role="radio"
+                        aria-checked={registerRole === "provider"}
                         className={`py-1.5 rounded-lg text-3xs ${registerRole === "provider"
                           ? "bg-white text-[var(--tenant-accent)] shadow-sm border border-gray-200"
-                          : "text-gray-400 hover:text-gray-600"
+                          : "text-gray-500 hover:text-gray-600"
                           }`}
                       >
                         Sou Profissional
@@ -669,8 +677,9 @@ export default function ClientPortal({
                   </Field>
 
                   {/* Name field */}
-                  <Field label="Nome Completo">
+                  <Field label="Nome Completo" htmlFor="portal-register-name">
                     <Input
+                      id="portal-register-name"
                       icon={User}
                       size="sm"
                       type="text"
@@ -684,8 +693,9 @@ export default function ClientPortal({
                   {/* Provider custom fields */}
                   {registerRole === "provider" && (
                     <>
-                      <Field label="Especialidade / Categoria">
+                      <Field label="Especialidade / Categoria" htmlFor="portal-register-category">
                         <Select
+                          id="portal-register-category"
                           value={registerCategoryId}
                           onChange={(e) => setRegisterCategoryId(e.target.value)}
                         >
@@ -697,8 +707,9 @@ export default function ClientPortal({
                         </Select>
                       </Field>
 
-                      <Field label="Biografia / Apresentação">
+                      <Field label="Biografia / Apresentação" htmlFor="portal-register-bio">
                         <Textarea
+                          id="portal-register-bio"
                           value={registerBio}
                           onChange={(e) => setRegisterBio(e.target.value)}
                           placeholder="Fale um pouco sobre sua experiência e serviços..."
@@ -710,8 +721,9 @@ export default function ClientPortal({
                 </>
               )}
 
-              <Field label="E-mail">
+              <Field label="E-mail" htmlFor="portal-login-email">
                 <Input
+                  id="portal-login-email"
                   icon={Mail}
                   size="sm"
                   type="email"
@@ -722,8 +734,9 @@ export default function ClientPortal({
                 />
               </Field>
 
-              <Field label="Senha">
+              <Field label="Senha" htmlFor="portal-login-password">
                 <Input
+                  id="portal-login-password"
                   icon={Lock}
                   size="sm"
                   type="password"
@@ -747,7 +760,7 @@ export default function ClientPortal({
 
             <div className="relative flex items-center justify-center my-3">
               <div className="border-t border-gray-200 w-full"></div>
-              <span className="absolute bg-white px-2 text-3xs text-gray-400 font-bold uppercase tracking-wider">ou</span>
+              <span className="absolute bg-white px-2 text-3xs text-gray-500 font-bold uppercase tracking-wider">ou</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -837,9 +850,10 @@ export default function ClientPortal({
             variant="none"
             size="none"
             onClick={() => setActiveTab("new")}
+            aria-current={activeTab === "new" ? "page" : undefined}
             className={`flex-1 py-4 text-xs border-b-2 gap-2 ${activeTab === "new"
               ? "border-[var(--tenant-accent)] text-[var(--tenant-accent)] bg-white"
-              : "border-transparent text-gray-400 hover:text-gray-600"
+              : "border-transparent text-gray-500 hover:text-gray-600"
               }`}
           >
             <CalendarDays className="w-4 h-4" />
@@ -849,9 +863,10 @@ export default function ClientPortal({
             variant="none"
             size="none"
             onClick={() => setActiveTab("my")}
+            aria-current={activeTab === "my" ? "page" : undefined}
             className={`flex-1 py-4 text-xs border-b-2 gap-2 ${activeTab === "my"
               ? "border-[var(--tenant-accent)] text-[var(--tenant-accent)] bg-white"
-              : "border-transparent text-gray-400 hover:text-gray-600"
+              : "border-transparent text-gray-500 hover:text-gray-600"
               }`}
           >
             <FileText className="w-4 h-4" />
@@ -862,18 +877,18 @@ export default function ClientPortal({
 
       {/* Progress Steps Indicator (4-Step Streamlined Flow) */}
       {activeTab === "new" && step < 4 && (
-        <div className="px-8 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between text-xs font-medium text-gray-400">
+        <div className="px-8 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between text-xs font-medium text-gray-500">
           <div className="flex items-center gap-4 w-full justify-center md:justify-start flex-wrap">
             <span className={`pb-1 flex items-center gap-1.5 ${step === 1 ? "text-[var(--tenant-accent)] font-bold border-b-2 border-[var(--tenant-accent)]" : step > 1 ? "text-gray-900 font-semibold" : ""}`}>
               {step > 1 ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : null}
               1. Serviço
             </span>
-            <span className="text-gray-300">/</span>
+            <span aria-hidden="true" className="text-gray-300">/</span>
             <span className={`pb-1 flex items-center gap-1.5 ${step === 2 ? "text-[var(--tenant-accent)] font-bold border-b-2 border-[var(--tenant-accent)]" : step > 2 ? "text-gray-900 font-semibold" : ""}`}>
               {step > 2 ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : null}
               2. Data e Hora
             </span>
-            <span className="text-gray-300">/</span>
+            <span aria-hidden="true" className="text-gray-300">/</span>
             <span className={`pb-1 flex items-center gap-1.5 ${step === 3 ? "text-[var(--tenant-accent)] font-bold border-b-2 border-[var(--tenant-accent)]" : ""}`}>
               3. Seus Dados
             </span>
@@ -1017,7 +1032,7 @@ export default function ClientPortal({
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-gray-400 uppercase tracking-wider pb-2 border-b border-gray-50">
+                      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider pb-2 border-b border-gray-50">
                         <span>Dom</span>
                         <span>Seg</span>
                         <span>Ter</span>
@@ -1048,13 +1063,15 @@ export default function ClientPortal({
                             <button
                               key={`day-${day}`}
                               disabled={isPast}
+                              aria-pressed={isSelected}
+                              aria-label={formatDateHuman(dateStr)}
                               onClick={() => selectDateHandler(day)}
-                              className={`aspect-square flex items-center justify-center rounded-xl text-xs font-medium transition-all cursor-pointer ${isPast
+                              className={`min-h-11 aspect-square flex items-center justify-center rounded-xl text-xs font-medium transition-all cursor-pointer ${isPast
                                   ? "text-gray-300 cursor-not-allowed"
                                   : isSelected
                                     ? "bg-[var(--tenant-accent)] text-white shadow-md font-bold scale-105"
                                     : isWeekend
-                                      ? "text-red-500 hover:bg-red-50 font-bold"
+                                      ? "text-red-600 hover:bg-red-50 font-bold"
                                       : "text-gray-700 hover:bg-gray-100 font-semibold"
                                 }`}
                             >
@@ -1068,7 +1085,7 @@ export default function ClientPortal({
                     {/* Time Slots Card */}
                     <section className="lg:col-span-5 flex flex-col justify-start min-h-[300px] lg:border-l lg:border-gray-100 lg:pl-8">
                       {slotsLoading ? (
-                        <div className="flex-1 flex flex-col items-center justify-center py-12 text-gray-400">
+                        <div className="flex-1 flex flex-col items-center justify-center py-12 text-gray-500">
                           <Spinner size="lg" tone="accent" />
                           <p className="mt-3 text-xs">Buscando horários disponíveis...</p>
                         </div>
@@ -1086,7 +1103,7 @@ export default function ClientPortal({
                         <div className="space-y-4 flex-1 flex flex-col justify-between">
                           <div className="space-y-3">
                             <h4 className="font-bold text-gray-900 text-xs flex items-center gap-2 border-b border-gray-100 pb-2">
-                              <Clock className="w-4 h-4 text-gray-400" />
+                              <Clock className="w-4 h-4 text-gray-500" />
                               Horários em {formatDateHuman(selectedDate)}
                             </h4>
 
@@ -1095,9 +1112,10 @@ export default function ClientPortal({
                                 <button
                                   key={slot.time}
                                   disabled={!slot.available}
+                                  aria-pressed={selectedSlot?.time === slot.time}
                                   onClick={() => setSelectedSlot(slot)}
-                                  className={`py-2.5 px-3 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer ${!slot.available
-                                      ? "bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed text-left flex flex-col opacity-60"
+                                  className={`min-h-11 py-2.5 px-3 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer ${!slot.available
+                                      ? "bg-gray-50 border-gray-100 text-gray-500 cursor-not-allowed text-left flex flex-col opacity-60"
                                       : selectedSlot?.time === slot.time
                                         ? "bg-[var(--tenant-accent)] border-[var(--tenant-accent)] text-white shadow-sm"
                                         : "bg-white border-gray-200 text-gray-700 hover:border-[var(--tenant-accent)]"
@@ -1218,17 +1236,17 @@ export default function ClientPortal({
 
                       <div className="space-y-3 text-xs">
                         <div className="flex justify-between items-start gap-4">
-                          <span className="text-gray-400">Serviço:</span>
+                          <span className="text-gray-500">Serviço:</span>
                           <span className="text-gray-900 font-bold text-right">{selectedService.name}</span>
                         </div>
                         {selectedProvider && (
                           <div className="flex justify-between items-start gap-4">
-                            <span className="text-gray-400">Profissional:</span>
+                            <span className="text-gray-500">Profissional:</span>
                             <span className="text-gray-900 font-semibold text-right">{selectedProvider.name}</span>
                           </div>
                         )}
                         <div className="flex justify-between items-start gap-4 border-t border-gray-200 pt-2">
-                          <span className="text-gray-400">Data e Hora:</span>
+                          <span className="text-gray-500">Data e Hora:</span>
                           <span className="text-[var(--tenant-accent)] font-extrabold font-mono text-right">
                             {formatDateHuman(selectedDate)} às {selectedSlot.time}
                           </span>
@@ -1417,9 +1435,10 @@ export default function ClientPortal({
         onClose={closeReschedule}
         size="lg"
         showClose
+        labelledBy="reschedule-modal-title"
       >
         <div>
-          <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">Reagendar Agendamento</h3>
+          <h3 id="reschedule-modal-title" className="text-lg font-extrabold text-slate-900 tracking-tight">Reagendar Agendamento</h3>
           <p className="text-xs text-gray-500 mt-1">
             Selecione um novo horário para o serviço: <strong>{reschedulingBooking?.serviceName}</strong>.
           </p>
@@ -1454,7 +1473,7 @@ export default function ClientPortal({
               </div>
             </div>
 
-            <div className="grid grid-cols-7 gap-0.5 text-center text-3xs font-bold text-gray-400">
+            <div className="grid grid-cols-7 gap-0.5 text-center text-3xs font-bold text-gray-500">
               <div>Dom</div>
               <div>Seg</div>
               <div>Ter</div>
@@ -1485,13 +1504,15 @@ export default function ClientPortal({
                   <button
                     key={`resday-${day}`}
                     disabled={isPast}
+                    aria-pressed={isSelected}
+                    aria-label={formatDateHuman(dateStr)}
                     onClick={() => selectRescheduleDateHandler(day)}
-                    className={`aspect-square flex items-center justify-center rounded text-xs font-semibold cursor-pointer ${isPast
+                    className={`min-h-11 aspect-square flex items-center justify-center rounded text-xs font-semibold cursor-pointer ${isPast
                         ? "text-gray-100 cursor-not-allowed"
                         : isSelected
                           ? "bg-[var(--tenant-accent)] text-white font-bold"
                           : isWeekend
-                            ? "text-red-400 hover:bg-red-50/50"
+                            ? "text-red-600 hover:bg-red-50/50"
                             : "text-gray-700 hover:bg-gray-100"
                       }`}
                   >
@@ -1522,7 +1543,7 @@ export default function ClientPortal({
               <div className="space-y-3 flex-1 flex flex-col justify-between">
                 <div className="space-y-2">
                   <h4 className="font-semibold text-gray-800 text-xs border-b border-gray-50 pb-1 flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-gray-400" />
+                    <Clock className="w-3.5 h-3.5 text-gray-500" />
                     Horários Disponíveis ({formatDateHuman(rescheduleDate)})
                   </h4>
                   <div className="grid grid-cols-2 gap-1.5 max-h-[160px] overflow-y-auto pr-1">
@@ -1530,8 +1551,9 @@ export default function ClientPortal({
                       <button
                         key={slot.time}
                         disabled={!slot.available}
+                        aria-pressed={selectedRescheduleSlot?.time === slot.time}
                         onClick={() => setSelectedRescheduleSlot(slot)}
-                        className={`py-2 rounded-lg text-xs font-semibold font-mono border transition-all cursor-pointer ${!slot.available
+                        className={`min-h-11 py-2 rounded-lg text-xs font-semibold font-mono border transition-all cursor-pointer ${!slot.available
                             ? "bg-gray-50 border-gray-100 text-gray-200 cursor-not-allowed"
                             : selectedRescheduleSlot?.time === slot.time
                               ? "bg-[var(--tenant-accent)] border-[var(--tenant-accent)] text-white shadow-sm"

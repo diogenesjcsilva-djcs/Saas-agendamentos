@@ -540,12 +540,13 @@ export default function ProviderDashboard({
         </div>
 
         {/* Tab Buttons */}
-        <nav className="flex md:flex-col gap-1 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
+        <nav aria-label="Seções do painel" className="flex md:flex-col gap-1 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
           <Button
             variant="none"
             size="none"
             onClick={() => setActiveTab("overview")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
+            aria-current={activeTab === "overview" ? "page" : undefined}
+            className={`min-h-11 px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
               activeTab === "overview"
                 ? "bg-[var(--tenant-accent)] text-white shadow-md"
                 : "text-gray-500 hover:text-slate-900 hover:bg-gray-100"
@@ -559,7 +560,8 @@ export default function ProviderDashboard({
             variant="none"
             size="none"
             onClick={() => setActiveTab("bookings")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
+            aria-current={activeTab === "bookings" ? "page" : undefined}
+            className={`min-h-11 px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
               activeTab === "bookings"
                 ? "bg-[var(--tenant-accent)] text-white shadow-md"
                 : "text-gray-500 hover:text-slate-900 hover:bg-gray-100"
@@ -573,7 +575,8 @@ export default function ProviderDashboard({
             variant="none"
             size="none"
             onClick={() => setActiveTab("services")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
+            aria-current={activeTab === "services" ? "page" : undefined}
+            className={`min-h-11 px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
               activeTab === "services"
                 ? "bg-[var(--tenant-accent)] text-white shadow-md"
                 : "text-gray-500 hover:text-slate-900 hover:bg-gray-100"
@@ -587,7 +590,8 @@ export default function ProviderDashboard({
             variant="none"
             size="none"
             onClick={() => setActiveTab("availability")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
+            aria-current={activeTab === "availability" ? "page" : undefined}
+            className={`min-h-11 px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
               activeTab === "availability"
                 ? "bg-[var(--tenant-accent)] text-white shadow-md"
                 : "text-gray-500 hover:text-slate-900 hover:bg-gray-100"
@@ -601,7 +605,8 @@ export default function ProviderDashboard({
             variant="none"
             size="none"
             onClick={() => setActiveTab("settings")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
+            aria-current={activeTab === "settings" ? "page" : undefined}
+            className={`min-h-11 px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
               activeTab === "settings"
                 ? "bg-[var(--tenant-accent)] text-white shadow-md"
                 : "text-gray-500 hover:text-slate-900 hover:bg-gray-100"
@@ -645,7 +650,7 @@ export default function ProviderDashboard({
                   <DollarSign className="w-5 h-5 text-[var(--tenant-accent)]" />
                 </div>
                 <h3 className="text-2xl font-black text-slate-900 font-mono">{formatPrice(totalRevenue)}</h3>
-                <p className="text-3xs text-gray-400">Soma dos agendamentos confirmados/concluídos</p>
+                <p className="text-3xs text-gray-500">Soma dos agendamentos confirmados/concluídos</p>
               </Card>
 
               <Card elevation="none" padding="md" className="space-y-2">
@@ -654,7 +659,7 @@ export default function ProviderDashboard({
                   <Users className="w-5 h-5 text-[var(--tenant-accent)]" />
                 </div>
                 <h3 className="text-2xl font-black text-slate-900 font-mono">{activeBookings.length}</h3>
-                <p className="text-3xs text-gray-400">Volume de clientes agendados ativos</p>
+                <p className="text-3xs text-gray-500">Volume de clientes agendados ativos</p>
               </Card>
 
               <Card elevation="none" padding="md" className="space-y-2">
@@ -663,7 +668,7 @@ export default function ProviderDashboard({
                   <Clock3 className="w-5 h-5 text-[var(--tenant-accent)]" />
                 </div>
                 <h3 className="text-2xl font-black text-slate-900 font-mono">{services.length}</h3>
-                <p className="text-3xs text-gray-400">Quantidade de modalidades criadas</p>
+                <p className="text-3xs text-gray-500">Quantidade de modalidades criadas</p>
               </Card>
             </div>
 
@@ -728,7 +733,7 @@ export default function ProviderDashboard({
                           {b.clientAddress && (
                             <p className="text-3xs text-blue-600 font-medium">📍 {b.clientAddress}</p>
                           )}
-                          {b.notes && <p className="text-3xs text-gray-400 italic">Obs: "{b.notes}"</p>}
+                          {b.notes && <p className="text-3xs text-gray-500 italic">Obs: "{b.notes}"</p>}
                         </div>
                         <div className="flex sm:flex-col items-baseline sm:items-end justify-between shrink-0">
                           <span className="text-[var(--tenant-accent)] font-bold font-mono text-xs">
@@ -767,7 +772,7 @@ export default function ProviderDashboard({
               </div>
 
               <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end text-xs">
-                <span className="text-gray-400">Filtrar por:</span>
+                <span className="text-gray-500">Filtrar por:</span>
                 <Select
                   value={bookingFilterStatus}
                   onChange={(e) => setBookingFilterStatus(e.target.value)}
@@ -788,7 +793,7 @@ export default function ProviderDashboard({
                 icon={<FileText className="w-12 h-12 text-gray-300 mb-2" />}
               >
                 <p className="text-sm text-gray-500 font-medium">Nenhum agendamento encontrado.</p>
-                <p className="text-xs text-gray-400 mt-1">Experimente remover os filtros de busca.</p>
+                <p className="text-xs text-gray-500 mt-1">Experimente remover os filtros de busca.</p>
               </EmptyState>
             ) : (
               <div className="space-y-4">
@@ -824,7 +829,7 @@ export default function ProviderDashboard({
                             <span>🚗 <strong>Atendimento no Cliente:</strong> {b.clientAddress}</span>
                           </div>
                         ) : (
-                          <div className="text-3xs text-gray-400 flex items-center gap-1">
+                          <div className="text-3xs text-gray-500 flex items-center gap-1">
                             <span>🏢 Atendimento no estabelecimento</span>
                           </div>
                         )}
@@ -844,7 +849,7 @@ export default function ProviderDashboard({
                           </p>
                           <p className="text-xs font-bold text-slate-900 font-mono mt-0.5">
                             ⏰ {b.startsAt.substring(11, 16)} às {b.endsAt.substring(11, 16)} 
-                            <span className="text-3xs text-gray-400 font-normal ml-1">
+                            <span className="text-3xs text-gray-500 font-normal ml-1">
                               (+{serv?.bufferMinutes}m buffer)
                             </span>
                           </p>
@@ -886,7 +891,7 @@ export default function ProviderDashboard({
                           </Button>
                         )}
                         {b.status === "completed" && (
-                          <span className="text-3xs text-gray-400 italic flex items-center gap-1">
+                          <span className="text-3xs text-gray-500 italic flex items-center gap-1">
                             <Check className="w-3 h-3 text-green-600" /> Atendimento Concluído
                           </span>
                         )}
@@ -928,7 +933,7 @@ export default function ProviderDashboard({
                     </div>
                     <p className="text-xs text-gray-500 leading-relaxed line-clamp-3">{s.description}</p>
                     
-                    <div className="flex items-center gap-4 text-3xs text-gray-400 font-semibold pt-1">
+                    <div className="flex items-center gap-4 text-3xs text-gray-500 font-semibold pt-1">
                       <span className="flex items-center gap-1 font-mono">
                         <Clock className="w-3.5 h-3.5" /> {s.durationMinutes} minutos de serviço
                       </span>
@@ -965,16 +970,22 @@ export default function ProviderDashboard({
             </div>
 
             {/* Service Modal Form */}
-            <Modal open={showServiceModal} onClose={closeServiceModal} size="md">
+            <Modal
+              open={showServiceModal}
+              onClose={closeServiceModal}
+              size="md"
+              labelledBy="service-modal-title"
+            >
               <div className="border-b border-gray-100 pb-4">
-                <h3 className="font-bold text-slate-900 text-base">
+                <h3 id="service-modal-title" className="font-bold text-slate-900 text-base">
                   {editingServiceId ? "Editar Serviço" : "Novo Serviço"}
                 </h3>
               </div>
 
               <form onSubmit={handleServiceSave} className="space-y-4">
-                <Field label="Nome do Serviço *">
+                <Field label="Nome do Serviço *" htmlFor="service-name">
                   <Input
+                    id="service-name"
                     type="text"
                     required
                     size="sm"
@@ -984,8 +995,9 @@ export default function ProviderDashboard({
                   />
                 </Field>
 
-                <Field label="Descrição">
+                <Field label="Descrição" htmlFor="service-desc">
                   <Textarea
+                    id="service-desc"
                     rows={2}
                     value={serviceDesc}
                     onChange={(e) => setServiceDesc(e.target.value)}
@@ -994,8 +1006,9 @@ export default function ProviderDashboard({
                 </Field>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Duração (min) *">
+                  <Field label="Duração (min) *" htmlFor="service-duration">
                     <Input
+                      id="service-duration"
                       type="number"
                       required
                       size="sm"
@@ -1007,8 +1020,9 @@ export default function ProviderDashboard({
                     />
                   </Field>
 
-                  <Field label="Buffer (minutos)">
+                  <Field label="Buffer (minutos)" htmlFor="service-buffer">
                     <Input
+                      id="service-buffer"
                       type="number"
                       required
                       size="sm"
@@ -1021,8 +1035,9 @@ export default function ProviderDashboard({
                   </Field>
                 </div>
 
-                <Field label="Preço (R$) *">
+                <Field label="Preço (R$) *" htmlFor="service-price">
                   <Input
+                    id="service-price"
                     type="number"
                     required
                     size="sm"
@@ -1086,7 +1101,7 @@ export default function ProviderDashboard({
                             }))}
                             className="rounded bg-white border-gray-300 text-[var(--tenant-accent)] focus:ring-0 focus:ring-offset-0 w-4 h-4 cursor-pointer"
                           />
-                          <span className={`font-bold ${dayVal.active ? "text-slate-900" : "text-gray-400"}`}>{dayName(d)}</span>
+                          <span className={`font-bold ${dayVal.active ? "text-slate-900" : "text-gray-500"}`}>{dayName(d)}</span>
                         </div>
 
                         {dayVal.active ? (
@@ -1105,7 +1120,7 @@ export default function ProviderDashboard({
                                 className="text-center"
                               />
                             </div>
-                            <span className="text-gray-400">às</span>
+                            <span className="text-gray-500">às</span>
                             <div className="w-20">
                               <Input
                                 type="text"
@@ -1122,7 +1137,7 @@ export default function ProviderDashboard({
                             </div>
                           </div>
                         ) : (
-                          <span className="text-gray-400 font-semibold italic flex items-center gap-1">
+                          <span className="text-gray-500 font-semibold italic flex items-center gap-1">
                             <CalendarOff className="w-3.5 h-3.5" /> Fechado / Sem Expediente
                           </span>
                         )}
@@ -1142,8 +1157,9 @@ export default function ProviderDashboard({
                   </h3>
 
                   <form onSubmit={handleAddException} className="space-y-4">
-                    <Field label="Escolha a Data *">
+                    <Field label="Escolha a Data *" htmlFor="except-date">
                       <Input
+                        id="except-date"
                         type="date"
                         required
                         size="sm"
@@ -1165,8 +1181,9 @@ export default function ProviderDashboard({
 
                     {!exceptBlocked && (
                       <div className="grid grid-cols-2 gap-3">
-                        <Field label="Horário Início">
+                        <Field label="Horário Início" htmlFor="except-start">
                           <Input
+                            id="except-start"
                             type="text"
                             size="sm"
                             value={exceptStart}
@@ -1175,8 +1192,9 @@ export default function ProviderDashboard({
                             className="text-center font-mono"
                           />
                         </Field>
-                        <Field label="Horário Fim">
+                        <Field label="Horário Fim" htmlFor="except-end">
                           <Input
+                            id="except-end"
                             type="text"
                             size="sm"
                             value={exceptEnd}
@@ -1205,7 +1223,7 @@ export default function ProviderDashboard({
                 <Card padding="lg" elevation="none" className="space-y-4">
                   <h3 className="font-bold text-slate-900 text-xs uppercase tracking-wider">Bloqueios Cadastrados</h3>
                   {exceptions.length === 0 ? (
-                    <p className="text-3xs text-gray-400 py-3 italic">Nenhuma exceção ou bloqueio ativo.</p>
+                    <p className="text-3xs text-gray-500 py-3 italic">Nenhuma exceção ou bloqueio ativo.</p>
                   ) : (
                     <div className="space-y-2">
                       {exceptions.map(e => {
@@ -1216,7 +1234,7 @@ export default function ProviderDashboard({
                               <span className="font-mono font-bold text-slate-900">
                                 {dateObj.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}
                               </span>
-                              <p className="text-3xs text-gray-400 font-medium">
+                              <p className="text-3xs text-gray-500 font-medium">
                                 {e.isBlocked ? (
                                   <span className="text-red-600 font-semibold">Dia todo bloqueado</span>
                                 ) : (
@@ -1277,8 +1295,9 @@ export default function ProviderDashboard({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Field label="Nome do Profissional / Estúdio *" variant="default">
+                  <Field label="Nome do Profissional / Estúdio *" variant="default" htmlFor="settings-name">
                     <Input
+                      id="settings-name"
                       type="text"
                       required
                       value={settingsName}
@@ -1287,8 +1306,9 @@ export default function ProviderDashboard({
                     />
                   </Field>
 
-                  <Field label="Ícone ou Emoji de Avatar" variant="default">
+                  <Field label="Ícone ou Emoji de Avatar" variant="default" htmlFor="settings-avatar">
                     <Input
+                      id="settings-avatar"
                       type="text"
                       value={settingsAvatarUrl}
                       onChange={(e) => setSettingsAvatarUrl(e.target.value)}
@@ -1299,9 +1319,9 @@ export default function ProviderDashboard({
                   <Field
                     label="Biografia / Apresentação de Especialidades"
                     variant="default"
-                    className="md:col-span-2"
-                  >
+                    className="md:col-span-2" htmlFor="settings-bio">
                     <Textarea
+                      id="settings-bio"
                       rows={3}
                       value={settingsBio}
                       onChange={(e) => setSettingsBio(e.target.value)}
@@ -1384,8 +1404,9 @@ export default function ProviderDashboard({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Field label="E-mail de Login *" variant="default">
+                  <Field label="E-mail de Login *" variant="default" htmlFor="settings-email">
                     <Input
+                      id="settings-email"
                       icon={Mail}
                       type="email"
                       required
@@ -1395,8 +1416,9 @@ export default function ProviderDashboard({
                     />
                   </Field>
 
-                  <Field label="Nova Senha (deixe em branco para manter)" variant="default">
+                  <Field label="Nova Senha (deixe em branco para manter)" variant="default" htmlFor="settings-password">
                     <Input
+                      id="settings-password"
                       icon={Key}
                       type="password"
                       value={settingsPassword}
@@ -1405,8 +1427,9 @@ export default function ProviderDashboard({
                     />
                   </Field>
 
-                  <Field label="Confirmar Nova Senha" variant="default">
+                  <Field label="Confirmar Nova Senha" variant="default" htmlFor="settings-confirm-password">
                     <Input
+                      id="settings-confirm-password"
                       icon={Key}
                       type="password"
                       value={settingsConfirmPassword}
@@ -1425,12 +1448,13 @@ export default function ProviderDashboard({
                 </div>
 
                 <div className="space-y-4">
-                  <Field label="URL / Slug Personalizado do Portal" variant="default">
+                  <Field label="URL / Slug Personalizado do Portal" variant="default" htmlFor="settings-slug">
                     <div className="flex items-center gap-2">
                       <span className="bg-gray-50 text-gray-500 px-3 py-2.5 rounded-xl border border-gray-200 font-mono text-xs select-none">
                         portalagendeai.app.br/
                       </span>
                       <Input
+                        id="settings-slug"
                         type="text"
                         value={settingsSlug}
                         onChange={(e) => setSettingsSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}

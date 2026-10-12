@@ -121,8 +121,9 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
       <form onSubmit={handleSubmit} className="space-y-5">
         {error && <Alert variant="error">{error}</Alert>}
 
-        <Field label="Nome do Estabelecimento" className="text-left">
+        <Field label="Nome do Estabelecimento" className="text-left" htmlFor="tenant-name">
           <Input
+            id="tenant-name"
             tone="brand"
             size="md"
             type="text"
@@ -133,12 +134,13 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
           />
         </Field>
 
-        <Field label="Link de Acesso (Slug)" className="text-left">
+        <Field label="Link de Acesso (Slug)" className="text-left" htmlFor="tenant-slug">
           <div className="flex rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-600 transition-all">
-            <span className="bg-gray-100/80 px-3 py-2.5 border-r border-gray-200 text-gray-400 text-2xs font-semibold select-none flex items-center">
+            <span className="bg-gray-100/80 px-3 py-2.5 border-r border-gray-200 text-gray-500 text-2xs font-semibold select-none flex items-center">
               portalagendeai.app.br/
             </span>
             <Input
+              id="tenant-slug"
               bare
               size="md"
               type="text"
@@ -153,8 +155,9 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
           )}
         </Field>
 
-        <Field label="Descrição das Atividades" className="text-left">
+        <Field label="Descrição das Atividades" className="text-left" htmlFor="tenant-description">
           <Textarea
+            id="tenant-description"
             tone="brand"
             size="md"
             required
@@ -165,8 +168,12 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
           />
         </Field>
 
-        <Field label="Escolha o Logo (Emoji)" className="space-y-2 text-left">
-          <div className="flex flex-wrap gap-2.5 p-3.5 bg-gray-50 rounded-2xl border border-gray-100 justify-start">
+        <Field label="Escolha o Logo (Emoji)" className="space-y-2 text-left" labelId="tenant-logo-label">
+          <div
+              role="radiogroup"
+              aria-labelledby="tenant-logo-label"
+              className="flex flex-wrap gap-2.5 p-3.5 bg-gray-50 rounded-2xl border border-gray-100 justify-start"
+            >
             {emojis.map((emoji) => (
               <Button
                 key={emoji}
@@ -174,7 +181,9 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
                 variant="none"
                 size="none"
                 onClick={() => setLogoUrl(emoji)}
-                className={`w-10 h-10 rounded-xl text-xl border shrink-0 select-none ${
+                role="radio"
+                aria-checked={logoUrl === emoji}
+                className={`w-11 h-11 rounded-xl text-xl border shrink-0 select-none ${
                   logoUrl === emoji
                     ? "bg-white border-indigo-600 shadow-md scale-105"
                     : "border-transparent hover:bg-white hover:border-gray-200"
@@ -186,8 +195,12 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
           </div>
         </Field>
 
-        <Field label="Tema de Cores da Marca" className="space-y-2 text-left">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Field label="Tema de Cores da Marca" className="space-y-2 text-left" labelId="tenant-theme-label">
+          <div
+              role="radiogroup"
+              aria-labelledby="tenant-theme-label"
+              className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+            >
             {themes.map((t) => (
               <Button
                 key={t.value}
@@ -195,6 +208,8 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
                 variant="none"
                 size="none"
                 onClick={() => setThemeColor(t.value)}
+                role="radio"
+                aria-checked={themeColor === t.value}
                 className={`p-3 rounded-2xl justify-start gap-2 border text-2xs font-bold ${
                   themeColor === t.value
                     ? "bg-indigo-50/20 border-indigo-600 shadow-sm"
@@ -217,8 +232,9 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
             </p>
           </div>
 
-          <Field label="Nome Completo do Responsável" className="text-left">
+          <Field label="Nome Completo do Responsável" className="text-left" htmlFor="tenant-owner-name">
             <Input
+              id="tenant-owner-name"
               tone="brand"
               size="md"
               type="text"
@@ -230,8 +246,9 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
           </Field>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="E-mail / Login de Acesso" className="text-left">
+            <Field label="E-mail / Login de Acesso" className="text-left" htmlFor="tenant-owner-email">
               <Input
+                id="tenant-owner-email"
                 tone="brand"
                 size="md"
                 type="email"
@@ -242,8 +259,9 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
               />
             </Field>
 
-            <Field label="Senha de Acesso" className="text-left">
+            <Field label="Senha de Acesso" className="text-left" htmlFor="tenant-owner-password">
               <Input
+                id="tenant-owner-password"
                 tone="brand"
                 size="md"
                 type="password"
@@ -697,14 +715,14 @@ export default function App() {
                 {/* Grid of existing tenants */}
                 <div className="space-y-6">
                   <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">
+                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">
                       Estabelecimentos Parceiros
                     </h3>
                     <span className="text-xs text-slate-500 font-semibold">{tenants.length} cadastrados</span>
                   </div>
 
                   {tenants.length === 0 ? (
-                    <div className="text-center py-12 bg-white rounded-2xl border border-gray-100 text-gray-400 text-xs">
+                    <div className="text-center py-12 bg-white rounded-2xl border border-gray-100 text-gray-500 text-xs">
                       Nenhum estabelecimento cadastrado. Seja o primeiro!
                     </div>
                   ) : (
@@ -727,7 +745,7 @@ export default function App() {
                                 <h4 className="font-extrabold text-slate-900 text-base group-hover:text-indigo-600 transition-colors text-left">
                                   {tenant.name}
                                 </h4>
-                                <p className="text-3xs text-slate-400 font-mono mt-1 text-left">
+                                <p className="text-3xs text-slate-500 font-mono mt-1 text-left">
                                   portalagendeai.app.br/{tenant.slug}
                                 </p>
                               </div>
@@ -784,8 +802,9 @@ export default function App() {
 
                 <form onSubmit={handleLogin} className="space-y-4">
                   {authError && <Alert variant="error">{authError}</Alert>}
-                  <Field label="E-mail Corporativo" className="text-left">
+                  <Field label="E-mail Corporativo" className="text-left" htmlFor="app-login-email">
                     <Input
+                      id="app-login-email"
                       icon={Mail}
                       tone="brand"
                       size="md"
@@ -796,8 +815,9 @@ export default function App() {
                       placeholder="nome@empresa.com"
                     />
                   </Field>
-                  <Field label="Senha" className="text-left">
+                  <Field label="Senha" className="text-left" htmlFor="app-login-password">
                     <Input
+                      id="app-login-password"
                       icon={Lock}
                       tone="brand"
                       size="md"
@@ -887,7 +907,7 @@ export default function App() {
                 />
               </motion.div>
             ) : (
-              <div className="text-center py-20 text-gray-400 text-xs">
+              <div className="text-center py-20 text-gray-500 text-xs">
                 Selecione uma empresa ou prestador para inicializar a visualização.
               </div>
             )}
@@ -906,9 +926,10 @@ export default function App() {
         }}
         size="sm"
         showClose
+        labelledBy="auth-modal-title"
       >
         <div className="text-center space-y-2">
-          <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
+          <h3 id="auth-modal-title" className="text-lg font-extrabold text-slate-900 tracking-tight">
             {authMode === "login" ? "Entrar na sua Conta" : "Criar sua Conta"}
           </h3>
           <p className="text-xs text-gray-500">
@@ -923,8 +944,9 @@ export default function App() {
           {authError && <Alert variant="error">{authError}</Alert>}
 
           {authMode === "register" && (
-            <Field label="Nome Completo">
+            <Field label="Nome Completo" htmlFor="app-register-name">
               <Input
+                id="app-register-name"
                 icon={User}
                 tone="brand"
                 size="md"
@@ -937,8 +959,9 @@ export default function App() {
             </Field>
           )}
 
-          <Field label="E-mail">
+          <Field label="E-mail" htmlFor="app-register-email">
             <Input
+              id="app-register-email"
               icon={Mail}
               tone="brand"
               size="md"
@@ -950,8 +973,9 @@ export default function App() {
             />
           </Field>
 
-          <Field label="Senha">
+          <Field label="Senha" htmlFor="app-register-password">
             <Input
+              id="app-register-password"
               icon={Lock}
               tone="brand"
               size="md"
@@ -977,7 +1001,7 @@ export default function App() {
         {/* Social Dividers & Intuitive Buttons */}
         <div className="relative flex items-center justify-center my-4">
           <div className="border-t border-gray-200 w-full"></div>
-          <span className="absolute bg-white px-3 text-3xs text-gray-400 font-bold uppercase tracking-wider">ou continuar com</span>
+          <span className="absolute bg-white px-3 text-3xs text-gray-500 font-bold uppercase tracking-wider">ou continuar com</span>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -1062,6 +1086,7 @@ export default function App() {
         scrim="strong"
         layer="top"
         bare
+        labelledBy="social-modal-title"
       >
         {socialAuthOpen === "google" ? (
           // GOOGLE OAUTH SIMULATOR
@@ -1073,7 +1098,7 @@ export default function App() {
                 <path d="M6.9,13.06c-0.18,-0.54 -0.28,-1.11 -0.28,-1.7s0.1,-1.16 0.28,-1.7V7H3.5c-0.6,1.19 -0.94,2.53 -0.94,3.96S2.9,13.7 3.5,14.88L6.9,13.06z" fill="#FBBC05" />
                 <path d="M12,6.08c1.41,0 2.69,0.49 3.69,1.44l2.76,-2.76C16.78,3.2 14.6,2.38 12,2.38c-3.65,0 -6.91,1.74 -8.5,4.62l3.4,2.66C7.62,7.68 9.63,6.08 12,6.08z" fill="#EA4335" />
               </svg>
-              <h3 className="text-lg font-bold text-gray-900 leading-tight">Escolha uma conta</h3>
+              <h3 id="social-modal-title" className="text-lg font-bold text-gray-900 leading-tight">Escolha uma conta</h3>
               <p className="text-xs text-gray-500">para prosseguir para <span className="text-gray-900 font-semibold">Scheduler SaaS</span></p>
             </div>
 
@@ -1099,7 +1124,7 @@ export default function App() {
 
               {/* Custom input option */}
               <div className="p-4 bg-gray-50/50 space-y-3">
-                <p className="text-gray-400 font-bold uppercase tracking-wider text-3xs">Ou usar outra conta</p>
+                <p className="text-gray-500 font-bold uppercase tracking-wider text-3xs">Ou usar outra conta</p>
                 <div className="space-y-2">
                   <Input
                     tone="brand"
@@ -1133,7 +1158,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex justify-between items-center text-3xs text-gray-400 pt-2 font-medium">
+            <div className="flex justify-between items-center text-3xs text-gray-500 pt-2 font-medium">
               <span>Termos de Serviço</span>
               <Button variant="brandLink" size="none" className="text-xs" onClick={() => setSocialAuthOpen(null)}>Cancelar</Button>
               <span>Privacidade</span>
@@ -1150,7 +1175,7 @@ export default function App() {
                   <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
                 </svg>
               </div>
-              <h3 className="text-lg font-bold text-white leading-tight">Autorização do Instagram</h3>
+              <h3 id="social-modal-title" className="text-lg font-bold text-white leading-tight">Autorização do Instagram</h3>
               <p className="text-xs text-slate-400">
                 <span className="text-white font-semibold">Scheduler SaaS</span> gostaria de obter as seguintes informações da sua conta do Instagram:
               </p>
@@ -1167,16 +1192,16 @@ export default function App() {
                 <p className="font-bold text-white flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Perfil Básico (Obrigatório)
                 </p>
-                <p className="text-3xs text-slate-500">Nome de usuário, tipo de conta e e-mail cadastrado.</p>
+                <p className="text-3xs text-slate-400">Nome de usuário, tipo de conta e e-mail cadastrado.</p>
               </div>
 
               <div className="border-t border-slate-900 pt-4 space-y-3">
-                <p className="text-3xs text-slate-500 font-bold uppercase tracking-wider">Conta a ser conectada:</p>
+                <p className="text-3xs text-slate-400 font-bold uppercase tracking-wider">Conta a ser conectada:</p>
                 <div className="flex items-center gap-3 bg-slate-900 p-3 rounded-xl border border-slate-800">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center font-bold text-xs text-white">D</div>
                   <div>
                     <p className="font-bold text-white">@diogenes_silva</p>
-                    <p className="text-3xs text-slate-500">diogenes.instagram@instagram.com</p>
+                    <p className="text-3xs text-slate-400">diogenes.instagram@instagram.com</p>
                   </div>
                 </div>
               </div>
@@ -1209,7 +1234,7 @@ export default function App() {
 
 
       {/* Humble footer */}
-      <footer className="bg-white border-t border-gray-100 py-6 px-8 text-center text-3xs text-gray-400 font-medium mt-auto">
+      <footer className="bg-white border-t border-gray-100 py-6 px-8 text-center text-3xs text-gray-500 font-medium mt-auto">
         <p>© 2026 Scheduler SaaS Multi-Tenant. Lógica de concorrência com prevenção de overlap de slots.</p>
       </footer>
 
