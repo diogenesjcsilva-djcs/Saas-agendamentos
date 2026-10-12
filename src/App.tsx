@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Tenant, Provider } from "./types";
-import { getTenants, getProviders, login, register, getMe, socialLogin, getTenantBySlug, createTenant } from "./lib/api.js";
+import { getTenants, getProviders, login, register, getMe, getTenantBySlug, createTenant } from "./lib/api.js";
 import ClientPortal from "./components/ClientPortal.js";
 import ProviderDashboard from "./components/ProviderDashboard.js";
 import { getTenantThemeVars } from "./theme/tenant.js";
@@ -326,12 +326,6 @@ export default function App() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(false);
 
-  // Social Authentication Simulator State
-  const [socialAuthOpen, setSocialAuthOpen] = useState<"google" | "instagram" | null>(null);
-  const [socialEmail, setSocialEmail] = useState<string>("");
-  const [socialName, setSocialName] = useState<string>("");
-  const [socialError, setSocialError] = useState<string | null>(null);
-  const [socialLoading, setSocialLoading] = useState<boolean>(false);
   // Browser history routing sync
   useEffect(() => {
     const handlePopState = () => {
@@ -540,25 +534,6 @@ export default function App() {
       console.error("Error setting up new tenant onboarding session:", err);
       // Fallback redirect
       navigateTo(`/${slug}`);
-    }
-  };
-
-  const handleSocialAuthSubmit = async (email: string, name: string, provider: "google" | "instagram") => {
-    setSocialLoading(true);
-    setSocialError(null);
-    try {
-      const res = await socialLogin(email, name, provider);
-      localStorage.setItem("token", res.token);
-      setCurrentUser(res.user);
-      setSocialAuthOpen(null);
-      setAuthModalOpen(false);
-      setSocialEmail("");
-      setSocialName("");
-      setViewMode("client");
-    } catch (err: any) {
-      setSocialError(err.message || "Erro ao conectar com conta social.");
-    } finally {
-      setSocialLoading(false);
     }
   };
 
@@ -876,7 +851,6 @@ export default function App() {
                   setAuthLoading={setAuthLoading}
                   handleLogin={handleLogin}
                   handleRegister={handleRegister}
-                  setSocialAuthOpen={setSocialAuthOpen}
                   onNavigateHome={() => navigateTo("/")}
                 />
               </motion.div>
@@ -998,52 +972,6 @@ export default function App() {
           </Button>
         </form>
 
-        {/* Social Dividers & Intuitive Buttons */}
-        <div className="relative flex items-center justify-center my-4">
-          <div className="border-t border-gray-200 w-full"></div>
-          <span className="absolute bg-white px-3 text-3xs text-gray-500 font-bold uppercase tracking-wider">ou continuar com</span>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="md"
-            fullWidth
-            onClick={() => {
-              setSocialError(null);
-              setSocialAuthOpen("google");
-            }}
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.57h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.48C21.68,11.75 21.56,11.4 21.35,11.1z" fill="#4285F4" />
-              <path d="M12,20.62c2.6,0 4.78,-0.86 6.37,-2.33l-3.3,-2.57c-0.91,0.61 -2.07,0.98 -3.07,0.98 -2.37,0 -4.38,-1.6 -5.1,-3.75H3.5v2.66C5.09,18.88 8.35,20.62 12,20.62z" fill="#34A853" />
-              <path d="M6.9,13.06c-0.18,-0.54 -0.28,-1.11 -0.28,-1.7s0.1,-1.16 0.28,-1.7V7H3.5c-0.6,1.19 -0.94,2.53 -0.94,3.96S2.9,13.7 3.5,14.88L6.9,13.06z" fill="#FBBC05" />
-              <path d="M12,6.08c1.41,0 2.69,0.49 3.69,1.44l2.76,-2.76C16.78,3.2 14.6,2.38 12,2.38c-3.65,0 -6.91,1.74 -8.5,4.62l3.4,2.66C7.62,7.68 9.63,6.08 12,6.08z" fill="#EA4335" />
-            </svg>
-            Google
-          </Button>
-
-          <Button
-            type="button"
-            variant="none"
-            size="md"
-            fullWidth
-            onClick={() => {
-              setSocialError(null);
-              setSocialAuthOpen("instagram");
-            }}
-            className="bg-gradient-to-r from-purple-600 via-pink-500 to-yellow-500 hover:opacity-90 text-white shadow-md"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-            </svg>
-            Instagram
-          </Button>
-        </div>
-
         <div className="text-center text-xs border-t border-gray-100 pt-4">
           {authMode === "login" ? (
             <p className="text-gray-500">
@@ -1075,161 +1003,6 @@ export default function App() {
             </p>
           )}
         </div>
-      </Modal>
-
-
-      {/* Social Authentication Simulator Modals */}
-      <Modal
-        open={!!socialAuthOpen}
-        onClose={() => setSocialAuthOpen(null)}
-        size="md"
-        scrim="strong"
-        layer="top"
-        bare
-        labelledBy="social-modal-title"
-      >
-        {socialAuthOpen === "google" ? (
-          // GOOGLE OAUTH SIMULATOR
-          <div className="bg-white border border-gray-200 text-gray-800 p-8 space-y-6">
-            <div className="flex flex-col items-center text-center space-y-3">
-              <svg className="w-8 h-8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.57h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.48C21.68,11.75 21.56,11.4 21.35,11.1z" fill="#4285F4" />
-                <path d="M12,20.62c2.6,0 4.78,-0.86 6.37,-2.33l-3.3,-2.57c-0.91,0.61 -2.07,0.98 -3.07,0.98 -2.37,0 -4.38,-1.6 -5.1,-3.75H3.5v2.66C5.09,18.88 8.35,20.62 12,20.62z" fill="#34A853" />
-                <path d="M6.9,13.06c-0.18,-0.54 -0.28,-1.11 -0.28,-1.7s0.1,-1.16 0.28,-1.7V7H3.5c-0.6,1.19 -0.94,2.53 -0.94,3.96S2.9,13.7 3.5,14.88L6.9,13.06z" fill="#FBBC05" />
-                <path d="M12,6.08c1.41,0 2.69,0.49 3.69,1.44l2.76,-2.76C16.78,3.2 14.6,2.38 12,2.38c-3.65,0 -6.91,1.74 -8.5,4.62l3.4,2.66C7.62,7.68 9.63,6.08 12,6.08z" fill="#EA4335" />
-              </svg>
-              <h3 id="social-modal-title" className="text-lg font-bold text-gray-900 leading-tight">Escolha uma conta</h3>
-              <p className="text-xs text-gray-500">para prosseguir para <span className="text-gray-900 font-semibold">Scheduler SaaS</span></p>
-            </div>
-
-            {socialError && <Alert variant="error">{socialError}</Alert>}
-
-            <div className="divide-y divide-gray-200 border border-gray-200 rounded-2xl overflow-hidden text-xs">
-              {/* Option 1 */}
-              <Button
-                variant="none"
-                size="none"
-                disabled={socialLoading}
-                onClick={() => handleSocialAuthSubmit("diogenes.silva@gmail.com", "Diógenes Silva", "google")}
-                className="w-full p-4 text-left justify-start hover:bg-gray-50 transition-colors"
-              >
-                <div>
-                  <p className="font-bold text-gray-900">Diógenes Silva</p>
-                  <p className="text-gray-500 font-medium">diogenes.silva@gmail.com</p>
-                </div>
-                {/* `ml-auto` em vez de `justify-between`: o `justify-center` da base
-                    do Button vem depois no CSS e venceria o `justify-between`. */}
-                <span className="ml-auto w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs border border-indigo-100">DS</span>
-              </Button>
-
-              {/* Custom input option */}
-              <div className="p-4 bg-gray-50/50 space-y-3">
-                <p className="text-gray-500 font-bold uppercase tracking-wider text-3xs">Ou usar outra conta</p>
-                <div className="space-y-2">
-                  <Input
-                    tone="brand"
-                    size="sm"
-                    surface="plain"
-                    type="text"
-                    placeholder="Seu nome"
-                    value={socialName}
-                    onChange={(e) => setSocialName(e.target.value)}
-                  />
-                  <Input
-                    tone="brand"
-                    size="sm"
-                    surface="plain"
-                    type="email"
-                    placeholder="seu.email@gmail.com"
-                    value={socialEmail}
-                    onChange={(e) => setSocialEmail(e.target.value)}
-                  />
-                  <Button
-                    type="button"
-                    variant="none"
-                    size="none"
-                    disabled={socialLoading || !socialEmail || !socialName}
-                    onClick={() => handleSocialAuthSubmit(socialEmail, socialName, "google")}
-                    className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-2xs"
-                  >
-                    Entrar com e-mail customizado
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center text-3xs text-gray-500 pt-2 font-medium">
-              <span>Termos de Serviço</span>
-              <Button variant="brandLink" size="none" className="text-xs" onClick={() => setSocialAuthOpen(null)}>Cancelar</Button>
-              <span>Privacidade</span>
-            </div>
-          </div>
-        ) : (
-          // INSTAGRAM AUTH SIMULATOR
-          <div className="bg-slate-900 border border-slate-800 text-slate-200 p-8 space-y-6">
-            <div className="flex flex-col items-center text-center space-y-3">
-              <div className="w-12 h-12 bg-gradient-to-tr from-purple-600 via-pink-500 to-yellow-500 rounded-2xl flex items-center justify-center text-white shadow-md">
-                <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                </svg>
-              </div>
-              <h3 id="social-modal-title" className="text-lg font-bold text-white leading-tight">Autorização do Instagram</h3>
-              <p className="text-xs text-slate-400">
-                <span className="text-white font-semibold">Scheduler SaaS</span> gostaria de obter as seguintes informações da sua conta do Instagram:
-              </p>
-            </div>
-
-            {socialError && (
-              <div className="p-3 bg-red-950/20 border border-red-500/30 rounded-xl text-red-200 text-xs font-semibold">
-                {socialError}
-              </div>
-            )}
-
-            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-4 text-xs">
-              <div className="space-y-1">
-                <p className="font-bold text-white flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Perfil Básico (Obrigatório)
-                </p>
-                <p className="text-3xs text-slate-400">Nome de usuário, tipo de conta e e-mail cadastrado.</p>
-              </div>
-
-              <div className="border-t border-slate-900 pt-4 space-y-3">
-                <p className="text-3xs text-slate-400 font-bold uppercase tracking-wider">Conta a ser conectada:</p>
-                <div className="flex items-center gap-3 bg-slate-900 p-3 rounded-xl border border-slate-800">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center font-bold text-xs text-white">D</div>
-                  <div>
-                    <p className="font-bold text-white">@diogenes_silva</p>
-                    <p className="text-3xs text-slate-400">diogenes.instagram@instagram.com</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Button
-                variant="none"
-                size="none"
-                className="flex-1 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white text-xs"
-                onClick={() => setSocialAuthOpen(null)}
-              >
-                Não Autorizar
-              </Button>
-              <Button
-                variant="none"
-                size="none"
-                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white text-xs shadow-md"
-                disabled={socialLoading}
-                loading={socialLoading}
-                loadingSize="xs"
-                onClick={() => handleSocialAuthSubmit("diogenes.instagram@instagram.com", "Diógenes Silva (Instagram)", "instagram")}
-              >
-                Autorizar e Entrar
-              </Button>
-            </div>
-          </div>
-        )}
       </Modal>
 
 

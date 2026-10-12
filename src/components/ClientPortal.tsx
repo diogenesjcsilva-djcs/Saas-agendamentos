@@ -77,7 +77,6 @@ interface ClientPortalProps {
     categoryId?: string,
     bio?: string
   ) => Promise<void>;
-  setSocialAuthOpen: (provider: "google" | "instagram" | null) => void;
   onNavigateHome?: () => void;
 }
 
@@ -119,7 +118,6 @@ export default function ClientPortal({
   setAuthLoading,
   handleLogin,
   handleRegister,
-  setSocialAuthOpen,
   onNavigateHome
 }: ClientPortalProps) {
   // Invalid Provider / Service Link State
@@ -757,44 +755,6 @@ export default function ClientPortal({
                 {authMode === "login" ? "Entrar" : "Criar Conta"}
               </Button>
             </form>
-
-            <div className="relative flex items-center justify-center my-3">
-              <div className="border-t border-gray-200 w-full"></div>
-              <span className="absolute bg-white px-2 text-3xs text-gray-500 font-bold uppercase tracking-wider">ou</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                size="none"
-                className="py-2 text-xs rounded-xl gap-1.5"
-                onClick={() => setSocialAuthOpen("google")}
-              >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.57h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.48C21.68,11.75 21.56,11.4 21.35,11.1z" fill="#4285F4" />
-                  <path d="M12,20.62c2.6,0 4.78,-0.86 6.37,-2.33l-3.3,-2.57c-0.91,0.61 -2.07,0.98 -3.07,0.98 -2.37,0 -4.38,-1.6 -5.1,-3.75H3.5v2.66C5.09,18.88 8.35,20.62 12,20.62z" fill="#34A853" />
-                  <path d="M6.9,13.06c-0.18,-0.54 -0.28,-1.11 -0.28,-1.7s0.1,-1.16 0.28,-1.7V7H3.5c-0.6,1.19 -0.94,2.53 -0.94,3.96S2.9,13.7 3.5,14.88L6.9,13.06z" fill="#FBBC05" />
-                  <path d="M12,6.08c1.41,0 2.69,0.49 3.69,1.44l2.76,-2.76C16.78,3.2 14.6,2.38 12,2.38c-3.65,0 -6.91,1.74 -8.5,4.62l3.4,2.66C7.62,7.68 9.63,6.08 12,6.08z" fill="#EA4335" />
-                </svg>
-                Google
-              </Button>
-
-              <Button
-                type="button"
-                variant="none"
-                size="none"
-                onClick={() => setSocialAuthOpen("instagram")}
-                className="py-2 text-xs rounded-xl gap-1.5 bg-gradient-to-r from-purple-600 via-pink-500 to-yellow-500 hover:opacity-90 text-white shadow-md"
-              >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                </svg>
-                Instagram
-              </Button>
-            </div>
 
             <div className="text-center text-xs border-t border-gray-100 pt-3">
               {authMode === "login" ? (
