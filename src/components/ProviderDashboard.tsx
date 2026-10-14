@@ -70,7 +70,8 @@ import {
   Copy,
   ExternalLink,
   Eye,
-  Palette
+  Palette,
+  Store
 } from "lucide-react";
 import { motion } from "motion/react";
 import Button from "./ui/Button.js";
@@ -228,12 +229,18 @@ export default function ProviderDashboard({
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
 
+  /* Nome de exibicao do prestador, editavel no proprio cartao de perfil. */
+  const [editingName, setEditingName] = useState<boolean>(false);
+  const [inlineName, setInlineName] = useState<string>(provider.name || "");
+  const [inlineNameSaving, setInlineNameSaving] = useState<boolean>(false);
+
   useEffect(() => {
     setSettingsName(provider.name || "");
     setSettingsEmail(provider.email || "");
     setSettingsBio(provider.bio || "");
     setSettingsLocationType(provider.serviceLocationType || "both");
     setSettingsAvatarUrl(provider.avatarUrl || "");
+    setInlineName(provider.name || "");
     if (tenant) {
       setSettingsSlug(tenant.slug || "");
       setSettingsThemeColor(tenant.themeColor || "indigo");
@@ -287,6 +294,47 @@ export default function ProviderDashboard({
       setSettingsError(err.message || "Erro ao salvar configurações.");
     } finally {
       setSettingsSaving(false);
+    }
+  };
+
+  /* Renomear o nome de exibicao sem passar por Configuracoes. A API grava
+     users, providers e tenants na mesma transacao, e o nome do estabelecimento
+     cai para o nome do prestador quando `tenantName` nao vai no corpo — por
+     isso os campos que nao estao em edicao sao reenviados como estao hoje. */
+  const handleInlineNameSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const nextName = inlineName.trim();
+
+    if (!nextName) {
+      setError("O nome de exibição não pode ficar vazio.");
+      return;
+    }
+    if (nextName === provider.name) {
+      setEditingName(false);
+      return;
+    }
+
+    setInlineNameSaving(true);
+    setError(null);
+    try {
+      const res = await updateProviderSettings({
+        name: nextName,
+        email: provider.email,
+        bio: provider.bio || "",
+        avatarUrl: provider.avatarUrl || "",
+        serviceLocationType: provider.serviceLocationType || "both",
+        tenantName: tenant?.name || undefined,
+        tenantDescription: tenant?.description || undefined
+      });
+
+      if (res.provider && onProviderUpdate) onProviderUpdate(res.provider);
+      if (res.tenant && onTenantUpdate) onTenantUpdate(res.tenant);
+      showFlashSuccess("Nome de exibição atualizado com sucesso!");
+      setEditingName(false);
+    } catch (err: any) {
+      setError(err.message || "Erro ao atualizar o nome de exibição.");
+    } finally {
+      setInlineNameSaving(false);
     }
   };
 
@@ -528,25 +576,78 @@ export default function ProviderDashboard({
       
       {/* Sidebar Navigation */}
       <div className="w-full md:w-64 bg-gray-50 p-6 border-b md:border-b-0 md:border-r border-gray-200 shrink-0 space-y-6">
-        {/* Profile Card */}
-        <div className="flex items-center gap-3 border-b border-gray-200 pb-4">
-          <div className="w-10 h-10 rounded-xl bg-[var(--tenant-accent)] text-white font-bold flex items-center justify-center text-base">
-            {provider.name.charAt(0)}
-          </div>
-          <div className="truncate">
-            <h4 className="font-bold text-sm text-slate-900">{provider.name}</h4>
-            <p className="text-3xs text-gray-500 truncate">{provider.email}</p>
-          </div>
+        {/* Profile Card — o nome de exibicao se edita aqui mesmo, no lapis. */}
+        <div className="border-b border-gray-200 pb-4">
+          {editingName ? (
+            <form onSubmit={handleInlineNameSave} className="space-y-2">
+              <Input
+                id="provider-name-inline"
+                size="sm"
+                type="text"
+                value={inlineName}
+                onChange={(e) => setInlineName(e.target.value)}
+                aria-label="Nome de exibição do prestador"
+                placeholder="Nome de exibição"
+                autoFocus
+              />
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="submit"
+                  size="none"
+                  loading={inlineNameSaving}
+                  className="px-3 py-1.5 rounded-lg text-2xs"
+                >
+                  Salvar
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="none"
+                  onClick={() => {
+                    setInlineName(provider.name || "");
+                    setEditingName(false);
+                    setError(null);
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-2xs text-gray-500"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[var(--tenant-accent)] text-white font-bold flex items-center justify-center text-base shrink-0">
+                {provider.name.charAt(0)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="font-bold text-sm text-slate-900 truncate">{provider.name}</h4>
+                <p className="text-3xs text-gray-500 truncate">{provider.email}</p>
+              </div>
+              <IconButton
+                variant="ghost"
+                size="md"
+                label="Editar nome de exibição"
+                title="Editar nome de exibição"
+                onClick={() => {
+                  setInlineName(provider.name || "");
+                  setEditingName(true);
+                }}
+                className="shrink-0"
+              >
+                <Edit2 className="w-4 h-4" />
+              </IconButton>
+            </div>
+          )}
         </div>
 
         {/* Tab Buttons */}
-        <nav aria-label="Seções do painel" className="flex md:flex-col gap-1 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
+        <nav aria-label="Seções do painel" className="-mx-6 px-6 md:mx-0 md:px-0 flex md:flex-col gap-1 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
           <Button
             variant="none"
             size="none"
             onClick={() => setActiveTab("overview")}
             aria-current={activeTab === "overview" ? "page" : undefined}
-            className={`min-h-11 px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
+            className={`min-h-11 px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left md:w-full whitespace-nowrap shrink-0 ${
               activeTab === "overview"
                 ? "bg-[var(--tenant-accent)] text-white shadow-md"
                 : "text-gray-500 hover:text-slate-900 hover:bg-gray-100"
@@ -561,7 +662,7 @@ export default function ProviderDashboard({
             size="none"
             onClick={() => setActiveTab("bookings")}
             aria-current={activeTab === "bookings" ? "page" : undefined}
-            className={`min-h-11 px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
+            className={`min-h-11 px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left md:w-full whitespace-nowrap shrink-0 ${
               activeTab === "bookings"
                 ? "bg-[var(--tenant-accent)] text-white shadow-md"
                 : "text-gray-500 hover:text-slate-900 hover:bg-gray-100"
@@ -576,7 +677,7 @@ export default function ProviderDashboard({
             size="none"
             onClick={() => setActiveTab("services")}
             aria-current={activeTab === "services" ? "page" : undefined}
-            className={`min-h-11 px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
+            className={`min-h-11 px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left md:w-full whitespace-nowrap shrink-0 ${
               activeTab === "services"
                 ? "bg-[var(--tenant-accent)] text-white shadow-md"
                 : "text-gray-500 hover:text-slate-900 hover:bg-gray-100"
@@ -591,7 +692,7 @@ export default function ProviderDashboard({
             size="none"
             onClick={() => setActiveTab("availability")}
             aria-current={activeTab === "availability" ? "page" : undefined}
-            className={`min-h-11 px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
+            className={`min-h-11 px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left md:w-full whitespace-nowrap shrink-0 ${
               activeTab === "availability"
                 ? "bg-[var(--tenant-accent)] text-white shadow-md"
                 : "text-gray-500 hover:text-slate-900 hover:bg-gray-100"
@@ -606,7 +707,7 @@ export default function ProviderDashboard({
             size="none"
             onClick={() => setActiveTab("settings")}
             aria-current={activeTab === "settings" ? "page" : undefined}
-            className={`min-h-11 px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left w-full whitespace-nowrap shrink-0 ${
+            className={`min-h-11 px-4 py-2.5 rounded-xl text-xs font-semibold gap-2.5 justify-start text-left md:w-full whitespace-nowrap shrink-0 ${
               activeTab === "settings"
                 ? "bg-[var(--tenant-accent)] text-white shadow-md"
                 : "text-gray-500 hover:text-slate-900 hover:bg-gray-100"
@@ -1396,7 +1497,44 @@ export default function ProviderDashboard({
                 </div>
               </Card>
 
-              {/* Card 2: Credenciais & Segurança (Login e Senha) */}
+              {/* Card 2: Estabelecimento (nome e descricao publicos) */}
+              {tenant && (
+                <Card padding="lg" elevation="none" className="space-y-5">
+                  <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+                    <Store className="w-4 h-4 text-[var(--tenant-accent)]" />
+                    <h3 className="font-bold text-slate-900 text-sm">Estabelecimento</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <Field label="Nome do Estabelecimento *" variant="default" htmlFor="settings-tenant-name">
+                      <Input
+                        id="settings-tenant-name"
+                        type="text"
+                        required
+                        value={settingsTenantName}
+                        onChange={(e) => setSettingsTenantName(e.target.value)}
+                        placeholder="Ex: Studio Aurora"
+                      />
+                    </Field>
+
+                    <Field label="Descrição do Estabelecimento" variant="default" htmlFor="settings-tenant-desc">
+                      <Textarea
+                        id="settings-tenant-desc"
+                        rows={2}
+                        value={settingsTenantDesc}
+                        onChange={(e) => setSettingsTenantDesc(e.target.value)}
+                        placeholder="Como o estabelecimento se apresenta para quem chega pelo link..."
+                      />
+                    </Field>
+                  </div>
+
+                  <p className="text-3xs text-gray-500">
+                    É este o nome anunciado na barra superior e no link público do estabelecimento.
+                  </p>
+                </Card>
+              )}
+
+              {/* Card 3: Credenciais & Segurança (Login e Senha) */}
               <Card padding="lg" elevation="none" className="space-y-5">
                 <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
                   <Lock className="w-4 h-4 text-[var(--tenant-accent)]" />

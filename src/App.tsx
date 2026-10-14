@@ -873,6 +873,12 @@ export default function App() {
                   onProviderUpdate={(updated) => {
                     setSelectedProvider(updated);
                     setProviders(prev => prev.map(p => p.id === updated.id ? updated : p));
+                    /* O "Olá, X" da barra lê currentUser, que só vem do /auth/me
+                       no boot: sem isto a saudação fica com o nome antigo
+                       depois de renomear o perfil. */
+                    setCurrentUser((prev: any) =>
+                      prev && prev.providerId === updated.id ? { ...prev, name: updated.name } : prev
+                    );
                   }}
                   onTenantUpdate={(updated) => {
                     setSelectedTenant(updated);
