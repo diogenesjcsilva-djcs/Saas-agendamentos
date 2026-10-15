@@ -44,7 +44,7 @@ interface TopBarProps {
  * Ela é a moldura: fica branca, no mesmo tom do resto, e quem carrega a
  * identidade é o estabelecimento ativo — logo, nome e endereço. Sem
  * estabelecimento, quem ocupa o lugar é a marca do app: o `BrandMark` no
- * quadradinho e o letreiro "agendeai" ao lado, ambos no índigo da marca. É a
+ * quadradinho e o letreiro "useagendeai" ao lado, ambos no índigo da marca. É a
  * única situação em que o logo do app aparece aqui; com estabelecimento, a
  * barra é dele.
  */
@@ -185,7 +185,7 @@ export default function TopBar({
                   : "text-indigo-600"
               }`}
             >
-              {tenant ? tenant.name : "agendeai"}
+              {tenant ? tenant.name : "useagendeai"}
             </span>
             <span className="block text-3xs text-gray-500 font-mono mt-0.5 truncate">
               {tenant ? `${tenant.slug}.useagendeai.app.br` : "useagendeai.app.br"}

@@ -655,7 +655,7 @@ export default function App() {
                 </div>
               </motion.div>
             ) : pathname === "/" ? (
-              // LANDING PAGE - AGENDEAI
+              // LANDING PAGE - USEAGENDEAI
               <motion.div
                 key="landing-page"
                 initial={{ opacity: 0, y: 15 }}
@@ -1014,7 +1014,7 @@ export default function App() {
 
       {/* Humble footer */}
       <footer className="bg-white border-t border-gray-100 py-6 px-8 text-center text-3xs text-gray-500 font-medium mt-auto">
-        <p>© 2026 agendeai</p>
+        <p>© 2026 useagendeai</p>
       </footer>
 
     </div>
