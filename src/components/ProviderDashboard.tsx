@@ -1441,7 +1441,11 @@ export default function ProviderDashboard({
                   <span className="font-bold text-gray-700 text-xs block">
                     Onde você atende seus clientes? (Modalidade de Atendimento)
                   </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* `lg:grid-cols-3` (e não `sm:`): entre 768px e 1023px o
+                      painel tem só ~446–640px de largura e três colunas viram
+                      caixas de ~116px, com o texto quebrando em 3–4 linhas.
+                      Abaixo de lg os botões empilham em largura cheia. */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
                     <Button
                       variant="none"
                       size="none"
@@ -1449,8 +1453,8 @@ export default function ProviderDashboard({
                       onClick={() => setSettingsLocationType("own_space")}
                       className={`p-3 rounded-xl justify-start flex-col items-start text-left ${
                         settingsLocationType === "own_space"
-                          ? "bg-[var(--tenant-accent-soft)] border-[var(--tenant-accent)] text-[var(--tenant-accent-strong)] font-bold shadow-sm"
-                          : "bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:text-slate-700"
+                          ? "border bg-[var(--tenant-accent-soft)] border-[var(--tenant-accent)] text-[var(--tenant-accent-strong)] font-bold shadow-sm"
+                          : "border bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:text-slate-700"
                       }`}
                     >
                       <span className="text-sm font-extrabold flex items-center gap-1.5">
@@ -1468,8 +1472,8 @@ export default function ProviderDashboard({
                       onClick={() => setSettingsLocationType("at_client")}
                       className={`p-3 rounded-xl justify-start flex-col items-start text-left ${
                         settingsLocationType === "at_client"
-                          ? "bg-[var(--tenant-accent-soft)] border-[var(--tenant-accent)] text-[var(--tenant-accent-strong)] font-bold shadow-sm"
-                          : "bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:text-slate-700"
+                          ? "border bg-[var(--tenant-accent-soft)] border-[var(--tenant-accent)] text-[var(--tenant-accent-strong)] font-bold shadow-sm"
+                          : "border bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:text-slate-700"
                       }`}
                     >
                       <span className="text-sm font-extrabold flex items-center gap-1.5">
@@ -1487,8 +1491,8 @@ export default function ProviderDashboard({
                       onClick={() => setSettingsLocationType("both")}
                       className={`p-3 rounded-xl justify-start flex-col items-start text-left ${
                         settingsLocationType === "both"
-                          ? "bg-[var(--tenant-accent-soft)] border-[var(--tenant-accent)] text-[var(--tenant-accent-strong)] font-bold shadow-sm"
-                          : "bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:text-slate-700"
+                          ? "border bg-[var(--tenant-accent-soft)] border-[var(--tenant-accent)] text-[var(--tenant-accent-strong)] font-bold shadow-sm"
+                          : "border bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:text-slate-700"
                       }`}
                     >
                       <span className="text-sm font-extrabold flex items-center gap-1.5">
