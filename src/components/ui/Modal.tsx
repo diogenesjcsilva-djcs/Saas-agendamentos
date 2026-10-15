@@ -77,6 +77,15 @@ export default function Modal({
   const panelRef = useRef<any>(null);
   const token = useRef<any>({});
 
+  // `onClose` quase sempre chega inline (`onClose={() => setX(false)}`) e ganha
+  // identidade nova a cada render do pai. Se ele entrasse nas dependências do
+  // efeito abaixo, o efeito seria desfeito e refeito a cada tecla digitada num
+  // campo do modal: a limpeza devolvia o foco ao gatilho e a nova execução o
+  // mandava para o primeiro campo do painel — o cursor pulava para o começo do
+  // formulário. Guardado num ref, o efeito só depende de `open`.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (!open) return;
 
@@ -109,7 +118,7 @@ export default function Modal({
 
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -144,7 +153,7 @@ export default function Modal({
       if (index >= 0) openModals.splice(index, 1);
       previouslyFocused?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   const panel = bare
     ? cardClasses({ radius: "3xl", tone: "none", border: "none", elevation: "2xl", padding: "none" })

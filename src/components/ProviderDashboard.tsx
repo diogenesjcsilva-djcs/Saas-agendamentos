@@ -719,8 +719,13 @@ export default function ProviderDashboard({
         </nav>
       </div>
 
-      {/* Main Panel Area */}
-      <div className="flex-1 p-8 space-y-6 bg-gray-50">
+      {/* Main Panel Area. `min-w-0` é obrigatório: como item de flex, o painel
+          tem `min-width: auto` e não encolhe abaixo do próprio conteúdo. Sem
+          isso ele ficava preso em ~592px (o bloco do link público tem URL
+          `nowrap` e botões que não encolhem) e, entre 768px e ~940px de
+          viewport, o cartão era cortado pela borda do painel, que é
+          `overflow-hidden`. */}
+      <div className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 space-y-6 bg-gray-50">
         {/* Flash Notifications */}
         {successMsg && (
           <Alert variant="success" icon={CheckCircle}>
@@ -1588,7 +1593,7 @@ export default function ProviderDashboard({
                 <div className="space-y-4">
                   <Field label="URL / Slug Personalizado do Portal" variant="default" htmlFor="settings-slug">
                     <div className="flex items-center gap-2">
-                      <span className="bg-gray-50 text-gray-500 px-3 py-2.5 rounded-xl border border-gray-200 font-mono text-xs select-none">
+                      <span className="bg-gray-50 text-gray-500 px-3 py-2.5 rounded-xl border border-gray-200 font-mono text-xs select-none shrink-0">
                         portalagendeai.app.br/
                       </span>
                       <Input
@@ -1597,14 +1602,18 @@ export default function ProviderDashboard({
                         value={settingsSlug}
                         onChange={(e) => setSettingsSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
                         placeholder="meu-estudio"
-                        className="flex-1 font-mono"
+                        className="flex-1 min-w-0 font-mono"
                       />
                     </div>
                   </Field>
 
-                  {/* Share Preview Banner */}
-                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div className="space-y-1 min-w-0">
+                  {/* Share Preview Banner. `flex-wrap` importa: com a URL em
+                      `nowrap` e os botões sem encolher, o bloco precisa de
+                      ~470px. Em vez de espremer o texto numa coluna de poucos
+                      pixels quando o painel é estreito (janela de 768–940px),
+                      os botões descem para a linha de baixo. */}
+                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 flex flex-wrap flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="space-y-1 min-w-0 grow">
                       <span className="text-2xs font-bold text-[var(--tenant-accent)] uppercase tracking-wider block">
                         Link público para seus clientes agendarem
                       </span>
