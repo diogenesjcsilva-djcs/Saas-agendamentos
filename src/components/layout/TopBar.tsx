@@ -188,7 +188,7 @@ export default function TopBar({
               {tenant ? tenant.name : "agendeai"}
             </span>
             <span className="block text-3xs text-gray-500 font-mono mt-0.5 truncate">
-              {tenant ? `${tenant.slug}.agendeai.app.br` : "agendeai.app.br"}
+              {tenant ? `${tenant.slug}.useagendeai.app.br` : "useagendeai.app.br"}
             </span>
           </span>
         </button>

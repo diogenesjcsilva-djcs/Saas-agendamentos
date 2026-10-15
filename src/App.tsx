@@ -137,7 +137,7 @@ function TenantRegistrationForm({ onCancel, onSuccess, tenants }: TenantRegistra
         <Field label="Link de Acesso (Slug)" className="text-left" htmlFor="tenant-slug">
           <div className="flex rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-600 transition-all">
             <span className="bg-gray-100/80 px-3 py-2.5 border-r border-gray-200 text-gray-600 text-2xs font-semibold select-none flex items-center">
-              agendeai.app.br/
+              useagendeai.app.br/
             </span>
             <Input
               id="tenant-slug"
@@ -721,7 +721,7 @@ export default function App() {
                                   {tenant.name}
                                 </h4>
                                 <p className="text-3xs text-slate-500 font-mono mt-1 text-left">
-                                  agendeai.app.br/{tenant.slug}
+                                  useagendeai.app.br/{tenant.slug}
                                 </p>
                               </div>
                               <p className="text-xs text-gray-500 leading-relaxed font-medium line-clamp-3 text-left">

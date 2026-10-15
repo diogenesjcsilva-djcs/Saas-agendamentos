@@ -1598,7 +1598,7 @@ export default function ProviderDashboard({
                   <Field label="URL / Slug Personalizado do Portal" variant="default" htmlFor="settings-slug">
                     <div className="flex items-center gap-2">
                       <span className="bg-gray-50 text-gray-500 px-3 py-2.5 rounded-xl border border-gray-200 font-mono text-xs select-none shrink-0">
-                        agendeai.app.br/
+                        useagendeai.app.br/
                       </span>
                       <Input
                         id="settings-slug"
