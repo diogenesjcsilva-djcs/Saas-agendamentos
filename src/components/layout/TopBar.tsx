@@ -8,6 +8,7 @@ import { Compass, LogIn, LogOut, Menu, Users, X } from "lucide-react";
 import { Tenant } from "../../types";
 import Button from "../ui/Button.js";
 import IconButton from "../ui/IconButton.js";
+import BrandMark from "./BrandMark.js";
 
 export type TopBarWidth = "wide" | "narrow";
 
@@ -41,9 +42,11 @@ interface TopBarProps {
  * Barra superior do app.
  *
  * Ela é a moldura: fica branca, no mesmo tom do resto, e quem carrega a
- * identidade é o estabelecimento ativo — logo, nome e endereço. A marca do app
- * ("portalagendeai") só aparece quando não há estabelecimento, e como texto
- * comum, porque o `<h1>` de cada tela é o título do conteúdo, não o logo.
+ * identidade é o estabelecimento ativo — logo, nome e endereço. Sem
+ * estabelecimento, quem ocupa o lugar é a marca do app: o `BrandMark` no
+ * quadradinho e o letreiro "agendeai" ao lado, ambos no índigo da marca. É a
+ * única situação em que o logo do app aparece aqui; com estabelecimento, a
+ * barra é dele.
  */
 export default function TopBar({
   tenant = null,
@@ -165,15 +168,27 @@ export default function TopBar({
           }}
           className="flex items-center gap-3 min-w-0 text-left cursor-pointer group"
         >
-          <span className="w-9 h-9 rounded-xl bg-[var(--tenant-accent-soft)] border border-[var(--tenant-accent)]/20 text-[var(--tenant-accent)] flex items-center justify-center text-lg leading-none shrink-0 select-none transition-transform group-hover:scale-105">
-            {tenant ? tenant.logoUrl || "🗓️" : "🗓️"}
+          <span
+            className={`w-9 h-9 rounded-xl border flex items-center justify-center text-lg leading-none shrink-0 select-none transition-transform group-hover:scale-105 ${
+              tenant
+                ? "bg-[var(--tenant-accent-soft)] border-[var(--tenant-accent)]/20 text-[var(--tenant-accent)]"
+                : "bg-indigo-50 border-indigo-600/20 text-indigo-600"
+            }`}
+          >
+            {tenant ? tenant.logoUrl || "🗓️" : <BrandMark className="w-5 h-5" />}
           </span>
           <span className="min-w-0">
-            <span className="block text-sm font-bold tracking-tight text-slate-900 truncate group-hover:text-[var(--tenant-accent)] transition-colors">
-              {tenant ? tenant.name : "portalagendeai"}
+            <span
+              className={`block text-sm font-bold tracking-tight truncate transition-colors ${
+                tenant
+                  ? "text-slate-900 group-hover:text-[var(--tenant-accent)]"
+                  : "text-indigo-600"
+              }`}
+            >
+              {tenant ? tenant.name : "agendeai"}
             </span>
             <span className="block text-3xs text-gray-500 font-mono mt-0.5 truncate">
-              {tenant ? `${tenant.slug}.portalagendeai.app.br` : "portalagendeai.app.br"}
+              {tenant ? `${tenant.slug}.agendeai.app.br` : "agendeai.app.br"}
             </span>
           </span>
         </button>

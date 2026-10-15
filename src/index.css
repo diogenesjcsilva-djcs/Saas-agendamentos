@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ===========================================================================
-   Design tokens — portalagendeai
+   Design tokens — agendeai
    Single source of truth for the UI layer. Components consume these utilities
    instead of inventing sizes, radii, shadows or semantic colours.
 
