@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { query, pool } from './db.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { authMiddleware, AuthenticatedRequest } from './auth-middleware.js';
+import { authMiddleware, AuthenticatedRequest, getJwtSecret } from './auth-middleware.js';
 import { createRateLimiter } from './rate-limiter.js';
 import { 
   Tenant, 
@@ -161,7 +161,7 @@ router.post('/tenants', tenantRateLimiter, async (req, res) => {
     }
 
     // 4. Gerar Token de Acesso JWT
-    const secret = process.env.JWT_SECRET || "pulse-saas-secret-key-12345678";
+    const secret = getJwtSecret();
     const token = jwt.sign(
       { userId, email: email.toLowerCase().trim(), name: ownerName.trim(), role: 'provider', tenantId, providerId },
       secret,
@@ -398,9 +398,12 @@ router.get('/services', async (req, res) => {
 });
 
 // 5. Add Service
-router.post('/services', async (req, res) => {
+router.post('/services', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  const user = req.user;
+  if (!user || user.role !== 'provider' || !user.providerId) return res.status(403).json({ error: "Apenas o profissional responsável pode criar serviços." });
   const newServiceId = "service-" + Date.now();
-  const { providerId, name, description, durationMinutes, bufferMinutes, price } = req.body;
+  const { name, description, durationMinutes, bufferMinutes, price } = req.body;
+  const providerId = user.providerId;
   try {
     const rows = await query<Service>(
       `INSERT INTO services (id, provider_id, name, description, duration_minutes, buffer_minutes, price) 
@@ -425,11 +428,13 @@ router.post('/services', async (req, res) => {
 });
 
 // Edit Service
-router.put('/services/:id', async (req, res) => {
+router.put('/services/:id', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  const user = req.user;
+  if (!user || user.role !== 'provider' || !user.providerId) return res.status(403).json({ error: "Apenas o profissional responsável pode editar serviços." });
   const { name, description, durationMinutes, bufferMinutes, price } = req.body;
   try {
     // Get existing service to handle fallback values
-    const serviceRows = await query<Service>(`SELECT * FROM services WHERE id = $1`, [req.params.id]);
+    const serviceRows = await query<Service>(`SELECT * FROM services WHERE id = $1 AND provider_id = $2`, [req.params.id, user.providerId]);
     if (serviceRows.length === 0) {
       return res.status(404).json({ error: "Service not found" });
     }
@@ -458,9 +463,12 @@ router.put('/services/:id', async (req, res) => {
 });
 
 // Delete Service
-router.delete('/services/:id', async (req, res) => {
+router.delete('/services/:id', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  const user = req.user;
+  if (!user || user.role !== 'provider' || !user.providerId) return res.status(403).json({ error: "Apenas o profissional responsável pode excluir serviços." });
   try {
-    await query(`DELETE FROM services WHERE id = $1`, [req.params.id]);
+    const deleted = await query(`DELETE FROM services WHERE id = $1 AND provider_id = $2 RETURNING id`, [req.params.id, user.providerId]);
+    if (deleted.length === 0) return res.status(404).json({ error: "Serviço não encontrado." });
     res.json({ success: true });
   } catch (error) {
     console.error("Error deleting service:", error);
@@ -840,7 +848,7 @@ router.get('/slots', async (req, res) => {
 });
 
 // 10. POST a booking (includes concurrency prevention constraint check with SQL transaction)
-router.post('/bookings', async (req, res) => {
+router.post('/bookings', bookingRateLimiter, async (req, res) => {
   const { providerId, serviceId, startsAt, clientName, clientEmail, clientPhone, notes } = req.body;
   
   if (!providerId || !serviceId || !startsAt || !clientName || !clientEmail || !clientPhone) {
@@ -1011,9 +1019,13 @@ router.patch('/bookings/:id', authMiddleware, async (req: AuthenticatedRequest, 
 });
 
 // 12. Delete booking
-router.delete('/bookings/:id', async (req, res) => {
+router.delete('/bookings/:id', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  const user = req.user;
+  if (!user) return res.status(401).json({ error: "Não autorizado." });
+  if (user.role !== 'provider' || !user.providerId) return res.status(403).json({ error: "Somente o profissional responsável pode excluir agendamentos. Clientes devem cancelar o agendamento." });
   try {
-    await query(`DELETE FROM bookings WHERE id = $1`, [req.params.id]);
+    const deleted = await query(`DELETE FROM bookings WHERE id = $1 AND provider_id = $2 RETURNING id`, [req.params.id, user.providerId]);
+    if (deleted.length === 0) return res.status(404).json({ error: "Agendamento não encontrado." });
     res.json({ success: true });
   } catch (error) {
     console.error("Error deleting booking:", error);
@@ -1024,8 +1036,8 @@ router.delete('/bookings/:id', async (req, res) => {
 // --- Authentication Endpoints ---
 
 // Auth: Register Client / Provider
-router.post('/auth/register', async (req, res) => {
-  const { email, password, name, role, tenantId, categoryId, bio } = req.body;
+router.post('/auth/register', authRateLimiter, async (req, res) => {
+  const { email, password, name } = req.body;
   if (!email || !password || !name) {
     return res.status(400).json({ error: "E-mail, senha e nome são obrigatórios." });
   }
@@ -1038,24 +1050,17 @@ router.post('/auth/register', async (req, res) => {
 
     const id = "user-" + Date.now();
     const passwordHash = await bcrypt.hash(password, 10);
-    const userRole = role === 'provider' ? 'provider' : 'client';
-    let providerId: string | null = null;
-
-    if (userRole === 'provider') {
-      providerId = "provider-" + Date.now();
-      await query(
-        `INSERT INTO providers (id, tenant_id, category_id, name, email, bio) 
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [providerId, tenantId || 'tenant-1', categoryId || null, name, email.toLowerCase(), bio || '']
-      );
-    }
-    
+    // Public self-registration creates clients only. Provider accounts must be
+    // created through tenant onboarding, which binds tenant/provider IDs server-side.
+    const userRole = 'client';
+    const providerId: string | null = null;
+    const userTenantId: string | null = null;
     await query(
       `INSERT INTO users (id, email, password_hash, name, role, tenant_id, provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [id, email.toLowerCase(), passwordHash, name, userRole, tenantId || null, providerId]
+      [id, email.toLowerCase(), passwordHash, name, userRole, userTenantId, providerId]
     );
 
-    const secret = process.env.JWT_SECRET || "pulse-saas-secret-key-12345678";
+    const secret = getJwtSecret();
     
     const token = jwt.sign(
       { userId: id, email: email.toLowerCase(), name, role: userRole, tenantId: tenantId || null, providerId },
@@ -1074,7 +1079,7 @@ router.post('/auth/register', async (req, res) => {
 });
 
 // Auth: Login
-router.post('/auth/login', async (req, res) => {
+router.post('/auth/login', authRateLimiter, async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: "E-mail e senha são obrigatórios." });
@@ -1096,7 +1101,7 @@ router.post('/auth/login', async (req, res) => {
       return res.status(401).json({ error: "Credenciais inválidas." });
     }
 
-    const secret = process.env.JWT_SECRET || "pulse-saas-secret-key-12345678";
+    const secret = getJwtSecret();
 
     const payload = {
       userId: user.id,
@@ -1127,77 +1132,13 @@ router.post('/auth/login', async (req, res) => {
 });
 
 // Auth: Social Login
-router.post('/auth/social-login', async (req, res) => {
-  const { email, name, provider } = req.body;
-  if (!email || !name || !provider) {
-    return res.status(400).json({ error: "E-mail, nome e provedor são obrigatórios." });
-  }
-
-  try {
-    const emailLower = email.toLowerCase();
-    let users = await query<any>(
-      `SELECT id, email, name, role, tenant_id AS "tenantId", provider_id AS "providerId", avatar_url AS "avatarUrl" 
-       FROM users WHERE email = $1 LIMIT 1`,
-      [emailLower]
-    );
-
-    let user;
-    if (users.length === 0) {
-      const id = "user-" + Date.now();
-      const passwordHash = await bcrypt.hash("social-oauth-token-" + Date.now(), 10);
-      
-      const avatarUrl = provider === 'instagram' 
-        ? "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&h=80&q=80" 
-        : "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&h=80&q=80";
-
-      await query(
-        `INSERT INTO users (id, email, password_hash, name, role, avatar_url) VALUES ($1, $2, $3, $4, $5, $6)`,
-        [id, emailLower, passwordHash, name, 'client', avatarUrl]
-      );
-
-      user = {
-        id,
-        email: emailLower,
-        name,
-        role: 'client',
-        avatarUrl
-      };
-    } else {
-      user = users[0];
-    }
-
-    const secret = process.env.JWT_SECRET || "pulse-saas-secret-key-12345678";
-    const payload = {
-      userId: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      tenantId: user.tenantId,
-      providerId: user.providerId,
-      avatarUrl: user.avatarUrl
-    };
-
-    const token = jwt.sign(payload, secret, { expiresIn: '30d' });
-
-    res.json({
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        tenantId: user.tenantId,
-        providerId: user.providerId,
-        avatarUrl: user.avatarUrl
-      }
-    });
-  } catch (error) {
-    console.error("Social login error:", error);
-    res.status(500).json({ error: "Erro interno no servidor." });
-  }
+router.post('/auth/social-login', authRateLimiter, (_req, res) => {
+  // Do not accept client-supplied email/name as proof of identity.
+  // Re-enable only after server-side OAuth token verification is implemented.
+  return res.status(501).json({ error: "Login social temporariamente indisponível; use e-mail e senha." });
 });
 
-// Auth: Get Profile
+// // Auth: Get Profile
 router.get('/auth/me', authMiddleware, (req: AuthenticatedRequest, res) => {
   res.json({ user: req.user });
 });
