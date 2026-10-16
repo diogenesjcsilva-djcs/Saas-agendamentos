@@ -12,6 +12,12 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
+export function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.length < 32) throw new Error('JWT_SECRET must be configured and contain at least 32 characters.');
+  return secret;
+}
+
 export function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -19,13 +25,14 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
   }
 
   const token = authHeader.split(' ')[1];
-  const secret = process.env.JWT_SECRET || "pulse-saas-secret-key-12345678";
-
   try {
-    const decoded = jwt.verify(token, secret) as any;
+    const decoded = jwt.verify(token, getJwtSecret()) as any;
     req.user = decoded;
     next();
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith("JWT_SECRET must be configured")) {
+      return res.status(500).json({ error: "Configuração de autenticação indisponível." });
+    }
     return res.status(403).json({ error: "Token inválido ou expirado." });
   }
 }
