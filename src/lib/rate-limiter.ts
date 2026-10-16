@@ -29,10 +29,9 @@ export function createRateLimiter(
   }, 5 * 60 * 1000).unref();
 
   return (req: Request, res: Response, next: NextFunction) => {
-    // In production behind proxies, use X-Forwarded-For if available
-    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() ||
-      req.socket.remoteAddress ||
-      'unknown-ip';
+    // Use Express's resolved IP. Configure trust proxy only for known proxies;
+    // never trust a client-supplied X-Forwarded-For header directly.
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown-ip';
 
     const now = Date.now();
     const record = ipStore.get(clientIp);
