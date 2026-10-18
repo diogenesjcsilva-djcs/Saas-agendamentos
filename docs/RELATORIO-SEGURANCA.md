@@ -160,7 +160,7 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 
 ### 17. Reagendamento transacional e concorrência
 - O endpoint de reagendamento agora usa uma única conexão PostgreSQL e uma transação para ler, autorizar, verificar conflitos e atualizar a reserva.
-- Usa bloqueio transacional `pg_advisory_xact_lock` com a mesma chave profissional/data UTC da criação; a criação também foi ajustada para usar limites de dia UTC consistentes, evitando divergência quando `startsAt` contém offset.
+- Usa bloqueio transacional `pg_advisory_xact_lock` por profissional, compartilhado entre criação e reagendamento. O bloqueio por profissional evita corridas também quando a duração ou o buffer atravessam a meia-noite; a criação consulta reservas do dia UTC adjacente e usa limites de dia UTC consistentes.
 - A verificação considera reservas em dias UTC adjacentes para não ignorar conflitos de buffer próximos à meia-noite e impede reagendar estados concluídos/cancelados.
 - O `UPDATE` confirma o estado anterior e a propriedade no SQL; alterações concorrentes retornam HTTP 409.
 - Ainda é necessário executar testes de concorrência com PostgreSQL e validar as regras de fuso horário usadas pela interface; o bloqueio por dia pressupõe que os horários são interpretados em UTC.
