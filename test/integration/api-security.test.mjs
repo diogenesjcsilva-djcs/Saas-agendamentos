@@ -146,3 +146,93 @@ test('social login cannot trust client-supplied identity fields', async () => {
   });
   assert.equal(result.response.status, 501);
 });
+
+
+test('booking creation validates service-provider ownership and rejects overlap', async () => {
+  const meA = (await request('/auth/me', { token: tokenA })).data.user;
+  const meB = (await request('/auth/me', { token: tokenB })).data.user;
+  const createdService = await request('/services', {
+    method: 'POST',
+    token: tokenA,
+    body: { name: 'Booking integration service', description: 'test', durationMinutes: 30, bufferMinutes: 0, price: 20 },
+  });
+  assert.equal(createdService.response.status, 201, JSON.stringify(createdService.data));
+  const startsAt = '2032-06-14T10:00:00.000Z';
+  const bookingPayload = {
+    providerId: meA.providerId,
+    serviceId: createdService.data.id,
+    startsAt,
+    clientName: 'Booking Test Client',
+    clientEmail: `booking-${Date.now()}@example.test`,
+    clientPhone: '+5511999999999',
+    notes: 'created by isolated CI',
+  };
+  const wrongOwner = await request('/bookings', {
+    method: 'POST',
+    body: { ...bookingPayload, providerId: meB.providerId },
+  });
+  assert.equal(wrongOwner.response.status, 400);
+
+  const first = await request('/bookings', { method: 'POST', body: bookingPayload });
+  assert.equal(first.response.status, 201, JSON.stringify(first.data));
+  assert.equal(first.data.status, 'confirmed');
+  assert.equal(first.data.providerId, meA.providerId);
+
+  const overlap = await request('/bookings', {
+    method: 'POST',
+    body: { ...bookingPayload, clientEmail: `overlap-${Date.now()}@example.test` },
+  });
+  assert.equal(overlap.response.status, 409);
+});
+
+test('booking cancellation is restricted to the owning client or provider', async () => {
+  const meA = (await request('/auth/me', { token: tokenA })).data.user;
+  const meB = (await request('/auth/me', { token: tokenB })).data.user;
+  const service = await request('/services', {
+    method: 'POST',
+    token: tokenA,
+    body: { name: 'Cancellation integration service', description: 'test', durationMinutes: 30, bufferMinutes: 0, price: 20 },
+  });
+  assert.equal(service.response.status, 201, JSON.stringify(service.data));
+  const email = `cancel-owner-${Date.now()}@example.test`;
+  const booking = await request('/bookings', {
+    method: 'POST',
+    body: {
+      providerId: meA.providerId,
+      serviceId: service.data.id,
+      startsAt: '2032-06-14T12:00:00.000Z',
+      clientName: 'Cancellation Test Client',
+      clientEmail: email,
+      clientPhone: '+5511888888888',
+    },
+  });
+  assert.equal(booking.response.status, 201, JSON.stringify(booking.data));
+
+  const otherProvider = await request(`/bookings/${booking.data.id}`, {
+    method: 'PATCH',
+    token: tokenB,
+    body: { status: 'cancelled' },
+  });
+  assert.equal(otherProvider.response.status, 403);
+
+  const owner = await request('/auth/register', {
+    method: 'POST',
+    body: { email, name: 'Cancellation Test Client', password: 'Client-Integration-Password-2026!' },
+  });
+  assert.equal(owner.response.status, 201, JSON.stringify(owner.data));
+  const cancel = await request(`/bookings/${booking.data.id}`, {
+    method: 'PATCH',
+    token: owner.data.token,
+    body: { status: 'cancelled' },
+  });
+  assert.equal(cancel.response.status, 200, JSON.stringify(cancel.data));
+  assert.equal(cancel.data.status, 'cancelled');
+
+  const reopen = await request(`/bookings/${booking.data.id}`, {
+    method: 'PATCH',
+    token: tokenA,
+    body: { status: 'confirmed' },
+  });
+  assert.equal(reopen.response.status, 409);
+  assert.notEqual(meA.providerId, meB.providerId);
+});
