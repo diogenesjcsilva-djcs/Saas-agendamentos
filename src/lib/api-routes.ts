@@ -789,13 +789,25 @@ router.get('/slots', async (req, res) => {
       return res.json([]);
     }
 
-    // 4. Fetch bookings on date, with the corresponding service buffer joined
+    // Validate and anchor the requested date in UTC.
+    if (typeof date !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) {
+      return res.status(400).json({ error: "Data inválida; use YYYY-MM-DD." });
+    }
+    const requestedDayStart = new Date(`${date}T00:00:00.000Z`);
+    if (!Number.isFinite(requestedDayStart.getTime()) || requestedDayStart.toISOString().slice(0, 10) !== date) {
+      return res.status(400).json({ error: "Data inválida; use YYYY-MM-DD." });
+    }
+    const requestedDayEnd = new Date(requestedDayStart.getTime() + 24 * 60 * 60 * 1000);
+
+    // Include adjacent days so appointments and buffers crossing midnight are considered.
     const bookings = await query<any>(
       `SELECT b.id, b.starts_at AS "startsAt", b.ends_at AS "endsAt", s.buffer_minutes AS "bufferMinutes"
        FROM bookings b
        LEFT JOIN services s ON b.service_id = s.id
-       WHERE b.provider_id = $1 AND b.status != 'cancelled' AND b.starts_at::date = $2::date`,
-      [provider.id, date]
+       WHERE b.provider_id = $1 AND b.status <> 'cancelled'
+         AND b.starts_at >= $2::timestamptz - INTERVAL '2 days'
+         AND b.starts_at < $3::timestamptz + INTERVAL '2 days'`,
+      [provider.id, requestedDayStart.toISOString(), requestedDayEnd.toISOString()]
     );
 
     const slots: TimeSlot[] = [];
@@ -814,21 +826,13 @@ router.get('/slots', async (req, res) => {
     const duration = service.durationMinutes;
     const stepMinutes = duration <= 30 ? 15 : 30;
 
-    const blockedRanges = bookings.map(b => {
-      const startsAtStr = toISOString(b.startsAt);
-      const endsAtStr = toISOString(b.endsAt);
-      
-      const bStartMin = timeToMinutes(startsAtStr.substring(11, 16));
-      const bEndMin = timeToMinutes(endsAtStr.substring(11, 16));
-      const bBuffer = Number(b.bufferMinutes) || 0;
-
-      return {
-        start: bStartMin,
-        end: bEndMin + bBuffer,
-        realEnd: bEndMin,
-        bookingId: b.id
-      };
-    });
+    const requestedDayStartMs = requestedDayStart.getTime();
+    const blockedRanges = bookings.map(b => ({
+      start: new Date(b.startsAt).getTime(),
+      realEnd: new Date(b.endsAt).getTime(),
+      end: new Date(b.endsAt).getTime() + (Number(b.bufferMinutes) || 0) * 60 * 1000,
+      bookingId: b.id
+    }));
 
     for (const window of activeWindows) {
       const windowStart = timeToMinutes(window.start);
@@ -836,35 +840,37 @@ router.get('/slots', async (req, res) => {
 
       for (let startMin = windowStart; startMin <= windowEnd - duration; startMin += stepMinutes) {
         const endMin = startMin + duration;
-        
         if (endMin > windowEnd) continue;
 
+        const timeStr = minutesToTime(startMin);
+        const slotStartMs = requestedDayStartMs + startMin * 60 * 1000;
+        const slotEndMs = requestedDayStartMs + endMin * 60 * 1000;
+        const requestedBufferMs = Number(service.bufferMinutes) * 60 * 1000;
         let isAvailable = true;
         let conflictReason = "";
 
         for (const block of blockedRanges) {
-          const coreOverlap = Math.max(startMin, block.start) < Math.min(endMin, block.realEnd);
+          const coreOverlap = slotStartMs < block.realEnd && slotEndMs > block.start;
           if (coreOverlap) {
             isAvailable = false;
             conflictReason = "Sobreposição com outro agendamento";
             break;
           }
 
-          if (startMin >= block.start && startMin < block.end) {
+          if (slotStartMs < block.end && slotEndMs > block.start) {
             isAvailable = false;
             conflictReason = "Período de intervalo do agendamento anterior";
             break;
           }
 
-          if (endMin > block.start - service.bufferMinutes && startMin < block.start) {
+          if (slotEndMs + requestedBufferMs > block.start && slotStartMs < block.start) {
             isAvailable = false;
             conflictReason = "Intervalo de segurança necessário antes do próximo agendamento";
             break;
           }
         }
 
-        const timeStr = minutesToTime(startMin);
-        const datetimeStr = `${date}T${timeStr}:00.000Z`;
+        const datetimeStr = new Date(slotStartMs).toISOString();
 
         slots.push({
           time: timeStr,
