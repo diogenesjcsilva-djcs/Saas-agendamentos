@@ -891,10 +891,17 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: "O serviço não pertence ao profissional informado." });
     }
+    const serviceDurationMinutes = Number(service.durationMinutes);
+    const serviceBufferMinutes = Number(service.bufferMinutes) || 0;
+    if (!Number.isFinite(serviceDurationMinutes) || serviceDurationMinutes <= 0 || serviceDurationMinutes > 1440 ||
+        !Number.isFinite(serviceBufferMinutes) || serviceBufferMinutes < 0 || serviceBufferMinutes > 1440) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: "A duração ou o intervalo configurado para o serviço é inválido." });
+    }
 
     // Calculate endsAt
     const startObj = new Date(startsAt);
-    const endObj = new Date(startObj.getTime() + service.durationMinutes * 60 * 1000);
+    const endObj = new Date(startObj.getTime() + serviceDurationMinutes * 60 * 1000);
     const endsAt = endObj.toISOString();
 
     // Use the normalized UTC date consistently with rescheduling and timestamp checks.
@@ -924,7 +931,7 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
 
     const reqStartMs = startObj.getTime();
     const reqEndMs = endObj.getTime();
-    const reqBufferMs = (service.bufferMinutes || 0) * 60 * 1000;
+    const reqBufferMs = serviceBufferMinutes * 60 * 1000;
 
     // Concurrency overlap & buffer validation
     for (const b of existingBookings) {
@@ -1321,7 +1328,7 @@ router.patch('/bookings/:id/reschedule', authMiddleware, async (req: Authenticat
     const service = serviceResult.rows[0];
     const durationMinutes = Number(service.durationMinutes);
     const serviceBufferMinutes = Number(service.bufferMinutes) || 0;
-    if (!Number.isFinite(durationMinutes) || durationMinutes <= 0 || !Number.isFinite(serviceBufferMinutes) || serviceBufferMinutes < 0) {
+    if (!Number.isFinite(durationMinutes) || durationMinutes <= 0 || durationMinutes > 1440 || !Number.isFinite(serviceBufferMinutes) || serviceBufferMinutes < 0 || serviceBufferMinutes > 1440) {
       await client.query('ROLLBACK');
       transactionOpen = false;
       return res.status(409).json({ error: "A duração ou o intervalo do serviço é inválido." });
