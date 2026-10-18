@@ -899,7 +899,15 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
 
     const dateStr = startsAt.substring(0, 10);
 
-    // 2. Lock & Fetch existing active bookings on the same day for this provider
+    // Serialize booking creation for this provider/day. Row locks alone do not
+    // protect an empty result set, so simultaneous first bookings could both pass.
+    // This transaction-scoped advisory lock is acquired even when no booking exists.
+    await client.query(
+      `SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`,
+      [String(providerId), dateStr]
+    );
+
+    // 2. Fetch existing active bookings on the same day for this provider
     const existingRes = await client.query(
       `SELECT b.id, b.starts_at AS "startsAt", b.ends_at AS "endsAt", s.buffer_minutes AS "bufferMinutes" 
        FROM bookings b 
