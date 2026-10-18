@@ -652,28 +652,46 @@ router.post('/exceptions', authMiddleware, async (req: AuthenticatedRequest, res
     return res.status(403).json({ error: "Você não tem permissão para alterar a agenda de outro profissional." });
   }
 
-  if (!targetProviderId || !date) {
-    return res.status(400).json({ error: "providerId e date são obrigatórios." });
+  if (typeof targetProviderId !== 'string' || !targetProviderId.trim() ||
+      typeof date !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date) ||
+      Number.isNaN(Date.parse(`${date}T00:00:00.000Z`)) || new Date(`${date}T00:00:00.000Z`).toISOString().slice(0, 10) !== date ||
+      typeof isBlocked !== 'boolean') {
+    return res.status(400).json({ error: "Dados da exceção inválidos." });
   }
 
+  const timePattern = /^(?:[01]\\d|2[0-3]):[0-5]\\d$/;
+  if (!isBlocked && (
+      typeof startTime !== 'string' || !timePattern.test(startTime) ||
+      typeof endTime !== 'string' || !timePattern.test(endTime) ||
+      startTime >= endTime
+  )) {
+    return res.status(400).json({ error: "Para uma exceção parcial, informe horários válidos e início anterior ao fim." });
+  }
+
+  const client = await pool.connect();
   try {
-    // Clear duplicate date/provider exception first
-    await query(
+    await client.query('BEGIN');
+    // Replacement is atomic: a failed insert must not erase the previous exception.
+    await client.query(
       `DELETE FROM availability_exceptions WHERE provider_id = $1 AND date = $2`,
       [targetProviderId, date]
     );
 
-    const newId = "except-" + Date.now();
-    const rows = await query<AvailabilityException>(
+    const newId = "except-" + randomUUID();
+    const rows = await client.query(
       `INSERT INTO availability_exceptions (id, provider_id, date, is_blocked, start_time, end_time) 
        VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING id, provider_id AS "providerId", date, is_blocked AS "isBlocked", start_time AS "startTime", end_time AS "endTime"`,
-      [newId, targetProviderId, date, !!isBlocked, startTime || null, endTime || null]
+      [newId, targetProviderId, date, isBlocked, isBlocked ? null : startTime, isBlocked ? null : endTime]
     );
-    res.status(201).json(rows[0]);
+    await client.query('COMMIT');
+    res.status(201).json(rows.rows[0]);
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error("Error creating exception:", error);
     res.status(500).json({ error: "Erro interno ao criar exceção." });
+  } finally {
+    client.release();
   }
 });
 
