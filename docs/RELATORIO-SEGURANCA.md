@@ -177,3 +177,9 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 - O cadastro valida tipos e limites dos campos de nome, descrição e slug, limita a paleta de tema a valores conhecidos e exige senha de 12 a 128 caracteres.
 - IDs de tenant, profissional e usuário passaram a usar UUID aleatório em vez de `Date.now()`, reduzindo colisões em cadastros concorrentes.
 - Ainda é necessário testar restrições únicas no banco para slug/e-mail sob concorrência; a checagem prévia na aplicação não substitui uma constraint única.
+
+### 21. Ordem dos bloqueios no reagendamento — corrigida estaticamente
+- A revisão identificou risco de deadlock: o reagendamento bloqueava primeiro a linha do agendamento (`FOR UPDATE`) e depois o bloqueio consultivo do profissional, enquanto a criação adquire o bloqueio consultivo antes de consultar/bloquear reservas.
+- O fluxo foi reorganizado para consultar inicialmente apenas o profissional sem bloquear a linha, adquirir o mesmo `pg_advisory_xact_lock` usado pela criação e só então reler o agendamento com `FOR UPDATE`.
+- O fluxo revalida que o profissional associado não mudou antes de continuar. O bloqueio consultivo permanece ativo até o fim da transação.
+- **Limite da validação:** a correção foi revisada estaticamente; ainda não foi reproduzida nem validada com testes concorrentes reais em PostgreSQL. Todos os caminhos que escrevem agendamentos devem respeitar a mesma ordem de bloqueios para eliminar esse tipo de deadlock.
