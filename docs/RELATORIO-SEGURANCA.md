@@ -357,3 +357,18 @@ A rota agora limita a lista a 50 regras, valida dia da semana entre 0 e 6, exige
 **Recomendação operacional:** antes de produção multi-instância, configurar um limitador compartilhado no gateway/plataforma ou adotar backend distribuído com operação atômica e política de indisponibilidade definida. Manter `trust proxy` restrito aos proxies confiáveis; não confiar diretamente em `X-Forwarded-For` enviado pelo cliente.
 
 **Validação pendente:** não foram executados testes de carga distribuída. O rate limiter atual deve ser considerado defesa local, não proteção global contra abuso.
+
+
+## 40. Script de sanitização não redefine mais senhas conhecidas
+
+**Arquivo:** `src/scripts/sanitize.ts`, bloco de contas demonstrativas.
+
+**Achado:** o script de sanitização redefinia, sempre que executado, as senhas de três contas de profissional para uma senha fixa conhecida (`12345678`) com bcrypt custo 10. Além de permitir acesso indevido às contas-modelo após uma execução operacional, isso contradizia a proteção já aplicada ao script de migração.
+
+**Correção aplicada:**
+- A criação de contas demonstrativas agora exige opt-in explícito (`SEED_DEMO_USERS=true`) e senha fornecida pelo operador (`SEED_DEMO_PASSWORD`) entre 12 e 128 caracteres.
+- O hash usa bcrypt custo 12.
+- As inserções usam `ON CONFLICT (id) DO NOTHING`; o script não redefine nem sobrescreve credenciais de contas existentes.
+- Sem opt-in, a sanitização não cria nem redefine essas contas.
+
+**Validação pendente:** alteração revisada estaticamente. Não executei o script contra banco real nem testes TypeScript. Como esse script também exclui registros por padrões de e-mail/nome e atualiza dados-modelo, ele deve ser revisado cuidadosamente e executado apenas após backup e confirmação explícita do ambiente-alvo.
