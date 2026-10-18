@@ -65,16 +65,42 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 
 **Limitação:** o limitador continua em memória local; em múltiplas instâncias, os contadores não são compartilhados. Para produção distribuída, migrar para Redis ou mecanismo equivalente. A identificação do IP agora usa `req.ip`, evitando confiar diretamente em `X-Forwarded-For`; configurar `trust proxy` somente conforme a topologia real do deployment.
 
+## Correções adicionais aplicadas após a primeira revisão
+
+### 7. Falha de compilação no cadastro público — corrigida estaticamente
+- O token e o objeto de usuário de `POST /auth/register` referenciavam `tenantId`, embora a rota tenha definido `userTenantId`.
+- Ambos agora usam `userTenantId`, coerente com o cadastro público de cliente sem vínculo a tenant.
+- O cadastro valida formato de e-mail, nome não vazio/com limite e senha com no mínimo 12 caracteres; o e-mail é normalizado antes da consulta e gravação.
+
+### 8. Atualização de serviço com verificação de proprietário incompleta — endurecida
+- A consulta inicial já verificava `id` e `provider_id`; o `UPDATE` agora também exige ambos na cláusula `WHERE`.
+- A rota verifica se o `UPDATE` retornou linha antes de montar a resposta.
+
+### 9. Alteração de status de agendamento — endurecida
+- `PATCH /bookings/:id` aceita apenas `pending`, `confirmed`, `completed` e `cancelled`.
+- Papéis que não sejam `client` ou `provider` são explicitamente negados.
+- Cliente só pode cancelar o próprio agendamento; profissional só pode alterar agendamento do próprio `providerId`.
+
+### 10. Reagendamento e grade de disponibilidade — endurecidos
+- Reagendamento valida que `startsAt` seja uma data interpretável, nega papéis desconhecidos e repete a autorização do proprietário na própria instrução SQL de atualização.
+- Alteração de regras e exceções de disponibilidade exige `providerId` presente no token e correspondente ao alvo; remoção de exceção também nega ausência de vínculo de profissional.
+
+### 11. Exposição desnecessária de dados públicos — reduzida
+- `GET /providers` não retorna mais e-mail dos profissionais.
+- `GET /slots` não seleciona nomes de clientes dos agendamentos existentes, usados apenas para calcular conflitos.
+
 ## Pontos que permanecem pendentes de validação
 
-1. **Isolamento multi-tenant completo:** as correções cobrem as rotas acima, mas é necessário revisar todas as consultas e tabelas para garantir que cada operação de leitura/escrita seja limitada ao tenant correto. Não declarar isolamento completo sem essa revisão.
-2. **Estado e transições de agendamento:** revisar uma lista permitida de estados em `PATCH /bookings/:id`, permissões por papel e transições válidas.
-3. **Reagendamento e concorrência:** testar autorização, fuso horário, intervalos e corrida entre reservas simultâneas; considerar restrições/locks no banco.
-4. **Validação de entrada:** revisar tipos, limites numéricos, comprimento de campos, e-mail normalizado e senha mínima em todos os endpoints.
-5. **Rate limiting em produção:** usar armazenamento compartilhado quando houver múltiplas réplicas e configurar proxy confiável corretamente.
-6. **Configuração e gestão de segredo:** definir `JWT_SECRET` no ambiente de deployment, não em código ou commit; usar secret manager e plano de rotação.
-7. **Testes automatizados:** cobrir 401 sem token, 403 para papel errado, tentativa de acesso a recursos de outro profissional/tenant, segredo ausente/fraco, login social sem validação, e respostas 429.
-8. **Documentação:** o README e o manifesto de dependências aparentam descrever stacks diferentes. Atualizar documentação após confirmar a arquitetura e o comando de build correto.
+1. **Isolamento multi-tenant completo:** as correções cobrem rotas específicas, mas é necessário revisar todas as consultas/tabelas e relações entre `users`, `providers`, `services` e `tenants`. Não declarar isolamento completo sem essa revisão.
+2. **Transições de estado:** a lista de status é validada, mas as transições permitidas (por exemplo, de `cancelled` para `completed`) ainda precisam de uma máquina de estados explícita.
+3. **Reagendamento e concorrência:** testar autorização, fuso horário, regras de intervalo e corrida entre reservas simultâneas; a validação estática não substitui teste com banco.
+4. **Validação de entrada global:** revisar limites numéricos, duração/preço negativos, limites de tamanho e validação de datas em todos os endpoints.
+5. **Rate limiting em produção:** o limitador permanece em memória local; usar armazenamento compartilhado quando houver múltiplas réplicas e configurar proxy confiável corretamente.
+6. **Configuração e gestão de segredo:** definir `JWT_SECRET` forte no ambiente de deployment, usar secret manager e planejar rotação. A rota de criação de tenant agora valida o segredo antes de gravar no banco.
+7. **Testes automatizados:** cobrir 401 sem token, 403 para papel errado, acesso cruzado entre tenants/profissionais, segredo ausente/fraco, login social, estados inválidos, reagendamento e respostas 429.
+8. **Testes de build:** executar instalação determinística de dependências, `npm run lint` e `npm run build` em CI antes do merge.
+9. **Rate limit e proxy:** confirmar a configuração real de `trust proxy`; `req.ip` só é confiável se a cadeia de proxies for configurada corretamente.
+10. **Documentação/arquitetura:** confirmar o comando de build e a divergência aparente entre README e manifesto de dependências.
 
 ## Arquivos alterados
 
