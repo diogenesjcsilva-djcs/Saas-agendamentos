@@ -152,3 +152,7 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 - `GET /exceptions` exige autenticação de profissional e consulta apenas exceções vinculadas ao `providerId` do token; o parâmetro fornecido pelo cliente não pode ampliar o escopo da consulta.
 - `GET /slots` não deve revelar nomes de clientes em mensagens de conflito. As mensagens foram generalizadas para informar apenas o motivo de indisponibilidade, sem PII.
 - A proteção é validada estaticamente; ainda é necessário testar os fluxos de interface para confirmar que os consumidores de `/exceptions` enviam o token de autenticação.
+
+### 16. Validação do perfil e alteração de senha
+- A alteração de senha no perfil agora exige no mínimo 12 caracteres, alinhando a regra com o cadastro público.
+- Os campos opcionais de nome/e-mail são validados antes de aplicar operações de normalização; a identificação do usuário usa o claim validado `user.userId`.
