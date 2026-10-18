@@ -506,14 +506,14 @@ router.get('/availability-rules', async (req, res) => {
 // Set Availability Rules
 router.put('/availability-rules', authMiddleware, async (req: AuthenticatedRequest, res) => {
   const user = req.user;
-  if (!user || user.role !== 'provider') {
+  if (!user || user.role !== 'provider' || !user.providerId) {
     return res.status(403).json({ error: "Apenas profissionais autenticados podem alterar horários." });
   }
 
   const { providerId, rules } = req.body;
   const targetProviderId = providerId || user.providerId;
 
-  if (user.providerId && user.providerId !== targetProviderId) {
+  if (user.providerId !== targetProviderId) {
     return res.status(403).json({ error: "Você não tem permissão para alterar a grade de outro profissional." });
   }
 
@@ -576,14 +576,14 @@ router.get('/exceptions', async (req, res) => {
 // Add Availability Exception
 router.post('/exceptions', authMiddleware, async (req: AuthenticatedRequest, res) => {
   const user = req.user;
-  if (!user || user.role !== 'provider') {
+  if (!user || user.role !== 'provider' || !user.providerId) {
     return res.status(403).json({ error: "Apenas profissionais autenticados podem gerenciar exceções." });
   }
 
   const { providerId, date, isBlocked, startTime, endTime } = req.body;
   const targetProviderId = providerId || user.providerId;
 
-  if (user.providerId && user.providerId !== targetProviderId) {
+  if (user.providerId !== targetProviderId) {
     return res.status(403).json({ error: "Você não tem permissão para alterar a agenda de outro profissional." });
   }
 
@@ -625,7 +625,7 @@ router.delete('/exceptions/:id', authMiddleware, async (req: AuthenticatedReques
       return res.status(404).json({ error: "Exceção não encontrada." });
     }
 
-    if (user.providerId && user.providerId !== expRows[0].provider_id) {
+    if (!user.providerId || user.providerId !== expRows[0].provider_id) {
       return res.status(403).json({ error: "Você não tem permissão para remover exceções de outro profissional." });
     }
 
@@ -1208,8 +1208,8 @@ router.patch('/bookings/:id/reschedule', authMiddleware, async (req: Authenticat
   const bookingId = req.params.id;
   const user = req.user;
 
-  if (!startsAt) {
-    return res.status(400).json({ error: "Data/hora de início é obrigatória." });
+  if (typeof startsAt !== 'string' || !startsAt.trim() || Number.isNaN(Date.parse(startsAt))) {
+    return res.status(400).json({ error: "Data/hora de início inválida." });
   }
   if (!user) {
     return res.status(401).json({ error: "Não autorizado." });
@@ -1228,11 +1228,12 @@ router.patch('/bookings/:id/reschedule', authMiddleware, async (req: Authenticat
     const booking = bookings[0];
 
     // Auth validation
-    if (user.role === 'client' && user.email !== booking.clientEmail) {
-      return res.status(403).json({ error: "Você não tem permissão para alterar este agendamento." });
-    }
-    if (user.role === 'provider' && user.providerId !== booking.providerId) {
-      return res.status(403).json({ error: "Você não tem permissão para alterar este agendamento." });
+    if (user.role === 'client') {
+      if (user.email !== booking.clientEmail) return res.status(403).json({ error: "Você não tem permissão para alterar este agendamento." });
+    } else if (user.role === 'provider') {
+      if (!user.providerId || user.providerId !== booking.providerId) return res.status(403).json({ error: "Você não tem permissão para alterar este agendamento." });
+    } else {
+      return res.status(403).json({ error: "Papel sem permissão para reagendar." });
     }
 
     // Fetch Service
@@ -1299,9 +1300,9 @@ router.patch('/bookings/:id/reschedule', authMiddleware, async (req: Authenticat
     const rows = await query<Booking>(
       `UPDATE bookings 
        SET starts_at = $1, ends_at = $2 
-       WHERE id = $3 
+       WHERE id = $3 AND (($4 = 'client' AND client_email = $5) OR ($4 = 'provider' AND provider_id = $6))
        RETURNING id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes`,
-      [startsAt, endsAt, bookingId]
+      [startsAt, endsAt, bookingId, user.role, user.email, user.providerId || null]
     );
 
     const updated = {
