@@ -379,8 +379,18 @@ router.put('/provider/settings', authMiddleware, async (req: AuthenticatedReques
       }
     });
   } catch (error) {
+    const dbError = error as { code?: string; constraint?: string };
+    if (dbError.code === '23505') {
+      if (dbError.constraint === 'users_email_key') {
+        return res.status(409).json({ error: "Este e-mail já está sendo utilizado por outro usuário." });
+      }
+      if (dbError.constraint === 'tenants_slug_key') {
+        return res.status(409).json({ error: "Esta URL/Slug já está em uso por outro estabelecimento." });
+      }
+      return res.status(409).json({ error: "Já existe um registro com um dos dados informados." });
+    }
     console.error("Error updating provider settings:", error);
-    res.status(500).json({ error: "Erro interno ao atualizar configurações." });
+    return res.status(500).json({ error: "Erro interno ao atualizar configurações." });
   }
 });
 
@@ -586,7 +596,7 @@ router.put('/availability-rules', authMiddleware, async (req: AuthenticatedReque
     const rulesToInsert: AvailabilityRule[] = [];
     for (let i = 0; i < rules.length; i++) {
       const r = rules[i];
-      const newId = `rule-${targetProviderId}-${Date.now()}-${i}`;
+      const newId = `rule-${randomUUID()}`;
       const rows = await client.query(
         `INSERT INTO availability_rules (id, provider_id, day_of_week, start_time, end_time) 
          VALUES ($1, $2, $3, $4, $5) 
