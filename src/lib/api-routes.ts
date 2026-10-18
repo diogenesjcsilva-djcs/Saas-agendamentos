@@ -902,12 +902,12 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
     const dayStart = new Date(Date.UTC(startObj.getUTCFullYear(), startObj.getUTCMonth(), startObj.getUTCDate()));
     const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 
-    // Serialize booking creation for this provider/day. Row locks alone do not
-    // protect an empty result set, so simultaneous first bookings could both pass.
-    // This transaction-scoped advisory lock is acquired even when no booking exists.
+    // Serialize booking mutations per provider. A provider-wide transaction lock
+    // also coordinates bookings on adjacent days when a duration/buffer crosses midnight.
+    // Row locks alone do not protect an empty result set.
     await client.query(
-      `SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`,
-      [String(providerId), dateStr]
+      `SELECT pg_advisory_xact_lock(hashtext($1), 0)`,
+      [String(providerId)]
     );
 
     // 2. Fetch existing active bookings on the same day for this provider
@@ -916,7 +916,8 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
        FROM bookings b 
        LEFT JOIN services s ON b.service_id = s.id 
        WHERE b.provider_id = $1 AND b.status != 'cancelled'
-         AND b.starts_at >= $2::timestamptz AND b.starts_at < $3::timestamptz
+         AND b.starts_at >= $2::timestamptz - INTERVAL '1 day'
+         AND b.starts_at < $3::timestamptz + INTERVAL '1 day'
        FOR UPDATE OF b`,
       [providerId, dayStart.toISOString(), dayEnd.toISOString()]
     );
@@ -1332,11 +1333,11 @@ router.patch('/bookings/:id/reschedule', authMiddleware, async (req: Authenticat
     const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
     const dateKey = dayStart.toISOString().slice(0, 10);
 
-    // The advisory lock serializes both booking creation and rescheduling for
-    // this provider/day. The lock is transaction-scoped and works for empty days.
+    // Use the same provider-wide transaction lock as booking creation. This avoids
+    // races with adjacent-day buffers and also serializes empty-result checks.
     await client.query(
-      `SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`,
-      [String(booking.providerId), dateKey]
+      `SELECT pg_advisory_xact_lock(hashtext($1), 0)`,
+      [String(booking.providerId)]
     );
 
     // Include adjacent UTC days so appointments near midnight and buffers are checked.
