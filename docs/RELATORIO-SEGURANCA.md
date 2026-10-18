@@ -262,3 +262,13 @@ A rota agora limita a lista a 50 regras, valida dia da semana entre 0 e 6, exige
 **Correção aplicada:** erros PostgreSQL `23505` são tratados como conflito HTTP 409. As constraints `tenants_slug_key` e `users_email_key` recebem mensagens específicas; outros conflitos únicos recebem uma mensagem genérica sem expor detalhes internos do banco. A transação existente continua fazendo rollback e liberando a conexão antes de o erro chegar ao tratamento externo.
 
 **Limitação/validação:** confirmei estaticamente o caminho de tratamento e os nomes das constraints na definição da migração (`tenants.slug UNIQUE` e `users.email UNIQUE`). Não executei cadastro concorrente nem teste de integração PostgreSQL; o comportamento em runtime permanece pendente.
+
+
+## 33. Atualização de perfil sob concorrência e IDs de regras de agenda
+
+**Arquivo:** `src/lib/api-routes.ts`.
+
+- **Perfil do profissional:** a checagem prévia de e-mail/slug não eliminava colisões simultâneas. O tratamento externo agora converte violações PostgreSQL de unicidade em HTTP 409, com mensagens específicas para `users_email_key` e `tenants_slug_key`, sem expor detalhes internos. A transação faz rollback e libera a conexão antes de chegar a esse tratamento.
+- **Regras de disponibilidade:** os IDs eram formados com `Date.now()` e índice local; duas requisições concorrentes para o mesmo profissional poderiam gerar IDs iguais no mesmo milissegundo. Os novos IDs usam `randomUUID()`, reduzindo esse risco de colisão.
+
+**Limitação/validação:** alterações verificadas por leitura estática. Não foram executados testes de concorrência nem integração com PostgreSQL; permanecem necessários testes para confirmar a resposta 409 e o rollback em runtime.
