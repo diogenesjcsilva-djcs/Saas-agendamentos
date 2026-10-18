@@ -2,6 +2,12 @@
 import { pool } from '../lib/db.js';
 
 async function sanitizeDatabase() {
+  // This script performs destructive deletes and overwrites demo tenant/service data.
+  // Require an explicit operator acknowledgement before opening a database connection.
+  if (process.env.CONFIRM_SANITIZE_DATABASE !== 'true') {
+    throw new Error('Refusing to sanitize database without explicit confirmation. Set CONFIRM_SANITIZE_DATABASE=true only after verifying DATABASE_URL and taking a backup.');
+  }
+
   console.log('==============================================');
   console.log('   INICIANDO SANITIZACAO DO BANCO DE DADOS    ');
   console.log('==============================================\n');
