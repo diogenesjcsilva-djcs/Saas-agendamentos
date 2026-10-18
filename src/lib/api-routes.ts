@@ -1173,7 +1173,9 @@ router.post('/auth/register', authRateLimiter, async (req, res) => {
     return res.status(400).json({ error: "E-mail, senha e nome são obrigatórios." });
   }
   if (!isValidEmail(email)) return res.status(400).json({ error: "Formato de e-mail inválido." });
-  if (typeof password !== 'string' || password.length < 12) return res.status(400).json({ error: "A senha deve ter no mínimo 12 caracteres." });
+  if (typeof password !== 'string' || password.length < 12 || password.length > 128) {
+    return res.status(400).json({ error: "A senha deve ter entre 12 e 128 caracteres." });
+  }
   if (typeof name !== 'string' || !name.trim() || name.length > 120) return res.status(400).json({ error: "Nome inválido." });
 
   try {
@@ -1184,8 +1186,9 @@ router.post('/auth/register', authRateLimiter, async (req, res) => {
       return res.status(409).json({ error: "Este e-mail já está cadastrado." });
     }
 
-    const id = "user-" + Date.now();
-    const passwordHash = await bcrypt.hash(password, 10);
+    // Random UUID avoids predictable IDs and timestamp collisions during concurrent signups.
+    const id = "user-" + randomUUID();
+    const passwordHash = await bcrypt.hash(password, 12);
     // Public self-registration creates clients only. Provider accounts must be
     // created through tenant onboarding, which binds tenant/provider IDs server-side.
     const userRole = 'client';
@@ -1207,6 +1210,10 @@ router.post('/auth/register', authRateLimiter, async (req, res) => {
       user: { id, email: normalizedEmail, name: name.trim(), role: userRole, tenantId: userTenantId, providerId }
     });
   } catch (error) {
+    const dbError = error as { code?: string; constraint?: string };
+    if (dbError.code === '23505' && dbError.constraint === 'users_email_key') {
+      return res.status(409).json({ error: "Este e-mail já está cadastrado." });
+    }
     console.error("Register error:", error);
     res.status(500).json({ error: "Erro interno no servidor." });
   }
@@ -1215,15 +1222,17 @@ router.post('/auth/register', authRateLimiter, async (req, res) => {
 // Auth: Login
 router.post('/auth/login', authRateLimiter, async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: "E-mail e senha são obrigatórios." });
+  if (typeof email !== 'string' || !isValidEmail(email) ||
+      typeof password !== 'string' || !password || password.length > 128) {
+    return res.status(400).json({ error: "E-mail e senha válidos são obrigatórios." });
   }
 
   try {
+    const normalizedEmail = email.toLowerCase().trim();
     const users = await query(
       `SELECT id, email, password_hash AS "passwordHash", name, role, tenant_id AS "tenantId", provider_id AS "providerId" 
        FROM users WHERE email = $1 LIMIT 1`,
-      [email.toLowerCase()]
+      [normalizedEmail]
     );
     if (users.length === 0) {
       return res.status(401).json({ error: "Credenciais inválidas." });
