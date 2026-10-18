@@ -328,3 +328,32 @@ A rota agora limita a lista a 50 regras, valida dia da semana entre 0 e 6, exige
 - Exceções de dia inteiro armazenam os horários como nulos.
 
 **Limitação/validação:** a validação e a transação foram inspecionadas estaticamente. Não foram executados testes HTTP, concorrência nem integração PostgreSQL. Requisições simultâneas para o mesmo profissional/data ainda devem ser testadas para avaliar a consistência da substituição.
+
+
+## 38. Política de senha no perfil e exposição de erros
+
+**Arquivo:** `src/lib/api-routes.ts`.
+
+**Achados:**
+- A alteração de senha no perfil utilizava custo bcrypt 10, enquanto os fluxos de cadastro utilizam custo 12.
+- A validação da nova senha não tinha limite superior, apesar de o login e o cadastro aceitarem no máximo 128 caracteres.
+- O endpoint público `GET /tenants` devolvia a mensagem original da exceção do servidor no campo `details`, podendo revelar detalhes internos de banco/configuração.
+
+**Correções aplicadas:**
+- Hash da senha no perfil agora usa bcrypt com custo 12.
+- A senha nova precisa ter entre 12 e 128 caracteres.
+- A resposta pública de erro em `GET /tenants` agora é genérica; detalhes continuam fora da resposta HTTP.
+
+**Validação pendente:** alterações revisadas estaticamente. Não executei testes de integração, nem medi o impacto de desempenho do custo bcrypt.
+
+## 39. Limitação de rate limiting em múltiplas instâncias
+
+**Arquivo:** `src/lib/rate-limiter.ts`.
+
+**Achado:** o limitador mantém contadores em um `Map` local ao processo Node. Isso ajuda a limitar abuso em uma única instância, mas cada instância/serverless replica seu próprio contador. Assim, uma pessoa pode distribuir requisições entre instâncias e exceder o limite efetivo. Reinícios também zeram os contadores.
+
+**Situação:** a limitação foi confirmada por inspeção do código, mas **não foi implementado um armazenamento compartilhado nesta etapa**. O repositório não apresenta, nos arquivos inspecionados, uma integração Redis ou serviço de rate limiting compartilhado pronta para uso. Introduzir um armazenamento novo sem confirmar infraestrutura, credenciais, política de falha e migração operacional poderia quebrar autenticação ou cadastro.
+
+**Recomendação operacional:** antes de produção multi-instância, configurar um limitador compartilhado no gateway/plataforma ou adotar backend distribuído com operação atômica e política de indisponibilidade definida. Manter `trust proxy` restrito aos proxies confiáveis; não confiar diretamente em `X-Forwarded-For` enviado pelo cliente.
+
+**Validação pendente:** não foram executados testes de carga distribuída. O rate limiter atual deve ser considerado defesa local, não proteção global contra abuso.
