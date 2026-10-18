@@ -189,3 +189,8 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 - O seed desses usuários agora fica desativado por padrão. Só é executado com `SEED_DEMO_USERS=true` e `SEED_DEMO_PASSWORD` configurada com 12–128 caracteres; o hash usa custo bcrypt 12.
 - O conflito por ID agora usa `ON CONFLICT (id) DO NOTHING`, impedindo que uma migração redefina a senha de uma conta já existente.
 - **Atenção:** se o seed de demonstração for ativado, use uma senha temporária forte e exclusiva em ambiente não produtivo. Não habilite essas contas em produção.
+
+### 23. Estado da verificação Vercel após as últimas alterações
+- Na consulta ao commit `acbc84d9124f2fb75be8bbf95c4ce6463d3293c7`, o status reportado pelo GitHub para `Vercel` era `failure`; não foram retornados GitHub Actions workflow runs para esse commit.
+- O status disponível não contém a causa detalhada da falha. Portanto, não atribuir a falha a TypeScript, build, variáveis de ambiente ou deploy sem consultar os logs do deployment no Vercel.
+- A PR continua aberta como Draft e não foi mesclada. O status de falha precisa ser investigado antes de qualquer merge.
