@@ -857,6 +857,19 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
   if (!providerId || !serviceId || !startsAt || !clientName || !clientEmail || !clientPhone) {
     return res.status(400).json({ error: "Preencha todos os campos obrigatórios." });
   }
+  if (typeof startsAt !== 'string' || Number.isNaN(Date.parse(startsAt))) {
+    return res.status(400).json({ error: "Data/hora do agendamento inválida." });
+  }
+  if (typeof clientName !== 'string' || !clientName.trim() || clientName.length > 120) {
+    return res.status(400).json({ error: "Nome do cliente inválido." });
+  }
+  if (!isValidEmail(clientEmail)) return res.status(400).json({ error: "E-mail do cliente inválido." });
+  if (typeof clientPhone !== 'string' || !clientPhone.trim() || clientPhone.length > 40) {
+    return res.status(400).json({ error: "Telefone do cliente inválido." });
+  }
+  if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 2000)) {
+    return res.status(400).json({ error: "Observações inválidas." });
+  }
 
   const client = await pool.connect();
   try {
@@ -873,6 +886,11 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
       return res.status(404).json({ error: "Serviço não encontrado." });
     }
     const service = serviceRes.rows[0];
+    // The requested provider must be the actual owner of the selected service.
+    if (service.providerId !== providerId) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: "O serviço não pertence ao profissional informado." });
+    }
 
     // Calculate endsAt
     const startObj = new Date(startsAt);
@@ -943,9 +961,9 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
         serviceId,
         startsAt,
         endsAt,
-        clientName,
-        clientEmail,
-        clientPhone,
+        clientName.trim(),
+        clientEmail.toLowerCase().trim(),
+        clientPhone.trim(),
         'confirmed',
         notes || null
       ]
@@ -1005,9 +1023,10 @@ router.patch('/bookings/:id', authMiddleware, async (req: AuthenticatedRequest, 
     }
 
     const rows = await query<Booking>(
-      `UPDATE bookings SET status = $1 WHERE id = $2 
+      `UPDATE bookings SET status = $1 
+       WHERE id = $2 AND (($3 = 'client' AND client_email = $4 AND $1 = 'cancelled') OR ($3 = 'provider' AND provider_id = $5))
        RETURNING id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes`,
-      [status, req.params.id]
+      [status, req.params.id, user.role, user.email, user.providerId || null]
     );
     if (rows.length === 0) {
       return res.status(404).json({ error: "Booking not found" });
