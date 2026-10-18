@@ -123,3 +123,24 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 4. Testar o fluxo de onboarding de profissional e o cancelamento de agendamento.
 5. Revisar isolamento multi-tenant completo.
 6. Revisar e aprovar o pull request antes de mesclar.
+
+
+## Correções adicionais — criação e atualização de agendamentos
+
+### 12. Integridade entre serviço e profissional
+- A criação pública de agendamento agora verifica que o `providerId` informado corresponde ao `providerId` proprietário do serviço selecionado.
+- Sem essa verificação, era possível combinar um serviço de um profissional com o identificador de outro profissional, afetando a integridade do agendamento e as verificações de conflito.
+
+### 13. Validação dos dados do agendamento
+- A rota de criação rejeita datas inválidas, nomes vazios ou excessivamente longos, e-mails inválidos, telefones inválidos/longos e observações acima do limite.
+- O e-mail do cliente é normalizado antes de gravar, alinhando o valor usado nas consultas de propriedade do cliente.
+- A rota de reagendamento retorna 404 se a atualização SQL não retornar uma linha, em vez de tentar serializar um resultado inexistente.
+
+### 14. Autorização no SQL para mudança de status
+- A instrução SQL de `PATCH /bookings/:id` repete a regra de propriedade: cliente só cancela agendamento com o próprio e-mail; profissional só altera agendamento associado ao seu `providerId`.
+- Isso reduz a janela de condição de corrida entre a leitura do agendamento e a atualização.
+
+## Validação da branch após esta rodada
+- Verificação estática de trechos críticos realizada por leitura do conteúdo da branch.
+- O status de CI consultado apresenta uma verificação Vercel pendente; isso não equivale a build aprovado.
+- Nenhum teste automatizado, teste com banco real ou execução local de lint/build foi realizado nesta rodada.
