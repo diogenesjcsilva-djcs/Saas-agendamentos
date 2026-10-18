@@ -455,6 +455,23 @@ router.put('/services/:id', authMiddleware, async (req: AuthenticatedRequest, re
       return res.status(404).json({ error: "Service not found" });
     }
     const current = serviceRows[0];
+    const nextName = name === undefined ? current.name : name;
+    const nextDescription = description === undefined ? current.description : description;
+    const nextDuration = durationMinutes === undefined ? Number(current.durationMinutes) : Number(durationMinutes);
+    const nextBuffer = bufferMinutes === undefined ? Number(current.bufferMinutes) : Number(bufferMinutes);
+    const nextPrice = price === undefined ? Number(current.price) : Number(price);
+
+    if (typeof nextName !== 'string' || !nextName.trim() || nextName.length > 120) {
+      return res.status(400).json({ error: "Nome do serviço inválido." });
+    }
+    if (typeof nextDescription !== 'string' || nextDescription.length > 2000) {
+      return res.status(400).json({ error: "Descrição do serviço inválida." });
+    }
+    if (!Number.isFinite(nextDuration) || nextDuration < 1 || nextDuration > 1440 ||
+        !Number.isFinite(nextBuffer) || nextBuffer < 0 || nextBuffer > 1440 ||
+        !Number.isFinite(nextPrice) || nextPrice < 0) {
+      return res.status(400).json({ error: "Duração, intervalo ou preço inválido." });
+    }
 
     const rows = await query<Service>(
       `UPDATE services 
@@ -462,11 +479,11 @@ router.put('/services/:id', authMiddleware, async (req: AuthenticatedRequest, re
        WHERE id = $6 AND provider_id = $7
        RETURNING id, provider_id AS "providerId", name, description, duration_minutes AS "durationMinutes", buffer_minutes AS "bufferMinutes", price`,
       [
-        name || current.name,
-        description !== undefined ? description : current.description,
-        durationMinutes !== undefined ? Number(durationMinutes) : current.durationMinutes,
-        bufferMinutes !== undefined ? Number(bufferMinutes) : current.bufferMinutes,
-        price !== undefined ? Number(price) : Number(current.price),
+        nextName.trim(),
+        nextDescription,
+        nextDuration,
+        nextBuffer,
+        nextPrice,
         req.params.id,
         user.providerId
       ]
