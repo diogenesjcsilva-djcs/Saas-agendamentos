@@ -1363,6 +1363,34 @@ router.patch('/bookings/:id/reschedule', authMiddleware, async (req: Authenticat
     await client.query('BEGIN');
     transactionOpen = true;
 
+    // Read without locking first so every scheduling operation acquires locks
+    // in the same order: provider advisory lock, then booking row lock. This
+    // avoids a deadlock with booking creation, which takes the provider lock first.
+    const initialBookingResult = await client.query(
+      `SELECT id, provider_id AS "providerId", client_email AS "clientEmail"
+       FROM bookings WHERE id = $1`,
+      [bookingId]
+    );
+    if (initialBookingResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      transactionOpen = false;
+      return res.status(404).json({ error: "Agendamento não encontrado." });
+    }
+    const initialBooking = initialBookingResult.rows[0];
+    const initiallyAuthorized =
+      (user.role === 'client' && user.email === initialBooking.clientEmail) ||
+      (user.role === 'provider' && !!user.providerId && user.providerId === initialBooking.providerId);
+    if (!initiallyAuthorized) {
+      await client.query('ROLLBACK');
+      transactionOpen = false;
+      return res.status(403).json({ error: "Você não tem permissão para alterar este agendamento." });
+    }
+
+    await client.query(
+      `SELECT pg_advisory_xact_lock(hashtext($1), 0)`,
+      [String(initialBooking.providerId)]
+    );
+
     const bookingResult = await client.query(
       `SELECT id, provider_id AS "providerId", service_id AS "serviceId",
               client_email AS "clientEmail", status
@@ -1375,6 +1403,11 @@ router.patch('/bookings/:id/reschedule', authMiddleware, async (req: Authenticat
       return res.status(404).json({ error: "Agendamento não encontrado." });
     }
     const booking = bookingResult.rows[0];
+    if (booking.providerId !== initialBooking.providerId) {
+      await client.query('ROLLBACK');
+      transactionOpen = false;
+      return res.status(409).json({ error: "O profissional do agendamento mudou; atualize e tente novamente." });
+    }
 
     if (user.role === 'client') {
       if (user.email !== booking.clientEmail) {
