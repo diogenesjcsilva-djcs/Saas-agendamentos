@@ -164,3 +164,7 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 - A verificação considera reservas em dias UTC adjacentes para não ignorar conflitos de buffer próximos à meia-noite e impede reagendar estados concluídos/cancelados.
 - O `UPDATE` confirma o estado anterior e a propriedade no SQL; alterações concorrentes retornam HTTP 409.
 - Ainda é necessário executar testes de concorrência com PostgreSQL e validar as regras de fuso horário usadas pela interface; o bloqueio por dia pressupõe que os horários são interpretados em UTC.
+
+### 18. Limites de duração e intervalo dos serviços
+- A criação e o reagendamento rejeitam duração não positiva, duração superior a 24 horas, buffer negativo ou buffer superior a 24 horas.
+- Esses limites tornam a validação de conflitos previsível e evitam que valores inesperados no banco ampliem indefinidamente o intervalo a verificar. Ainda é necessário confirmar que os limites correspondem às regras comerciais do produto.
