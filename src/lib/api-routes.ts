@@ -1323,6 +1323,7 @@ router.patch('/bookings/:id/reschedule', authMiddleware, async (req: Authenticat
       [startsAt, endsAt, bookingId, user.role, user.email, user.providerId || null]
     );
 
+    if (rows.length === 0) return res.status(404).json({ error: "Agendamento não encontrado ou sem autorização." });
     const updated = {
       ...rows[0],
       startsAt: toISOString(rows[0].startsAt),
