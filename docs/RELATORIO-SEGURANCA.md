@@ -80,6 +80,8 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 - `PATCH /bookings/:id` aceita apenas `pending`, `confirmed`, `completed` e `cancelled`.
 - Papéis que não sejam `client` ou `provider` são explicitamente negados.
 - Cliente só pode cancelar o próprio agendamento; profissional só pode alterar agendamento do próprio `providerId`.
+- A rodada seguinte definiu transições explícitas: cliente pode cancelar apenas reservas `pending`/`confirmed`; profissional pode mover `pending` para `confirmed`/`cancelled` e `confirmed` para `completed`/`cancelled`. Estados terminais (`completed`/`cancelled`) não podem ser reabertos.
+- O `UPDATE` repete a condição do estado anterior no SQL; se outra requisição mudar o estado entre leitura e gravação, a atualização falha com HTTP 409 em vez de sobrescrever a alteração.
 
 ### 10. Reagendamento e grade de disponibilidade — endurecidos
 - Reagendamento valida que `startsAt` seja uma data interpretável, nega papéis desconhecidos e repete a autorização do proprietário na própria instrução SQL de atualização.
