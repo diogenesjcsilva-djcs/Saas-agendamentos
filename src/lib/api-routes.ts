@@ -896,7 +896,10 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
     const endObj = new Date(startObj.getTime() + service.durationMinutes * 60 * 1000);
     const endsAt = endObj.toISOString();
 
-    const dateStr = startsAt.substring(0, 10);
+    // Use the normalized UTC date consistently with rescheduling and timestamp checks.
+    const dateStr = startObj.toISOString().slice(0, 10);
+    const dayStart = new Date(Date.UTC(startObj.getUTCFullYear(), startObj.getUTCMonth(), startObj.getUTCDate()));
+    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 
     // Serialize booking creation for this provider/day. Row locks alone do not
     // protect an empty result set, so simultaneous first bookings could both pass.
@@ -911,9 +914,10 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
       `SELECT b.id, b.starts_at AS "startsAt", b.ends_at AS "endsAt", s.buffer_minutes AS "bufferMinutes" 
        FROM bookings b 
        LEFT JOIN services s ON b.service_id = s.id 
-       WHERE b.provider_id = $1 AND b.status != 'cancelled' AND b.starts_at::date = $2::date
+       WHERE b.provider_id = $1 AND b.status != 'cancelled'
+         AND b.starts_at >= $2::timestamptz AND b.starts_at < $3::timestamptz
        FOR UPDATE OF b`,
-      [providerId, dateStr]
+      [providerId, dayStart.toISOString(), dayEnd.toISOString()]
     );
     const existingBookings = existingRes.rows;
 
