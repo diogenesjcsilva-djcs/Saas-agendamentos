@@ -29,9 +29,11 @@ export const pool = new pg.Pool({
   // Require certificate validation to prevent accepting an impostor database server.
   // Neon uses publicly trusted TLS certificates; local PostgreSQL setups can configure
   // their own trusted CA rather than disabling verification in application code.
-  ssl: {
-    rejectUnauthorized: true
-  }
+  // Local/test PostgreSQL containers do not require TLS. Production keeps TLS
+  // certificate validation enabled unless an explicit non-production override is set.
+  ssl: process.env.DATABASE_SSL === 'false'
+    ? false
+    : { rejectUnauthorized: true }
 });
 
 export async function query<T = any>(text: string, params?: any[]): Promise<T[]> {
