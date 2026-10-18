@@ -146,23 +146,32 @@ async function sanitizeDatabase() {
       }
     }
 
-    // 9. Garantir usuarios e senhas dos administradores modelo
-    console.log('8. Assegurando credenciais de login para contas modelo...');
-    const hash = await bcrypt.hash('12345678', 10);
-    await client.query(`
-      INSERT INTO users (id, email, password_hash, name, role, tenant_id, provider_id)
-      VALUES 
-        ('user-1', 'carlos@imperial.com', $1, 'Carlos Barber', 'provider', 'tenant-1', 'provider-1'),
-        ('user-2', 'lucas@imperial.com', $1, 'Lucas Faccini', 'provider', 'tenant-1', 'provider-2'),
-        ('user-3', 'heloisa@aura.com', $1, 'Dra. Heloísa Barros', 'provider', 'tenant-2', 'provider-3')
-      ON CONFLICT (id) DO UPDATE SET
-        email = EXCLUDED.email,
-        password_hash = EXCLUDED.password_hash,
-        name = EXCLUDED.name,
-        role = EXCLUDED.role,
-        tenant_id = EXCLUDED.tenant_id,
-        provider_id = EXCLUDED.provider_id
-    `, [hash]);
+    // 9. Contas demonstrativas: opt-in explícito, senha fornecida pelo operador e sem redefinir contas existentes.
+    // A sanitização nunca deve restaurar uma senha pública/conhecida em contas reais.
+    if (process.env.SEED_DEMO_USERS === 'true') {
+      const seedPassword = process.env.SEED_DEMO_PASSWORD;
+      if (typeof seedPassword !== 'string' || seedPassword.length < 12 || seedPassword.length > 128) {
+        throw new Error('SEED_DEMO_PASSWORD must be configured with 12-128 characters when SEED_DEMO_USERS=true.');
+      }
+
+      console.log('Criando contas demonstrativas apenas por opt-in explícito...');
+      const hash = await bcrypt.hash(seedPassword, 12);
+      const demoUsers = [
+        ['user-1', 'carlos@imperial.com', 'Carlos Barber', 'tenant-1', 'provider-1'],
+        ['user-2', 'lucas@imperial.com', 'Lucas Faccini', 'tenant-1', 'provider-2'],
+        ['user-3', 'heloisa@aura.com', 'Dra. Heloísa Barros', 'tenant-2', 'provider-3']
+      ];
+      for (const [id, email, name, tenantId, providerId] of demoUsers) {
+        await client.query(
+          `INSERT INTO users (id, email, password_hash, name, role, tenant_id, provider_id)
+           VALUES ($1, $2, $3, $4, 'provider', $5, $6)
+           ON CONFLICT (id) DO NOTHING`,
+          [id, email, hash, name, tenantId, providerId]
+        );
+      }
+    } else {
+      console.log('Não foram criadas contas demonstrativas; defina SEED_DEMO_USERS=true e SEED_DEMO_PASSWORD para habilitar explicitamente.');
+    }
 
     // Limpar regras ou excecoes orfas
     await client.query('DELETE FROM availability_rules WHERE provider_id NOT IN (SELECT id FROM providers)');
