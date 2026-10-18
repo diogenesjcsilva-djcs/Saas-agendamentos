@@ -1064,7 +1064,7 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
     }
 
     // 3. Insert new booking
-    const newId = "booking-" + Date.now();
+    const newId = "booking-" + randomUUID();
     const insertRes = await client.query(
       `INSERT INTO bookings (id, provider_id, service_id, starts_at, ends_at, client_name, client_email, client_phone, status, notes) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
