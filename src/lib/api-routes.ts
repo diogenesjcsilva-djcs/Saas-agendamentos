@@ -70,6 +70,8 @@ router.get('/tenants/:slug', async (req, res) => {
 // 2.1 Create New Tenant
 router.post('/tenants', tenantRateLimiter, async (req, res) => {
   try {
+    // Fail before any database write if JWT issuance cannot be configured.
+    const secret = getJwtSecret();
     const { name, slug, description, logoUrl, themeColor, ownerName, email, password } = req.body;
 
     if (!name || !slug || !description || !themeColor || !ownerName || !email || !password) {
@@ -161,7 +163,6 @@ router.post('/tenants', tenantRateLimiter, async (req, res) => {
     }
 
     // 4. Gerar Token de Acesso JWT
-    const secret = getJwtSecret();
     const token = jwt.sign(
       { userId, email: email.toLowerCase().trim(), name: ownerName.trim(), role: 'provider', tenantId, providerId },
       secret,
@@ -196,13 +197,13 @@ router.get('/providers', async (req, res) => {
     let providers;
     if (tenantId) {
       providers = await query<Provider>(
-        `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, email, bio, avatar_url AS "avatarUrl" 
+        `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, bio, avatar_url AS "avatarUrl" 
          FROM providers WHERE tenant_id = $1`,
         [tenantId]
       );
     } else {
       providers = await query<Provider>(
-        `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, email, bio, avatar_url AS "avatarUrl" 
+        `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, bio, avatar_url AS "avatarUrl" 
          FROM providers`
       );
     }
@@ -443,7 +444,7 @@ router.put('/services/:id', authMiddleware, async (req: AuthenticatedRequest, re
     const rows = await query<Service>(
       `UPDATE services 
        SET name = $1, description = $2, duration_minutes = $3, buffer_minutes = $4, price = $5 
-       WHERE id = $6 
+       WHERE id = $6 AND provider_id = $7
        RETURNING id, provider_id AS "providerId", name, description, duration_minutes AS "durationMinutes", buffer_minutes AS "bufferMinutes", price`,
       [
         name || current.name,
@@ -451,9 +452,11 @@ router.put('/services/:id', authMiddleware, async (req: AuthenticatedRequest, re
         durationMinutes !== undefined ? Number(durationMinutes) : current.durationMinutes,
         bufferMinutes !== undefined ? Number(bufferMinutes) : current.bufferMinutes,
         price !== undefined ? Number(price) : Number(current.price),
-        req.params.id
+        req.params.id,
+        user.providerId
       ]
     );
+    if (rows.length === 0) return res.status(404).json({ error: "Service not found" });
     const updated = { ...rows[0], price: Number(rows[0].price) };
     res.json(updated);
   } catch (error) {
@@ -754,7 +757,7 @@ router.get('/slots', async (req, res) => {
 
     // 4. Fetch bookings on date, with the corresponding service buffer joined
     const bookings = await query<any>(
-      `SELECT b.id, b.starts_at AS "startsAt", b.ends_at AS "endsAt", b.client_name AS "clientName", s.buffer_minutes AS "bufferMinutes" 
+      `SELECT b.id, b.starts_at AS "startsAt", b.ends_at AS "endsAt", s.buffer_minutes AS "bufferMinutes" 
        FROM bookings b 
        LEFT JOIN services s ON b.service_id = s.id 
        WHERE b.provider_id = $1 AND b.status != 'cancelled' AND b.starts_at::date = $2::date`,
@@ -968,8 +971,9 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
 // 11. Update booking status
 router.patch('/bookings/:id', authMiddleware, async (req: AuthenticatedRequest, res) => {
   const { status } = req.body;
-  if (!status) {
-    return res.status(400).json({ error: "status is required" });
+  const allowedStatuses = new Set(['pending', 'confirmed', 'completed', 'cancelled']);
+  if (typeof status !== 'string' || !allowedStatuses.has(status)) {
+    return res.status(400).json({ error: "Status de agendamento inválido." });
   }
 
   const user = req.user;
@@ -993,9 +997,11 @@ router.patch('/bookings/:id', authMiddleware, async (req: AuthenticatedRequest, 
         return res.status(403).json({ error: "Não autorizado a alterar este agendamento." });
       }
     } else if (user.role === 'provider') {
-      if (user.providerId !== booking.providerId) {
+      if (!user.providerId || user.providerId !== booking.providerId) {
         return res.status(403).json({ error: "Não autorizado a alterar este agendamento." });
       }
+    } else {
+      return res.status(403).json({ error: "Papel sem permissão para alterar agendamentos." });
     }
 
     const rows = await query<Booking>(
@@ -1041,9 +1047,13 @@ router.post('/auth/register', authRateLimiter, async (req, res) => {
   if (!email || !password || !name) {
     return res.status(400).json({ error: "E-mail, senha e nome são obrigatórios." });
   }
+  if (!isValidEmail(email)) return res.status(400).json({ error: "Formato de e-mail inválido." });
+  if (typeof password !== 'string' || password.length < 12) return res.status(400).json({ error: "A senha deve ter no mínimo 12 caracteres." });
+  if (typeof name !== 'string' || !name.trim() || name.length > 120) return res.status(400).json({ error: "Nome inválido." });
 
   try {
-    const existing = await query(`SELECT id FROM users WHERE email = $1`, [email.toLowerCase()]);
+    const normalizedEmail = email.toLowerCase().trim();
+    const existing = await query(`SELECT id FROM users WHERE email = $1`, [normalizedEmail]);
     if (existing.length > 0) {
       return res.status(409).json({ error: "Este e-mail já está cadastrado." });
     }
@@ -1057,20 +1067,20 @@ router.post('/auth/register', authRateLimiter, async (req, res) => {
     const userTenantId: string | null = null;
     await query(
       `INSERT INTO users (id, email, password_hash, name, role, tenant_id, provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [id, email.toLowerCase(), passwordHash, name, userRole, userTenantId, providerId]
+      [id, normalizedEmail, passwordHash, name.trim(), userRole, userTenantId, providerId]
     );
 
     const secret = getJwtSecret();
     
     const token = jwt.sign(
-      { userId: id, email: email.toLowerCase(), name, role: userRole, tenantId: tenantId || null, providerId },
+      { userId: id, email: normalizedEmail, name: name.trim(), role: userRole, tenantId: userTenantId, providerId },
       secret,
       { expiresIn: '30d' }
     );
 
     res.status(201).json({
       token,
-      user: { id, email: email.toLowerCase(), name, role: userRole, tenantId: tenantId || null, providerId }
+      user: { id, email: normalizedEmail, name: name.trim(), role: userRole, tenantId: userTenantId, providerId }
     });
   } catch (error) {
     console.error("Register error:", error);
