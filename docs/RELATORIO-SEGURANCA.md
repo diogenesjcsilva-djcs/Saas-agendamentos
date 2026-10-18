@@ -372,3 +372,14 @@ A rota agora limita a lista a 50 regras, valida dia da semana entre 0 e 6, exige
 - Sem opt-in, a sanitização não cria nem redefine essas contas.
 
 **Validação pendente:** alteração revisada estaticamente. Não executei o script contra banco real nem testes TypeScript. Como esse script também exclui registros por padrões de e-mail/nome e atualiza dados-modelo, ele deve ser revisado cuidadosamente e executado apenas após backup e confirmação explícita do ambiente-alvo.
+
+
+## 41. Identificadores de agendamentos não previsíveis
+
+**Arquivo:** `src/lib/api-routes.ts`, rota `POST /bookings`.
+
+**Achado:** o identificador de um novo agendamento era formado apenas por `Date.now()`. Isso torna os IDs previsíveis e permite colisões quando requisições são processadas no mesmo milissegundo. As rotas autenticadas já verificam autorização, então previsibilidade não deve substituir a falha de autorização; ainda assim, IDs imprevisíveis reduzem enumeração e colisões acidentais.
+
+**Correção aplicada:** o identificador agora usa `randomUUID()`, consistente com os demais fluxos corrigidos.
+
+**Validação pendente:** inspeção estática do código alterado. Não executei teste de carga ou integração PostgreSQL para verificar criação simultânea de reservas.
