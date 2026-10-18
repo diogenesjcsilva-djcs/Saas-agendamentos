@@ -75,16 +75,20 @@ router.post('/tenants', tenantRateLimiter, async (req, res) => {
     const secret = getJwtSecret();
     const { name, slug, description, logoUrl, themeColor, ownerName, email, password } = req.body;
 
-    if (!name || !slug || !description || !themeColor || !ownerName || !email || !password) {
-      return res.status(400).json({ error: "Todos os campos obrigatórios devem ser preenchidos." });
+    if (typeof name !== 'string' || !name.trim() || name.length > 120 ||
+        typeof slug !== 'string' || !slug.trim() || slug.length > 160 ||
+        typeof description !== 'string' || !description.trim() || description.length > 2000 ||
+        typeof ownerName !== 'string' || !ownerName.trim() || ownerName.length > 120 ||
+        typeof themeColor !== 'string' || !['indigo', 'emerald', 'rose', 'amber'].includes(themeColor)) {
+      return res.status(400).json({ error: "Dados do estabelecimento inválidos ou incompletos." });
     }
 
     if (!isValidEmail(email)) {
       return res.status(400).json({ error: "Formato de e-mail inválido." });
     }
 
-    if (typeof password !== 'string' || password.length < 6) {
-      return res.status(400).json({ error: "A senha deve ter no mínimo 6 caracteres." });
+    if (typeof password !== 'string' || password.length < 12 || password.length > 128) {
+      return res.status(400).json({ error: "A senha deve ter entre 12 e 128 caracteres." });
     }
 
     // Sanitizar slug
@@ -123,9 +127,9 @@ router.post('/tenants', tenantRateLimiter, async (req, res) => {
       accentColor = "bg-amber-600 text-white";
     }
 
-    const tenantId = `tenant-${Date.now()}`;
-    const providerId = `provider-${Date.now()}`;
-    const userId = `user-${Date.now()}`;
+    const tenantId = `tenant-${randomUUID()}`;
+    const providerId = `provider-${randomUUID()}`;
+    const userId = `user-${randomUUID()}`;
     const passwordHash = await bcrypt.hash(password, 10);
 
     const client = await pool.connect();
