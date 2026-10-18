@@ -551,8 +551,19 @@ router.put('/availability-rules', authMiddleware, async (req: AuthenticatedReque
     return res.status(403).json({ error: "Você não tem permissão para alterar a grade de outro profissional." });
   }
 
-  if (!targetProviderId || !Array.isArray(rules)) {
-    return res.status(400).json({ error: "Payload inválido. providerId e lista de rules são obrigatórios." });
+  if (!targetProviderId || !Array.isArray(rules) || rules.length > 50) {
+    return res.status(400).json({ error: "Payload inválido. Informe providerId e até 50 regras." });
+  }
+
+  // Validate the entire schedule before deleting existing rules.
+  const timePattern = /^(?:[01]\\d|2[0-3]):[0-5]\\d$/;
+  for (const rule of rules) {
+    if (!rule || !Number.isInteger(rule.dayOfWeek) || rule.dayOfWeek < 0 || rule.dayOfWeek > 6 ||
+        typeof rule.startTime !== 'string' || !timePattern.test(rule.startTime) ||
+        typeof rule.endTime !== 'string' || !timePattern.test(rule.endTime) ||
+        rule.startTime >= rule.endTime) {
+      return res.status(400).json({ error: "Cada regra deve conter dia da semana válido e horário inicial anterior ao final." });
+    }
   }
 
   const client = await pool.connect();
