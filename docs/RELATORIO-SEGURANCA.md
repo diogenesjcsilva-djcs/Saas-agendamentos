@@ -285,3 +285,21 @@ A rota agora limita a lista a 50 regras, valida dia da semana entre 0 e 6, exige
 - **Hash de senha:** os fluxos de cadastro de cliente, cadastro de estabelecimento e alteração de senha passaram a usar custo bcrypt 12, em vez de 10.
 
 **Limitações/validação:** mudanças verificadas estaticamente no código. Não executei testes de autenticação, testes de carga para o custo bcrypt nem testes concorrentes com PostgreSQL. O limite de 128 caracteres evita entradas extremas, mas ainda é importante testar a latência do login no ambiente de produção e assegurar rate limiting compartilhado entre instâncias.
+
+
+## 35. Validação da identidade e vínculo multi-tenant a cada requisição autenticada
+
+**Arquivo:** `src/lib/auth-middleware.ts`.
+
+**Achado:** a assinatura JWT era verificada e os tipos das claims eram conferidos, mas o middleware confiava em `role`, `tenantId`, `providerId`, e-mail e nome contidos no token até sua expiração (30 dias). Se uma conta fosse removida, tivesse o papel alterado ou perdesse o vínculo com um profissional/tenant, tokens já emitidos poderiam continuar sendo aceitos com dados antigos.
+
+**Correção aplicada:**
+- O token validado identifica apenas o `userId` candidato; o middleware consulta a tabela `users` em cada requisição autenticada e obtém do banco o papel, e-mail, nome e vínculos atuais.
+- Contas inexistentes e papéis não suportados ou divergentes do token são rejeitados.
+- Para profissionais, exige registro correspondente em `providers` e consistência entre `users.tenant_id` e `providers.tenant_id`.
+- Os campos disponibilizados em `req.user` vêm do banco, não das claims de tenant/profissional enviadas no JWT.
+- Falhas de banco falham fechadas com HTTP 503, sem expor detalhes SQL; token ausente continua sendo 401 e token inválido/expirado é 403.
+
+**Impacto e trade-off:** cada requisição protegida passa a depender de uma consulta ao PostgreSQL. Isso permite refletir alterações e remoções de conta sem aguardar a expiração do JWT, mas aumenta latência/carga e faz com que indisponibilidade do banco impeça o acesso às rotas protegidas. Não foi adicionado cache, para evitar manter dados de autorização desatualizados.
+
+**Validação pendente:** alteração revisada estaticamente contra o esquema definido em `src/scripts/migrate.ts` (`users`, `providers`, `tenant_id` e `provider_id`). Não executei TypeScript/build, testes HTTP, nem testes com PostgreSQL. Antes de merge, validar cadastro e login de clientes/profissionais, sessão após alteração de papel/vínculo, usuário removido, tenant inconsistente e indisponibilidade do banco. Também confirmar que não existem outras formas válidas de conta `provider` sem tenant; o middleware rejeita essa condição deliberadamente.
