@@ -653,13 +653,13 @@ router.post('/exceptions', authMiddleware, async (req: AuthenticatedRequest, res
   }
 
   if (typeof targetProviderId !== 'string' || !targetProviderId.trim() ||
-      typeof date !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date) ||
+      typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
       Number.isNaN(Date.parse(`${date}T00:00:00.000Z`)) || new Date(`${date}T00:00:00.000Z`).toISOString().slice(0, 10) !== date ||
       typeof isBlocked !== 'boolean') {
     return res.status(400).json({ error: "Dados da exceção inválidos." });
   }
 
-  const timePattern = /^(?:[01]\\d|2[0-3]):[0-5]\\d$/;
+  const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
   if (!isBlocked && (
       typeof startTime !== 'string' || !timePattern.test(startTime) ||
       typeof endTime !== 'string' || !timePattern.test(endTime) ||
