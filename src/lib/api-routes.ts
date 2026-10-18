@@ -1052,6 +1052,7 @@ router.post('/auth/register', authRateLimiter, async (req, res) => {
   if (typeof name !== 'string' || !name.trim() || name.length > 120) return res.status(400).json({ error: "Nome inválido." });
 
   try {
+    const secret = getJwtSecret();
     const normalizedEmail = email.toLowerCase().trim();
     const existing = await query(`SELECT id FROM users WHERE email = $1`, [normalizedEmail]);
     if (existing.length > 0) {
@@ -1070,8 +1071,6 @@ router.post('/auth/register', authRateLimiter, async (req, res) => {
       [id, normalizedEmail, passwordHash, name.trim(), userRole, userTenantId, providerId]
     );
 
-    const secret = getJwtSecret();
-    
     const token = jwt.sign(
       { userId: id, email: normalizedEmail, name: name.trim(), role: userRole, tenantId: userTenantId, providerId },
       secret,
