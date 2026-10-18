@@ -550,22 +550,19 @@ router.put('/availability-rules', authMiddleware, async (req: AuthenticatedReque
 });
 
 // 7. Get Availability Exceptions
-router.get('/exceptions', async (req, res) => {
-  const { providerId } = req.query;
+router.get('/exceptions', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  const user = req.user;
+  if (!user || user.role !== 'provider' || !user.providerId) {
+    return res.status(403).json({ error: "Apenas o profissional autenticado pode consultar suas exceções de agenda." });
+  }
+
   try {
-    let exceptions;
-    if (providerId) {
-      exceptions = await query<AvailabilityException>(
-        `SELECT id, provider_id AS "providerId", date, is_blocked AS "isBlocked", start_time AS "startTime", end_time AS "endTime" 
-         FROM availability_exceptions WHERE provider_id = $1`,
-        [providerId]
-      );
-    } else {
-      exceptions = await query<AvailabilityException>(
-        `SELECT id, provider_id AS "providerId", date, is_blocked AS "isBlocked", start_time AS "startTime", end_time AS "endTime" 
-         FROM availability_exceptions`
-      );
-    }
+    // Never allow a caller-supplied providerId to expand the scope of this query.
+    const exceptions = await query<AvailabilityException>(
+      `SELECT id, provider_id AS "providerId", date, is_blocked AS "isBlocked", start_time AS "startTime", end_time AS "endTime"
+       FROM availability_exceptions WHERE provider_id = $1`,
+      [user.providerId]
+    );
     res.json(exceptions);
   } catch (error) {
     console.error("Error fetching exceptions:", error);
@@ -757,9 +754,9 @@ router.get('/slots', async (req, res) => {
 
     // 4. Fetch bookings on date, with the corresponding service buffer joined
     const bookings = await query<any>(
-      `SELECT b.id, b.starts_at AS "startsAt", b.ends_at AS "endsAt", s.buffer_minutes AS "bufferMinutes" 
-       FROM bookings b 
-       LEFT JOIN services s ON b.service_id = s.id 
+      `SELECT b.id, b.starts_at AS "startsAt", b.ends_at AS "endsAt", s.buffer_minutes AS "bufferMinutes"
+       FROM bookings b
+       LEFT JOIN services s ON b.service_id = s.id
        WHERE b.provider_id = $1 AND b.status != 'cancelled' AND b.starts_at::date = $2::date`,
       [provider.id, date]
     );
@@ -792,8 +789,7 @@ router.get('/slots', async (req, res) => {
         start: bStartMin,
         end: bEndMin + bBuffer,
         realEnd: bEndMin,
-        bookingId: b.id,
-        client: b.clientName
+        bookingId: b.id
       };
     });
 
@@ -819,13 +815,13 @@ router.get('/slots', async (req, res) => {
 
           if (startMin >= block.start && startMin < block.end) {
             isAvailable = false;
-            conflictReason = `Período de intervalo (buffer) do agendamento de ${block.client}`;
+            conflictReason = "Período de intervalo do agendamento anterior";
             break;
           }
 
           if (endMin > block.start - service.bufferMinutes && startMin < block.start) {
             isAvailable = false;
-            conflictReason = `Intervalo de segurança necessário antes do agendamento de ${block.client}`;
+            conflictReason = "Intervalo de segurança necessário antes do próximo agendamento";
             break;
           }
         }
