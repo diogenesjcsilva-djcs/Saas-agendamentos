@@ -168,3 +168,12 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 ### 18. Limites de duração e intervalo dos serviços
 - A criação e o reagendamento rejeitam duração não positiva, duração superior a 24 horas, buffer negativo ou buffer superior a 24 horas.
 - Esses limites tornam a validação de conflitos previsível e evitam que valores inesperados no banco ampliem indefinidamente o intervalo a verificar. Ainda é necessário confirmar que os limites correspondem às regras comerciais do produto.
+
+### 19. Isolamento de catálogo por profissional e estabelecimento
+- A consulta pública de serviços agora aplica simultaneamente os filtros `providerId` e `tenantId` quando ambos são informados. Antes, o ramo de `providerId` ignorava `tenantId`, podendo retornar serviços de um profissional fora do estabelecimento solicitado.
+- Os filtros são validados como strings não vazias e a consulta faz o vínculo explícito entre serviços e profissionais.
+- A criação e edição de serviços validam nome, descrição, duração, buffer e preço; não aceitam duração fora de 1–1440 minutos, buffer fora de 0–1440 minutos ou preço negativo. O uso de fallback numérico que transformava valores inválidos em zero foi removido.
+### 20. Cadastro de estabelecimento
+- O cadastro valida tipos e limites dos campos de nome, descrição e slug, limita a paleta de tema a valores conhecidos e exige senha de 12 a 128 caracteres.
+- IDs de tenant, profissional e usuário passaram a usar UUID aleatório em vez de `Date.now()`, reduzindo colisões em cadastros concorrentes.
+- Ainda é necessário testar restrições únicas no banco para slug/e-mail sob concorrência; a checagem prévia na aplicação não substitui uma constraint única.
