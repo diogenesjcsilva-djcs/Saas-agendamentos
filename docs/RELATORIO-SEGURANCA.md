@@ -221,3 +221,15 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 - A consulta agora valida o formato `YYYY-MM-DD`, constrói limites explícitos UTC e busca reservas em uma janela ampliada; o cálculo de conflito usa timestamps completos em milissegundos, incluindo duração e buffers, em vez de comparar apenas o relógio.
 - Os horários devolvidos são normalizados como ISO UTC.
 - **Atenção:** é necessário validar com testes de integração se o fuso horário de negócio esperado pela interface é UTC ou local do profissional. A mudança elimina comparação apenas por hora, mas não substitui uma política de fuso horário definida e testada ponta a ponta.
+
+## 29. Validação de data na consulta de horários
+
+**Arquivo:** `src/lib/api-routes.ts`, rota `GET /slots`.
+
+**Achado:** a expressão regular que validava `YYYY-MM-DD` estava duplamente escapada no código-fonte, impedindo a validação normal de datas; além disso, a validação acontecia depois de consultas ao banco e a determinação do dia da semana dependia do fuso horário local do processo.
+
+**Correção aplicada:** a rota agora valida `serviceId` e o formato/validade real da data antes de consultar o banco, ancora o dia em UTC e usa `getUTCDay()` para selecionar o dia da semana de forma determinística. A comparação round-trip rejeita datas inexistentes, como `2026-02-30`.
+
+**Limitação:** isso torna o cálculo consistente em UTC, mas não define o fuso horário comercial de cada profissional. A disponibilidade ponta a ponta ainda precisa ser testada com o fuso horário esperado pelo produto e com agendamentos próximos à meia-noite.
+
+**Validação executada nesta etapa:** inspeção estática do trecho atualizado e confirmação de que não há status checks nem execuções de GitHub Actions reportadas para o commit consultado. Lint, build e testes com PostgreSQL continuam pendentes; ausência de checks não significa aprovação.
