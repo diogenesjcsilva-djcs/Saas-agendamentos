@@ -367,34 +367,29 @@ router.put('/provider/settings', authMiddleware, async (req: AuthenticatedReques
   }
 });
 
-// 4. Get Services (optionally filtered by providerId or tenantId)
+// 4. Get Services (optionally filtered by providerId and/or tenantId)
 router.get('/services', async (req, res) => {
-  const { providerId, tenantId } = req.query;
+  const providerId = req.query.providerId;
+  const tenantId = req.query.tenantId;
+  if ((providerId !== undefined && (typeof providerId !== 'string' || !providerId.trim())) ||
+      (tenantId !== undefined && (typeof tenantId !== 'string' || !tenantId.trim()))) {
+    return res.status(400).json({ error: "Filtros de profissional ou estabelecimento inválidos." });
+  }
+
   try {
-    let services;
-    if (providerId) {
-      services = await query<Service>(
-        `SELECT id, provider_id AS "providerId", name, description, duration_minutes AS "durationMinutes", buffer_minutes AS "bufferMinutes", price 
-         FROM services WHERE provider_id = $1`,
-        [providerId]
-      );
-    } else if (tenantId) {
-      services = await query<Service>(
-        `SELECT s.id, s.provider_id AS "providerId", s.name, s.description, s.duration_minutes AS "durationMinutes", s.buffer_minutes AS "bufferMinutes", s.price 
-         FROM services s
-         INNER JOIN providers p ON s.provider_id = p.id
-         WHERE p.tenant_id = $1`,
-        [tenantId]
-      );
-    } else {
-      services = await query<Service>(
-        `SELECT id, provider_id AS "providerId", name, description, duration_minutes AS "durationMinutes", buffer_minutes AS "bufferMinutes", price 
-         FROM services`
-      );
-    }
-    // Convert price from string (Postgres numeric) to number
-    const mapped = services.map(s => ({ ...s, price: Number(s.price) }));
-    res.json(mapped);
+    // Apply both filters together when supplied. A providerId from one tenant
+    // must not bypass a simultaneous tenantId constraint.
+    const services = await query<Service>(
+      `SELECT s.id, s.provider_id AS "providerId", s.name, s.description,
+              s.duration_minutes AS "durationMinutes", s.buffer_minutes AS "bufferMinutes", s.price
+       FROM services s
+       INNER JOIN providers p ON s.provider_id = p.id
+       WHERE ($1::text IS NULL OR s.provider_id = $1)
+         AND ($2::text IS NULL OR p.tenant_id = $2)
+       ORDER BY s.name ASC`,
+      [providerId || null, tenantId || null]
+    );
+    res.json(services.map(s => ({ ...s, price: Number(s.price) })));
   } catch (error) {
     console.error("Error fetching services:", error);
     res.status(500).json({ error: "Internal server error" });
