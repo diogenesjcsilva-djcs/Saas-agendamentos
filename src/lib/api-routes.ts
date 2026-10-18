@@ -518,24 +518,22 @@ router.delete('/services/:id', authMiddleware, async (req: AuthenticatedRequest,
 // 6. Get Availability Rules
 router.get('/availability-rules', async (req, res) => {
   const { providerId } = req.query;
+  // Public booking pages may read one provider's schedule, never every
+  // provider's availability rules across tenants.
+  if (typeof providerId !== 'string' || !providerId.trim()) {
+    return res.status(400).json({ error: "providerId é obrigatório." });
+  }
+
   try {
-    let rules;
-    if (providerId) {
-      rules = await query<AvailabilityRule>(
-        `SELECT id, provider_id AS "providerId", day_of_week AS "dayOfWeek", start_time AS "startTime", end_time AS "endTime" 
-         FROM availability_rules WHERE provider_id = $1`,
-        [providerId]
-      );
-    } else {
-      rules = await query<AvailabilityRule>(
-        `SELECT id, provider_id AS "providerId", day_of_week AS "dayOfWeek", start_time AS "startTime", end_time AS "endTime" 
-         FROM availability_rules`
-      );
-    }
-    res.json(rules);
+    const rules = await query<AvailabilityRule>(
+      `SELECT id, provider_id AS "providerId", day_of_week AS "dayOfWeek", start_time AS "startTime", end_time AS "endTime"
+       FROM availability_rules WHERE provider_id = $1`,
+      [providerId]
+    );
+    return res.json(rules);
   } catch (error) {
     console.error("Error fetching rules:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Erro interno ao buscar horários de disponibilidade." });
   }
 });
 
