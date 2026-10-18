@@ -67,10 +67,6 @@ async function runMigration() {
       ALTER TABLE providers ADD COLUMN IF NOT EXISTS service_location_type TEXT DEFAULT 'own_space';
     `);
 
-    await client.query(`
-      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_address TEXT;
-      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_location_type TEXT;
-    `);
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS services (
@@ -133,7 +129,7 @@ async function runMigration() {
         await client.query(
           `INSERT INTO tenants (id, name, slug, logo_url, description, theme_color, accent_color) 
            VALUES ($1, $2, $3, $4, $5, $6, $7) 
-           ON CONFLICT (id) DO UPDATE SET 
+           ON CONFLICT (id) DO NOTHING 
              name = EXCLUDED.name, 
              slug = EXCLUDED.slug, 
              logo_url = EXCLUDED.logo_url, 
@@ -142,6 +138,13 @@ async function runMigration() {
              accent_color = EXCLUDED.accent_color`,
           [tenant.id, tenant.name, tenant.slug, tenant.logoUrl, tenant.description, tenant.themeColor, tenant.accentColor]
         );
+
+    await client.query(`
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_address TEXT;
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_location_type TEXT;
+    `);
+
+
       }
 
       // Seed categories
@@ -156,7 +159,7 @@ async function runMigration() {
         await client.query(
           `INSERT INTO categories (id, name, slug, image_url)
            VALUES ($1, $2, $3, $4)
-           ON CONFLICT (id) DO UPDATE SET
+           ON CONFLICT (id) DO NOTHING
              name = EXCLUDED.name,
              slug = EXCLUDED.slug,
              image_url = EXCLUDED.image_url`,
@@ -171,7 +174,7 @@ async function runMigration() {
         await client.query(
           `INSERT INTO providers (id, tenant_id, category_id, name, email, bio, avatar_url) 
            VALUES ($1, $2, $3, $4, $5, $6, $7) 
-           ON CONFLICT (id) DO UPDATE SET 
+           ON CONFLICT (id) DO NOTHING 
              tenant_id = EXCLUDED.tenant_id, 
              category_id = EXCLUDED.category_id, 
              name = EXCLUDED.name, 
@@ -237,7 +240,7 @@ async function runMigration() {
         await client.query(
           `INSERT INTO services (id, provider_id, name, description, duration_minutes, buffer_minutes, price) 
            VALUES ($1, $2, $3, $4, $5, $6, $7) 
-           ON CONFLICT (id) DO UPDATE SET 
+           ON CONFLICT (id) DO NOTHING 
              provider_id = EXCLUDED.provider_id, 
              name = EXCLUDED.name, 
              description = EXCLUDED.description, 
@@ -254,7 +257,7 @@ async function runMigration() {
         await client.query(
           `INSERT INTO availability_rules (id, provider_id, day_of_week, start_time, end_time) 
            VALUES ($1, $2, $3, $4, $5) 
-           ON CONFLICT (id) DO UPDATE SET 
+           ON CONFLICT (id) DO NOTHING 
              provider_id = EXCLUDED.provider_id, 
              day_of_week = EXCLUDED.day_of_week, 
              start_time = EXCLUDED.start_time, 
@@ -269,7 +272,7 @@ async function runMigration() {
         await client.query(
           `INSERT INTO availability_exceptions (id, provider_id, date, is_blocked, start_time, end_time) 
            VALUES ($1, $2, $3, $4, $5, $6) 
-           ON CONFLICT (id) DO UPDATE SET 
+           ON CONFLICT (id) DO NOTHING 
              provider_id = EXCLUDED.provider_id, 
              date = EXCLUDED.date, 
              is_blocked = EXCLUDED.is_blocked, 
@@ -285,7 +288,7 @@ async function runMigration() {
         await client.query(
           `INSERT INTO bookings (id, provider_id, service_id, starts_at, ends_at, client_name, client_email, client_phone, status, notes) 
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
-           ON CONFLICT (id) DO UPDATE SET 
+           ON CONFLICT (id) DO NOTHING 
              provider_id = EXCLUDED.provider_id, 
              service_id = EXCLUDED.service_id, 
              starts_at = EXCLUDED.starts_at, 
