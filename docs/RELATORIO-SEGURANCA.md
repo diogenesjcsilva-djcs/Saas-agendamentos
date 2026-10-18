@@ -203,3 +203,9 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 - Os seeds de tenant, categoria, profissional, serviço, regra/exceção de disponibilidade e agendamento usavam `ON CONFLICT (id) DO UPDATE`, podendo sobrescrever alterações feitas no banco ao executar novamente a migração.
 - Os sete caminhos de seed agora usam `ON CONFLICT (id) DO NOTHING`, evitando atualizar silenciosamente registros existentes. Conflitos com outras constraints únicas ainda podem fazer a transação falhar; isso é preferível a sobrescrever dados sem intenção, mas deve ser coberto por testes de migração.
 - **Validação pendente:** não executei a migração em PostgreSQL vazio nem em cópia de banco existente. Faça backup antes de executar em qualquer ambiente com dados importantes.
+
+### 26. Integridade do arquivo de rotas e janela de conflitos — corrigidos na revisão
+- A comparação da PR revelou que `src/lib/api-routes.ts` estava truncado para 207 linhas, embora a versão íntegra tivesse cerca de 1.456 linhas. Isso removia grande parte dos endpoints e tornava o arquivo inválido/incompleto para a aplicação.
+- O arquivo foi restaurado a partir da versão completa da própria branch que continha as correções anteriores, preservando os endpoints e controles de segurança já implementados.
+- As consultas de criação e reagendamento passaram a considerar reservas iniciadas até dois dias antes/depois do dia UTC consultado. Como duração e buffer podem chegar a 24 horas cada, a janela de um dia podia excluir reservas relevantes em casos extremos próximos à meia-noite.
+- **Validação pendente:** confirme o diff da PR e execute lint, TypeScript/build e testes de integração. Não executei build nem testes PostgreSQL nesta sessão; a restauração foi verificada por conteúdo/contagem de linhas, não por execução.
