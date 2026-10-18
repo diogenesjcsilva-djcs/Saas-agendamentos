@@ -194,3 +194,12 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 - Na consulta ao commit `acbc84d9124f2fb75be8bbf95c4ce6463d3293c7`, o status reportado pelo GitHub para `Vercel` era `failure`; não foram retornados GitHub Actions workflow runs para esse commit.
 - O status disponível não contém a causa detalhada da falha. Portanto, não atribuir a falha a TypeScript, build, variáveis de ambiente ou deploy sem consultar os logs do deployment no Vercel.
 - A PR continua aberta como Draft e não foi mesclada. O status de falha precisa ser investigado antes de qualquer merge.
+
+### 24. Migração de banco: tabela alterada antes da criação — corrigido estaticamente
+- `src/scripts/migrate.ts` tentava executar `ALTER TABLE bookings ...` antes do `CREATE TABLE IF NOT EXISTS bookings`. Em banco vazio, a migração podia falhar antes de chegar à criação da tabela.
+- As colunas adicionais `client_address` e `service_location_type` agora são adicionadas depois da criação da tabela, tornando a ordem coerente para banco novo e existente.
+
+### 25. Seeds da migração sobrescreviam dados persistidos — mitigado
+- Os seeds de tenant, categoria, profissional, serviço, regra/exceção de disponibilidade e agendamento usavam `ON CONFLICT (id) DO UPDATE`, podendo sobrescrever alterações feitas no banco ao executar novamente a migração.
+- Os sete caminhos de seed agora usam `ON CONFLICT (id) DO NOTHING`, evitando atualizar silenciosamente registros existentes. Conflitos com outras constraints únicas ainda podem fazer a transação falhar; isso é preferível a sobrescrever dados sem intenção, mas deve ser coberto por testes de migração.
+- **Validação pendente:** não executei a migração em PostgreSQL vazio nem em cópia de banco existente. Faça backup antes de executar em qualquer ambiente com dados importantes.
