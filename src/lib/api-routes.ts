@@ -235,12 +235,15 @@ router.put('/provider/settings', authMiddleware, async (req: AuthenticatedReques
   } = req.body;
 
   try {
-    // 1. Validate Email if provided
-    if (email && !isValidEmail(email)) {
+    // Validate optional profile fields before normalization or persistence.
+    if (email !== undefined && email !== null && email !== '' && !isValidEmail(email)) {
       return res.status(400).json({ error: "E-mail inválido." });
     }
+    if (name !== undefined && (typeof name !== 'string' || !name.trim() || name.length > 120)) {
+      return res.status(400).json({ error: "Nome inválido." });
+    }
 
-    const userId = user.userId || (user as any).id;
+    const userId = user.userId;
 
     // Check if new email already belongs to another user
     if (email && email.toLowerCase().trim() !== user.email.toLowerCase().trim()) {
@@ -252,9 +255,9 @@ router.put('/provider/settings', authMiddleware, async (req: AuthenticatedReques
 
     // 2. Validate Password if provided
     let passwordHash: string | null = null;
-    if (password) {
-      if (typeof password !== 'string' || password.length < 6) {
-        return res.status(400).json({ error: "A nova senha deve ter pelo menos 6 caracteres." });
+    if (password !== undefined && password !== null && password !== '') {
+      if (typeof password !== 'string' || password.length < 12) {
+        return res.status(400).json({ error: "A nova senha deve ter pelo menos 12 caracteres." });
       }
       passwordHash = await bcrypt.hash(password, 10);
     }
