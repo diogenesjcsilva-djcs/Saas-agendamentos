@@ -251,3 +251,14 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 A rota agora limita a lista a 50 regras, valida dia da semana entre 0 e 6, exige horários válidos no formato `HH:MM` e rejeita horário inicial igual ou posterior ao final. A lista completa é validada antes de iniciar a substituição da grade, que permanece transacional.
 
 **Limitação:** intervalos que atravessam a meia-noite não são suportados. A correção foi revisada estaticamente; testes automatizados e integração com PostgreSQL continuam pendentes.
+
+
+## 32. Cadastro concorrente de estabelecimento: conflitos de unicidade
+
+**Arquivo:** `src/lib/api-routes.ts`, rota `POST /tenants`.
+
+**Achado:** a rota verificava previamente se o slug e o e-mail já existiam, mas essas consultas não impedem duas requisições simultâneas de passar pela verificação. As constraints únicas do PostgreSQL continuam sendo a proteção definitiva; sem tratamento específico, uma colisão legítima poderia resultar em HTTP 500.
+
+**Correção aplicada:** erros PostgreSQL `23505` são tratados como conflito HTTP 409. As constraints `tenants_slug_key` e `users_email_key` recebem mensagens específicas; outros conflitos únicos recebem uma mensagem genérica sem expor detalhes internos do banco. A transação existente continua fazendo rollback e liberando a conexão antes de o erro chegar ao tratamento externo.
+
+**Limitação/validação:** confirmei estaticamente o caminho de tratamento e os nomes das constraints na definição da migração (`tenants.slug UNIQUE` e `users.email UNIQUE`). Não executei cadastro concorrente nem teste de integração PostgreSQL; o comportamento em runtime permanece pendente.
