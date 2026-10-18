@@ -553,18 +553,19 @@ router.put('/availability-rules', authMiddleware, async (req: AuthenticatedReque
 });
 
 // 7. Get Availability Exceptions
-router.get('/exceptions', authMiddleware, async (req: AuthenticatedRequest, res) => {
-  const user = req.user;
-  if (!user || user.role !== 'provider' || !user.providerId) {
-    return res.status(403).json({ error: "Apenas o profissional autenticado pode consultar suas exceções de agenda." });
+router.get('/exceptions', async (req, res) => {
+  const providerId = req.query.providerId;
+  if (typeof providerId !== 'string' || !providerId.trim()) {
+    return res.status(400).json({ error: "providerId é obrigatório." });
   }
 
   try {
-    // Never allow a caller-supplied providerId to expand the scope of this query.
+    // Public booking pages need to read a single provider's blocked dates.
+    // Require an explicit provider scope; never return exceptions for every provider.
     const exceptions = await query<AvailabilityException>(
       `SELECT id, provider_id AS "providerId", date, is_blocked AS "isBlocked", start_time AS "startTime", end_time AS "endTime"
        FROM availability_exceptions WHERE provider_id = $1`,
-      [user.providerId]
+      [providerId]
     );
     res.json(exceptions);
   } catch (error) {
