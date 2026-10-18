@@ -272,3 +272,16 @@ A rota agora limita a lista a 50 regras, valida dia da semana entre 0 e 6, exige
 - **Regras de disponibilidade:** os IDs eram formados com `Date.now()` e índice local; duas requisições concorrentes para o mesmo profissional poderiam gerar IDs iguais no mesmo milissegundo. Os novos IDs usam `randomUUID()`, reduzindo esse risco de colisão.
 
 **Limitação/validação:** alterações verificadas por leitura estática. Não foram executados testes de concorrência nem integração com PostgreSQL; permanecem necessários testes para confirmar a resposta 409 e o rollback em runtime.
+
+
+## 34. Endurecimento do cadastro e login por senha
+
+**Arquivo:** `src/lib/api-routes.ts`, rotas `POST /auth/register` e `POST /auth/login`, além dos fluxos de cadastro/alteração de senha.
+
+- **IDs previsíveis:** o cadastro público usava `Date.now()` para gerar IDs de usuário, o que permite colisões em cadastros simultâneos e produz identificadores previsíveis. Agora usa `randomUUID()`.
+- **Colisão de e-mail:** o cadastro captura a violação PostgreSQL `users_email_key` e retorna HTTP 409, inclusive quando dois pedidos passam pela checagem inicial ao mesmo tempo.
+- **Validação de entrada:** login agora exige e-mail em formato válido e senha string de até 128 caracteres; cadastro limita senha a 12–128 caracteres. O e-mail usado na consulta é normalizado com `trim()` e minúsculas.
+- **Roles no login:** após validar a senha, o login não emite token para roles não suportadas nem para conta `provider` sem `providerId`.
+- **Hash de senha:** os fluxos de cadastro de cliente, cadastro de estabelecimento e alteração de senha passaram a usar custo bcrypt 12, em vez de 10.
+
+**Limitações/validação:** mudanças verificadas estaticamente no código. Não executei testes de autenticação, testes de carga para o custo bcrypt nem testes concorrentes com PostgreSQL. O limite de 128 caracteres evita entradas extremas, mas ainda é importante testar a latência do login no ambiente de produção e assegurar rate limiting compartilhado entre instâncias.
