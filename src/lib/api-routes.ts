@@ -1252,111 +1252,160 @@ router.patch('/bookings/:id/reschedule', authMiddleware, async (req: Authenticat
   if (typeof startsAt !== 'string' || !startsAt.trim() || Number.isNaN(Date.parse(startsAt))) {
     return res.status(400).json({ error: "Data/hora de início inválida." });
   }
-  if (!user) {
-    return res.status(401).json({ error: "Não autorizado." });
+  if (!user) return res.status(401).json({ error: "Não autorizado." });
+
+  const startObj = new Date(startsAt);
+  if (!Number.isFinite(startObj.getTime())) {
+    return res.status(400).json({ error: "Data/hora de início inválida." });
   }
 
+  const client = await pool.connect();
+  let transactionOpen = false;
   try {
-    // Fetch booking
-    const bookings = await query<any>(
-      `SELECT id, provider_id AS "providerId", service_id AS "serviceId", client_email AS "clientEmail" 
-       FROM bookings WHERE id = $1 LIMIT 1`,
+    await client.query('BEGIN');
+    transactionOpen = true;
+
+    const bookingResult = await client.query(
+      `SELECT id, provider_id AS "providerId", service_id AS "serviceId",
+              client_email AS "clientEmail", status
+       FROM bookings WHERE id = $1 FOR UPDATE`,
       [bookingId]
     );
-    if (bookings.length === 0) {
+    if (bookingResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      transactionOpen = false;
       return res.status(404).json({ error: "Agendamento não encontrado." });
     }
-    const booking = bookings[0];
+    const booking = bookingResult.rows[0];
 
-    // Auth validation
     if (user.role === 'client') {
-      if (user.email !== booking.clientEmail) return res.status(403).json({ error: "Você não tem permissão para alterar este agendamento." });
+      if (user.email !== booking.clientEmail) {
+        await client.query('ROLLBACK');
+        transactionOpen = false;
+        return res.status(403).json({ error: "Você não tem permissão para alterar este agendamento." });
+      }
     } else if (user.role === 'provider') {
-      if (!user.providerId || user.providerId !== booking.providerId) return res.status(403).json({ error: "Você não tem permissão para alterar este agendamento." });
+      if (!user.providerId || user.providerId !== booking.providerId) {
+        await client.query('ROLLBACK');
+        transactionOpen = false;
+        return res.status(403).json({ error: "Você não tem permissão para alterar este agendamento." });
+      }
     } else {
+      await client.query('ROLLBACK');
+      transactionOpen = false;
       return res.status(403).json({ error: "Papel sem permissão para reagendar." });
     }
 
-    // Fetch Service
-    const services = await query<Service>(
-      `SELECT id, duration_minutes AS "durationMinutes", buffer_minutes AS "bufferMinutes" 
+    if (!['pending', 'confirmed'].includes(booking.status)) {
+      await client.query('ROLLBACK');
+      transactionOpen = false;
+      return res.status(409).json({ error: "Agendamentos concluídos ou cancelados não podem ser reagendados." });
+    }
+
+    const serviceResult = await client.query(
+      `SELECT id, provider_id AS "providerId",
+              duration_minutes AS "durationMinutes", buffer_minutes AS "bufferMinutes"
        FROM services WHERE id = $1 LIMIT 1`,
       [booking.serviceId]
     );
-    if (services.length === 0) {
-      return res.status(404).json({ error: "Serviço não encontrado." });
+    if (serviceResult.rows.length === 0 || serviceResult.rows[0].providerId !== booking.providerId) {
+      await client.query('ROLLBACK');
+      transactionOpen = false;
+      return res.status(409).json({ error: "O serviço associado ao agendamento é inválido." });
     }
-    const service = services[0];
-
-    const startObj = new Date(startsAt);
-    const endObj = new Date(startObj.getTime() + service.durationMinutes * 60 * 1000);
-    const endsAt = endObj.toISOString();
-
-    const requestedStartMin = startObj.getUTCHours() * 60 + startObj.getUTCMinutes();
-    const requestedEndMin = requestedStartMin + service.durationMinutes;
-    const dateStr = startsAt.substring(0, 10);
-
-    // Fetch bookings (excluding current)
-    const existingBookings = await query<any>(
-      `SELECT b.id, b.starts_at AS "startsAt", b.ends_at AS "endsAt", s.buffer_minutes AS "bufferMinutes" 
-       FROM bookings b 
-       LEFT JOIN services s ON b.service_id = s.id 
-       WHERE b.provider_id = $1 AND b.status != 'cancelled' AND b.starts_at::date = $2::date AND b.id != $3`,
-      [booking.providerId, dateStr, bookingId]
-    );
-
-    // Check overlap
-    for (const b of existingBookings) {
-      const bStartObj = new Date(b.startsAt);
-      const bEndObj = new Date(b.endsAt);
-      
-      const bStartMin = bStartObj.getUTCHours() * 60 + bStartObj.getUTCMinutes();
-      const bEndMin = bStartMin + (bEndObj.getTime() - bStartObj.getTime()) / (60 * 1000);
-      const bBuffer = Number(b.bufferMinutes) || 0;
-
-      const coreOverlap = Math.max(requestedStartMin, bStartMin) < Math.min(requestedEndMin, bEndMin);
-      if (coreOverlap) {
-        return res.status(409).json({ 
-          error: "slot_unavailable", 
-          message: "O horário selecionado já foi reservado por outro cliente." 
-        });
-      }
-
-      if (requestedStartMin >= bStartMin && requestedStartMin < (bEndMin + bBuffer)) {
-        return res.status(409).json({
-          error: "slot_unavailable",
-          message: "Conflito com o período de preparação/intervalo do agendamento anterior."
-        });
-      }
-
-      if (requestedEndMin > (bStartMin - service.bufferMinutes) && requestedStartMin < bStartMin) {
-        return res.status(409).json({
-          error: "slot_unavailable",
-          message: "Este horário não oferece o intervalo necessário antes da próxima reserva."
-        });
-      }
+    const service = serviceResult.rows[0];
+    const durationMinutes = Number(service.durationMinutes);
+    const serviceBufferMinutes = Number(service.bufferMinutes) || 0;
+    if (!Number.isFinite(durationMinutes) || durationMinutes <= 0 || !Number.isFinite(serviceBufferMinutes) || serviceBufferMinutes < 0) {
+      await client.query('ROLLBACK');
+      transactionOpen = false;
+      return res.status(409).json({ error: "A duração ou o intervalo do serviço é inválido." });
     }
 
-    // Update
-    const rows = await query<Booking>(
-      `UPDATE bookings 
-       SET starts_at = $1, ends_at = $2 
-       WHERE id = $3 AND (($4 = 'client' AND client_email = $5) OR ($4 = 'provider' AND provider_id = $6))
-       RETURNING id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes`,
-      [startsAt, endsAt, bookingId, user.role, user.email, user.providerId || null]
+    const endsAt = new Date(startObj.getTime() + durationMinutes * 60 * 1000).toISOString();
+    const dayStart = new Date(Date.UTC(startObj.getUTCFullYear(), startObj.getUTCMonth(), startObj.getUTCDate()));
+    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+    const dateKey = dayStart.toISOString().slice(0, 10);
+
+    // The advisory lock serializes both booking creation and rescheduling for
+    // this provider/day. The lock is transaction-scoped and works for empty days.
+    await client.query(
+      `SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`,
+      [String(booking.providerId), dateKey]
     );
 
-    if (rows.length === 0) return res.status(404).json({ error: "Agendamento não encontrado ou sem autorização." });
+    // Include adjacent UTC days so appointments near midnight and buffers are checked.
+    const existingResult = await client.query(
+      `SELECT b.id, b.starts_at AS "startsAt", b.ends_at AS "endsAt",
+              COALESCE(s.buffer_minutes, 0) AS "bufferMinutes"
+       FROM bookings b
+       LEFT JOIN services s ON b.service_id = s.id
+       WHERE b.provider_id = $1 AND b.status <> 'cancelled'
+         AND b.starts_at >= $2::timestamptz - INTERVAL '1 day'
+         AND b.starts_at < $3::timestamptz + INTERVAL '1 day'
+         AND b.id <> $4
+       FOR UPDATE OF b`,
+      [booking.providerId, dayStart.toISOString(), dayEnd.toISOString(), bookingId]
+    );
+
+    const requestedStartMs = startObj.getTime();
+    const requestedEndMs = new Date(endsAt).getTime();
+    const requestedBufferMs = serviceBufferMinutes * 60 * 1000;
+
+    for (const existing of existingResult.rows) {
+      const existingStartMs = new Date(existing.startsAt).getTime();
+      const existingEndMs = new Date(existing.endsAt).getTime();
+      const existingBufferMs = (Number(existing.bufferMinutes) || 0) * 60 * 1000;
+
+      const overlaps = requestedStartMs < existingEndMs && requestedEndMs > existingStartMs;
+      const overlapsExistingBuffer = requestedStartMs < existingEndMs + existingBufferMs && requestedEndMs > existingStartMs;
+      const violatesRequestedBuffer = requestedEndMs + requestedBufferMs > existingStartMs && requestedStartMs < existingStartMs;
+
+      if (overlaps || overlapsExistingBuffer || violatesRequestedBuffer) {
+        await client.query('ROLLBACK');
+        transactionOpen = false;
+        return res.status(409).json({
+          error: "slot_unavailable",
+          message: "O horário selecionado conflita com outra reserva ou com o intervalo de segurança."
+        });
+      }
+    }
+
+    const updateResult = await client.query(
+      `UPDATE bookings
+       SET starts_at = $1, ends_at = $2
+       WHERE id = $3 AND status = $7
+         AND (($4 = 'client' AND client_email = $5)
+           OR ($4 = 'provider' AND provider_id = $6))
+       RETURNING id, provider_id AS "providerId", service_id AS "serviceId",
+                 starts_at AS "startsAt", ends_at AS "endsAt",
+                 client_name AS "clientName", client_email AS "clientEmail",
+                 client_phone AS "clientPhone", status, notes`,
+      [startObj.toISOString(), endsAt, bookingId, user.role, user.email, user.providerId || null, booking.status]
+    );
+
+    if (updateResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      transactionOpen = false;
+      return res.status(409).json({ error: "O agendamento mudou durante a operação; atualize e tente novamente." });
+    }
+
+    await client.query('COMMIT');
+    transactionOpen = false;
     const updated = {
-      ...rows[0],
-      startsAt: toISOString(rows[0].startsAt),
-      endsAt: toISOString(rows[0].endsAt)
+      ...updateResult.rows[0],
+      startsAt: toISOString(updateResult.rows[0].startsAt),
+      endsAt: toISOString(updateResult.rows[0].endsAt)
     };
-    res.json(updated);
+    return res.json(updated);
   } catch (error) {
+    if (transactionOpen) {
+      try { await client.query('ROLLBACK'); } catch { /* preserve original error */ }
+    }
     console.error("Reschedule booking error:", error);
-    res.status(500).json({ error: "Erro interno no servidor." });
+    return res.status(500).json({ error: "Erro interno no servidor." });
+  } finally {
+    client.release();
   }
 });
-
 export default router;
