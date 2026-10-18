@@ -182,49 +182,53 @@ async function runMigration() {
         );
       }
 
-      // Seed users
-      console.log('Seeding users...');
-      const passwordHash = await bcrypt.hash('12345678', 10);
-      const defaultUsers = [
-        {
-          id: 'user-1',
-          email: 'carlos@imperial.com',
-          name: 'Carlos Barber',
-          role: 'provider',
-          tenantId: 'tenant-1',
-          providerId: 'provider-1'
-        },
-        {
-          id: 'user-2',
-          email: 'lucas@imperial.com',
-          name: 'Lucas Faccini',
-          role: 'provider',
-          tenantId: 'tenant-1',
-          providerId: 'provider-2'
-        },
-        {
-          id: 'user-3',
-          email: 'heloisa@aura.com',
-          name: 'Dra. Heloísa Barros',
-          role: 'provider',
-          tenantId: 'tenant-2',
-          providerId: 'provider-3'
+      // Demo users have known identities and must never receive a hard-coded password.
+      // Seed them only with explicit opt-in and a strong password supplied by the operator.
+      if (process.env.SEED_DEMO_USERS === 'true') {
+        const seedPassword = process.env.SEED_DEMO_PASSWORD;
+        if (typeof seedPassword !== 'string' || seedPassword.length < 12 || seedPassword.length > 128) {
+          throw new Error('SEED_DEMO_PASSWORD must be configured with 12-128 characters when SEED_DEMO_USERS=true.');
         }
-      ];
 
-      for (const u of defaultUsers) {
-        await client.query(
-          `INSERT INTO users (id, email, password_hash, name, role, tenant_id, provider_id) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7) 
-           ON CONFLICT (id) DO UPDATE SET 
-             email = EXCLUDED.email, 
-             password_hash = EXCLUDED.password_hash, 
-             name = EXCLUDED.name, 
-             role = EXCLUDED.role, 
-             tenant_id = EXCLUDED.tenant_id, 
-             provider_id = EXCLUDED.provider_id`,
-          [u.id, u.email, passwordHash, u.name, u.role, u.tenantId, u.providerId]
-        );
+        console.log('Seeding demo users only because SEED_DEMO_USERS=true...');
+        const passwordHash = await bcrypt.hash(seedPassword, 12);
+        const defaultUsers = [
+          {
+            id: 'user-1',
+            email: 'carlos@imperial.com',
+            name: 'Carlos Barber',
+            role: 'provider',
+            tenantId: 'tenant-1',
+            providerId: 'provider-1'
+          },
+          {
+            id: 'user-2',
+            email: 'lucas@imperial.com',
+            name: 'Lucas Faccini',
+            role: 'provider',
+            tenantId: 'tenant-1',
+            providerId: 'provider-2'
+          },
+          {
+            id: 'user-3',
+            email: 'heloisa@aura.com',
+            name: 'Dra. Heloísa Barros',
+            role: 'provider',
+            tenantId: 'tenant-2',
+            providerId: 'provider-3'
+          }
+        ];
+
+        for (const u of defaultUsers) {
+          await client.query(
+            `INSERT INTO users (id, email, password_hash, name, role, tenant_id, provider_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (id) DO NOTHING`,
+            [u.id, u.email, passwordHash, u.name, u.role, u.tenantId, u.providerId]
+          );
+        }
+      } else {
+        console.log('Skipping demo-user seeding; set SEED_DEMO_USERS=true and SEED_DEMO_PASSWORD explicitly to opt in.');
       }
 
       // Seed services
