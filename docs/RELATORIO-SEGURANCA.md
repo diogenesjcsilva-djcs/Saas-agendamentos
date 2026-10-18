@@ -393,3 +393,13 @@ A rota agora limita a lista a 50 regras, valida dia da semana entre 0 e 6, exige
 **Correção aplicada:** a configuração agora usa `rejectUnauthorized: true`, mantendo TLS e exigindo certificado válido. A configuração presume certificados emitidos por uma autoridade confiável pelo runtime, como os certificados públicos usados normalmente pelo Neon.
 
 **Impacto operacional / validação pendente:** ambientes PostgreSQL com certificado privado ou autoassinado precisam configurar a CA confiável no runtime; não devem voltar a desabilitar a validação como solução permanente. Não foi possível testar a conexão contra Neon nem contra banco local nesta sessão. Confirmar a conectividade no ambiente de staging antes de promover a branch.
+
+## 43. Confirmação explícita antes da sanitização destrutiva
+
+**Arquivo:** `src/scripts/sanitize.ts`, início de `sanitizeDatabase()`.
+
+**Achado:** o script altera os tenants de demonstração, remove usuários/profissionais/agendamentos por padrões de e-mail e nome e exclui serviços por regras de limpeza. Antes desta correção, bastava executá-lo com acesso ao banco para iniciar essas alterações; não havia uma confirmação de intenção que diferenciasse execução acidental de uma operação planejada.
+
+**Correção aplicada:** o script agora aborta antes de abrir conexão com o banco, a menos que `CONFIRM_SANITIZE_DATABASE=true` esteja explicitamente definido. A mensagem de erro instrui o operador a conferir `DATABASE_URL` e fazer backup.
+
+**Limitação:** essa variável é uma proteção contra execução acidental, não uma autorização de segurança forte contra alguém que já controla o ambiente. O script ainda deve ser executado somente por operadores autorizados, após revisar o alvo e confirmar o backup. Não executei a sanitização nem testes contra banco real.
