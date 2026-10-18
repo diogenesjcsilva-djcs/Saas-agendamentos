@@ -46,7 +46,7 @@ router.get('/tenants', async (req, res) => {
     res.json(tenants);
   } catch (error) {
     console.error("Error fetching tenants:", error);
-    res.status(500).json({ error: "Internal server error", details: (error as Error).message });
+    res.status(500).json({ error: "Erro interno ao buscar estabelecimentos." });
   }
 });
 
@@ -273,10 +273,10 @@ router.put('/provider/settings', authMiddleware, async (req: AuthenticatedReques
     // 2. Validate Password if provided
     let passwordHash: string | null = null;
     if (password !== undefined && password !== null && password !== '') {
-      if (typeof password !== 'string' || password.length < 12) {
-        return res.status(400).json({ error: "A nova senha deve ter pelo menos 12 caracteres." });
+      if (typeof password !== 'string' || password.length < 12 || password.length > 128) {
+        return res.status(400).json({ error: "A nova senha deve ter entre 12 e 128 caracteres." });
       }
-      passwordHash = await bcrypt.hash(password, 10);
+      passwordHash = await bcrypt.hash(password, 12);
     }
 
     // 3. Validate serviceLocationType
