@@ -215,3 +215,9 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 - Removi as atribuições residuais e mantive apenas `ON CONFLICT (id) DO NOTHING` nos oito caminhos de seed (incluindo usuários de demonstração).
 - Também movi os `ALTER TABLE bookings ...` para fora do loop de tenants, logo após a criação da tabela. Antes, as colunas adicionais só seriam garantidas se o arquivo de seed existisse e eram tentadas repetidamente para cada tenant.
 - **Validação pendente:** verifiquei o texto e a ordem das instruções, mas não executei o script contra PostgreSQL. A execução real ainda é necessária para confirmar compatibilidade com a versão e o estado do banco.
+
+### 28. Disponibilidade: reservas cruzando a meia-noite — corrigido estaticamente
+- A consulta de `GET /slots` filtrava reservas com `starts_at::date = $2::date` e depois comparava somente a hora (`HH:mm`). Isso podia ignorar reservas iniciadas no dia anterior que ainda ocupassem parte do dia solicitado, além de introduzir dependência do fuso horário da sessão PostgreSQL.
+- A consulta agora valida o formato `YYYY-MM-DD`, constrói limites explícitos UTC e busca reservas em uma janela ampliada; o cálculo de conflito usa timestamps completos em milissegundos, incluindo duração e buffers, em vez de comparar apenas o relógio.
+- Os horários devolvidos são normalizados como ISO UTC.
+- **Atenção:** é necessário validar com testes de integração se o fuso horário de negócio esperado pela interface é UTC ou local do profissional. A mudança elimina comparação apenas por hora, mas não substitui uma política de fuso horário definida e testada ponta a ponta.
