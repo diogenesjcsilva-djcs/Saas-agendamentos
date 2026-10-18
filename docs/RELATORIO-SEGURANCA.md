@@ -233,3 +233,13 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 **Limitação:** isso torna o cálculo consistente em UTC, mas não define o fuso horário comercial de cada profissional. A disponibilidade ponta a ponta ainda precisa ser testada com o fuso horário esperado pelo produto e com agendamentos próximos à meia-noite.
 
 **Validação executada nesta etapa:** inspeção estática do trecho atualizado e confirmação de que não há status checks nem execuções de GitHub Actions reportadas para o commit consultado. Lint, build e testes com PostgreSQL continuam pendentes; ausência de checks não significa aprovação.
+
+## 30. Isolamento da leitura pública de regras de disponibilidade
+
+**Arquivo:** `src/lib/api-routes.ts`, rota `GET /availability-rules`.
+
+**Achado:** sem o parâmetro `providerId`, a rota retornava as regras de disponibilidade de todos os profissionais. Em uma aplicação multi-tenant, isso permitia consultar a grade de horários de profissionais de outros estabelecimentos.
+
+**Correção aplicada:** `providerId` agora é obrigatório, deve ser uma string não vazia e é usado como filtro obrigatório na consulta. A rota não executa mais consulta global sem escopo.
+
+**Validação executada:** inspeção estática do código após a alteração. Não foram executados testes HTTP automatizados nem testes de integração com banco nesta sessão; a validação de autorização multi-tenant em runtime continua pendente.
