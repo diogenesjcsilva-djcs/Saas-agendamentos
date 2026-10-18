@@ -149,9 +149,9 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 
 
 ### 15. Privacidade e escopo de exceções de disponibilidade
-- `GET /exceptions` exige autenticação de profissional e consulta apenas exceções vinculadas ao `providerId` do token; o parâmetro fornecido pelo cliente não pode ampliar o escopo da consulta.
+- `GET /exceptions` exige `providerId` explícito e retorna apenas as exceções desse profissional; não lista mais exceções de todos os profissionais. A leitura permanece pública porque a página de agendamento precisa consultar bloqueios de agenda, mas o resultado é limitado a um profissional por requisição.
 - `GET /slots` não deve revelar nomes de clientes em mensagens de conflito. As mensagens foram generalizadas para informar apenas o motivo de indisponibilidade, sem PII.
-- A proteção é validada estaticamente; ainda é necessário testar os fluxos de interface para confirmar que os consumidores de `/exceptions` enviam o token de autenticação.
+- A proteção é validada estaticamente; ainda é necessário testar a interface de agendamento e confirmar se a exposição das datas bloqueadas por profissional corresponde à política de privacidade desejada.
 
 ### 16. Validação do perfil e alteração de senha
 - A alteração de senha no perfil agora exige no mínimo 12 caracteres, alinhando a regra com o cadastro público.
