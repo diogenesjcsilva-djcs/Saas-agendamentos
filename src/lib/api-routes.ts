@@ -1,4 +1,4 @@
-import crypto from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import { query, pool } from './db.js';
 import jwt from 'jsonwebtoken';
@@ -419,7 +419,7 @@ router.post('/services', authMiddleware, async (req: AuthenticatedRequest, res) 
     return res.status(400).json({ error: "Duração, intervalo ou preço inválido." });
   }
 
-  const newServiceId = "service-" + crypto.randomUUID();
+  const newServiceId = "service-" + randomUUID();
   try {
     const rows = await query<Service>(
       `INSERT INTO services (id, provider_id, name, description, duration_minutes, buffer_minutes, price) 
