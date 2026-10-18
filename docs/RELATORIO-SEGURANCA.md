@@ -383,3 +383,13 @@ A rota agora limita a lista a 50 regras, valida dia da semana entre 0 e 6, exige
 **Correção aplicada:** o identificador agora usa `randomUUID()`, consistente com os demais fluxos corrigidos.
 
 **Validação pendente:** inspeção estática do código alterado. Não executei teste de carga ou integração PostgreSQL para verificar criação simultânea de reservas.
+
+## 42. Validação de certificado TLS da conexão PostgreSQL
+
+**Arquivo:** `src/lib/db.ts`, configuração do pool PostgreSQL.
+
+**Achado:** a conexão exigia TLS, mas configurava `rejectUnauthorized: false`. Isso desabilita a validação da cadeia de certificados do servidor. Em uma rede ou ambiente comprometido, a aplicação poderia aceitar um endpoint impostor e expor credenciais/dados da conexão.
+
+**Correção aplicada:** a configuração agora usa `rejectUnauthorized: true`, mantendo TLS e exigindo certificado válido. A configuração presume certificados emitidos por uma autoridade confiável pelo runtime, como os certificados públicos usados normalmente pelo Neon.
+
+**Impacto operacional / validação pendente:** ambientes PostgreSQL com certificado privado ou autoassinado precisam configurar a CA confiável no runtime; não devem voltar a desabilitar a validação como solução permanente. Não foi possível testar a conexão contra Neon nem contra banco local nesta sessão. Confirmar a conectividade no ambiente de staging antes de promover a branch.
