@@ -671,6 +671,12 @@ router.post('/exceptions', authMiddleware, async (req: AuthenticatedRequest, res
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    // Serialize replacements for the same provider/date so concurrent requests
+    // cannot both delete and then leave duplicate exceptions behind.
+    await client.query(
+      `SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`,
+      [String(targetProviderId), date]
+    );
     // Replacement is atomic: a failed insert must not erase the previous exception.
     await client.query(
       `DELETE FROM availability_exceptions WHERE provider_id = $1 AND date = $2`,
