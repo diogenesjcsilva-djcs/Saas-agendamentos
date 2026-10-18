@@ -183,3 +183,9 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 - O fluxo foi reorganizado para consultar inicialmente apenas o profissional sem bloquear a linha, adquirir o mesmo `pg_advisory_xact_lock` usado pela criação e só então reler o agendamento com `FOR UPDATE`.
 - O fluxo revalida que o profissional associado não mudou antes de continuar. O bloqueio consultivo permanece ativo até o fim da transação.
 - **Limite da validação:** a correção foi revisada estaticamente; ainda não foi reproduzida nem validada com testes concorrentes reais em PostgreSQL. Todos os caminhos que escrevem agendamentos devem respeitar a mesma ordem de bloqueios para eliminar esse tipo de deadlock.
+
+### 22. Credenciais de demonstração fixas na migração — removidas
+- A migração gerava um hash para a senha fixa `12345678` e fazia `UPSERT` atualizando `password_hash` dos usuários de demonstração. Executar a migração novamente podia redefinir credenciais existentes para uma senha previsível.
+- O seed desses usuários agora fica desativado por padrão. Só é executado com `SEED_DEMO_USERS=true` e `SEED_DEMO_PASSWORD` configurada com 12–128 caracteres; o hash usa custo bcrypt 12.
+- O conflito por ID agora usa `ON CONFLICT (id) DO NOTHING`, impedindo que uma migração redefina a senha de uma conta já existente.
+- **Atenção:** se o seed de demonstração for ativado, use uma senha temporária forte e exclusiva em ambiente não produtivo. Não habilite essas contas em produção.
