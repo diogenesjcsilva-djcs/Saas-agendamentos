@@ -26,8 +26,11 @@ if (!connectionString) {
 
 export const pool = new pg.Pool({
   connectionString: connectionString || undefined,
+  // Require certificate validation to prevent accepting an impostor database server.
+  // Neon uses publicly trusted TLS certificates; local PostgreSQL setups can configure
+  // their own trusted CA rather than disabling verification in application code.
   ssl: {
-    rejectUnauthorized: false // Neon requires SSL
+    rejectUnauthorized: true
   }
 });
 
