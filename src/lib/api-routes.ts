@@ -1001,7 +1001,7 @@ router.patch('/bookings/:id', authMiddleware, async (req: AuthenticatedRequest, 
 
   try {
     const bookingRows = await query<any>(
-      `SELECT provider_id AS "providerId", client_email AS "clientEmail" FROM bookings WHERE id = $1`,
+      `SELECT provider_id AS "providerId", client_email AS "clientEmail", status FROM bookings WHERE id = $1`,
       [req.params.id]
     );
     if (bookingRows.length === 0) {
@@ -1009,27 +1009,43 @@ router.patch('/bookings/:id', authMiddleware, async (req: AuthenticatedRequest, 
     }
     const booking = bookingRows[0];
 
-    // Authorization checks
+    // Authorization is based on both ownership and an explicit state machine.
+    // Terminal states (completed/cancelled) cannot be reopened or changed.
+    const currentStatus = booking.status;
+    let transitionAllowed = false;
+
     if (user.role === 'client') {
-      if (user.email !== booking.clientEmail || status !== 'cancelled') {
-        return res.status(403).json({ error: "Não autorizado a alterar este agendamento." });
-      }
+      transitionAllowed =
+        user.email === booking.clientEmail &&
+        status === 'cancelled' &&
+        ['pending', 'confirmed'].includes(currentStatus);
     } else if (user.role === 'provider') {
       if (!user.providerId || user.providerId !== booking.providerId) {
         return res.status(403).json({ error: "Não autorizado a alterar este agendamento." });
       }
+      transitionAllowed =
+        (currentStatus === 'pending' && ['confirmed', 'cancelled'].includes(status)) ||
+        (currentStatus === 'confirmed' && ['completed', 'cancelled'].includes(status));
     } else {
       return res.status(403).json({ error: "Papel sem permissão para alterar agendamentos." });
     }
 
+    if (!transitionAllowed) {
+      return res.status(409).json({ error: "Transição de status não permitida para o estado atual do agendamento." });
+    }
+
     const rows = await query<Booking>(
-      `UPDATE bookings SET status = $1 
-       WHERE id = $2 AND (($3 = 'client' AND client_email = $4 AND $1 = 'cancelled') OR ($3 = 'provider' AND provider_id = $5))
+      `UPDATE bookings SET status = $1
+       WHERE id = $2 AND status = $6
+         AND (($3 = 'client' AND client_email = $4 AND $1 = 'cancelled')
+           OR ($3 = 'provider' AND provider_id = $5
+             AND (($6 = 'pending' AND $1 IN ('confirmed', 'cancelled'))
+               OR ($6 = 'confirmed' AND $1 IN ('completed', 'cancelled')))))
        RETURNING id, provider_id AS "providerId", service_id AS "serviceId", starts_at AS "startsAt", ends_at AS "endsAt", client_name AS "clientName", client_email AS "clientEmail", client_phone AS "clientPhone", status, notes`,
-      [status, req.params.id, user.role, user.email, user.providerId || null]
+      [status, req.params.id, user.role, user.email, user.providerId || null, currentStatus]
     );
     if (rows.length === 0) {
-      return res.status(404).json({ error: "Booking not found" });
+      return res.status(409).json({ error: "O agendamento foi alterado por outra solicitação ou a transição não é permitida." });
     }
     const updated = {
       ...rows[0],
