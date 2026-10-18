@@ -729,6 +729,16 @@ router.get('/slots', async (req, res) => {
     return res.status(400).json({ error: "serviceId and date are required" });
   }
 
+  // Validate the requested calendar date before database work.
+  if (typeof serviceId !== 'string' || !serviceId.trim() ||
+      typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ error: "serviceId and a valid date (YYYY-MM-DD) are required" });
+  }
+  const requestedDayStart = new Date(`${date}T00:00:00.000Z`);
+  if (!Number.isFinite(requestedDayStart.getTime()) || requestedDayStart.toISOString().slice(0, 10) !== date) {
+    return res.status(400).json({ error: "Data inválida; use YYYY-MM-DD." });
+  }
+
   try {
     // 1. Fetch Service
     const services = await query<Service>(
@@ -753,8 +763,7 @@ router.get('/slots', async (req, res) => {
     const provider = providers[0];
 
     // Determine Day of Week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
-    const dateObj = new Date(`${date}T00:00:00`);
-    const dayOfWeek = dateObj.getDay();
+    const dayOfWeek = requestedDayStart.getUTCDay();
 
     // 3. Resolve active availability windows for this provider/day
     const exceptions = await query<AvailabilityException>(
@@ -789,14 +798,6 @@ router.get('/slots', async (req, res) => {
       return res.json([]);
     }
 
-    // Validate and anchor the requested date in UTC.
-    if (typeof date !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) {
-      return res.status(400).json({ error: "Data inválida; use YYYY-MM-DD." });
-    }
-    const requestedDayStart = new Date(`${date}T00:00:00.000Z`);
-    if (!Number.isFinite(requestedDayStart.getTime()) || requestedDayStart.toISOString().slice(0, 10) !== date) {
-      return res.status(400).json({ error: "Data inválida; use YYYY-MM-DD." });
-    }
     const requestedDayEnd = new Date(requestedDayStart.getTime() + 24 * 60 * 60 * 1000);
 
     // Include adjacent days so appointments and buffers crossing midnight are considered.
