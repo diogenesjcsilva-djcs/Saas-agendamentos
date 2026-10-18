@@ -180,8 +180,20 @@ router.post('/tenants', tenantRateLimiter, async (req, res) => {
       user: { id: userId, email: email.toLowerCase().trim(), name: ownerName.trim(), role: 'provider', tenantId, providerId }
     });
   } catch (error) {
+    const dbError = error as { code?: string; constraint?: string };
+    // Pre-checks improve UX, but unique constraints are the authority under concurrent requests.
+    if (dbError.code === '23505') {
+      if (dbError.constraint === 'tenants_slug_key') {
+        return res.status(409).json({ error: "Este link já está sendo utilizado por outro estabelecimento." });
+      }
+      if (dbError.constraint === 'users_email_key') {
+        return res.status(409).json({ error: "Este e-mail de administrador já está cadastrado no sistema." });
+      }
+      return res.status(409).json({ error: "Já existe um registro com um dos dados informados." });
+    }
+
     console.error("Error creating tenant and provider:", error);
-    res.status(500).json({ error: "Erro interno ao criar estabelecimento." });
+    return res.status(500).json({ error: "Erro interno ao criar estabelecimento." });
   }
 });
 // 2.5 Get Categories
