@@ -898,7 +898,6 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
     const endsAt = endObj.toISOString();
 
     // Use the normalized UTC date consistently with rescheduling and timestamp checks.
-    const dateStr = startObj.toISOString().slice(0, 10);
     const dayStart = new Date(Date.UTC(startObj.getUTCFullYear(), startObj.getUTCMonth(), startObj.getUTCDate()));
     const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 
@@ -1331,7 +1330,6 @@ router.patch('/bookings/:id/reschedule', authMiddleware, async (req: Authenticat
     const endsAt = new Date(startObj.getTime() + durationMinutes * 60 * 1000).toISOString();
     const dayStart = new Date(Date.UTC(startObj.getUTCFullYear(), startObj.getUTCMonth(), startObj.getUTCDate()));
     const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
-    const dateKey = dayStart.toISOString().slice(0, 10);
 
     // Use the same provider-wide transaction lock as booking creation. This avoids
     // races with adjacent-day buffers and also serializes empty-result checks.
