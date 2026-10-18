@@ -243,3 +243,11 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 **Correção aplicada:** `providerId` agora é obrigatório, deve ser uma string não vazia e é usado como filtro obrigatório na consulta. A rota não executa mais consulta global sem escopo.
 
 **Validação executada:** inspeção estática do código após a alteração. Não foram executados testes HTTP automatizados nem testes de integração com banco nesta sessão; a validação de autorização multi-tenant em runtime continua pendente.
+
+## 31. Validação das regras de disponibilidade
+
+**Arquivo:** `src/lib/api-routes.ts`, rota `PUT /availability-rules`.
+
+A rota agora limita a lista a 50 regras, valida dia da semana entre 0 e 6, exige horários válidos no formato `HH:MM` e rejeita horário inicial igual ou posterior ao final. A lista completa é validada antes de iniciar a substituição da grade, que permanece transacional.
+
+**Limitação:** intervalos que atravessam a meia-noite não são suportados. A correção foi revisada estaticamente; testes automatizados e integração com PostgreSQL continuam pendentes.
