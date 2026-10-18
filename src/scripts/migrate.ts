@@ -67,10 +67,6 @@ async function runMigration() {
       ALTER TABLE providers ADD COLUMN IF NOT EXISTS service_location_type TEXT DEFAULT 'own_space';
     `);
 
-    await client.query(`
-      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_address TEXT;
-      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_location_type TEXT;
-    `);
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS services (
@@ -120,7 +116,12 @@ async function runMigration() {
       )
     `);
 
-    // 2. Read seed data from db.json
+    await client.query(`
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_address TEXT;
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_location_type TEXT;
+    `);
+
+        // 2. Read seed data from db.json
     const dbPath = path.join(process.cwd(), 'data', 'db.json');
     if (fs.existsSync(dbPath)) {
       console.log('Reading seed data from data/db.json...');
@@ -133,15 +134,11 @@ async function runMigration() {
         await client.query(
           `INSERT INTO tenants (id, name, slug, logo_url, description, theme_color, accent_color) 
            VALUES ($1, $2, $3, $4, $5, $6, $7) 
-           ON CONFLICT (id) DO UPDATE SET 
-             name = EXCLUDED.name, 
-             slug = EXCLUDED.slug, 
-             logo_url = EXCLUDED.logo_url, 
-             description = EXCLUDED.description, 
-             theme_color = EXCLUDED.theme_color, 
-             accent_color = EXCLUDED.accent_color`,
+           ON CONFLICT (id) DO NOTHING`,
           [tenant.id, tenant.name, tenant.slug, tenant.logoUrl, tenant.description, tenant.themeColor, tenant.accentColor]
         );
+
+
       }
 
       // Seed categories
@@ -156,10 +153,7 @@ async function runMigration() {
         await client.query(
           `INSERT INTO categories (id, name, slug, image_url)
            VALUES ($1, $2, $3, $4)
-           ON CONFLICT (id) DO UPDATE SET
-             name = EXCLUDED.name,
-             slug = EXCLUDED.slug,
-             image_url = EXCLUDED.image_url`,
+           ON CONFLICT (id) DO NOTHING`,
           [cat.id, cat.name, cat.slug, cat.imageUrl]
         );
       }
@@ -171,60 +165,58 @@ async function runMigration() {
         await client.query(
           `INSERT INTO providers (id, tenant_id, category_id, name, email, bio, avatar_url) 
            VALUES ($1, $2, $3, $4, $5, $6, $7) 
-           ON CONFLICT (id) DO UPDATE SET 
-             tenant_id = EXCLUDED.tenant_id, 
-             category_id = EXCLUDED.category_id, 
-             name = EXCLUDED.name, 
-             email = EXCLUDED.email, 
-             bio = EXCLUDED.bio, 
-             avatar_url = EXCLUDED.avatar_url`,
+           ON CONFLICT (id) DO NOTHING`,
           [provider.id, provider.tenantId, categoryId, provider.name, provider.email, provider.bio, provider.avatarUrl || null]
         );
       }
 
-      // Seed users
-      console.log('Seeding users...');
-      const passwordHash = await bcrypt.hash('12345678', 10);
-      const defaultUsers = [
-        {
-          id: 'user-1',
-          email: 'carlos@imperial.com',
-          name: 'Carlos Barber',
-          role: 'provider',
-          tenantId: 'tenant-1',
-          providerId: 'provider-1'
-        },
-        {
-          id: 'user-2',
-          email: 'lucas@imperial.com',
-          name: 'Lucas Faccini',
-          role: 'provider',
-          tenantId: 'tenant-1',
-          providerId: 'provider-2'
-        },
-        {
-          id: 'user-3',
-          email: 'heloisa@aura.com',
-          name: 'Dra. Heloísa Barros',
-          role: 'provider',
-          tenantId: 'tenant-2',
-          providerId: 'provider-3'
+      // Demo users have known identities and must never receive a hard-coded password.
+      // Seed them only with explicit opt-in and a strong password supplied by the operator.
+      if (process.env.SEED_DEMO_USERS === 'true') {
+        const seedPassword = process.env.SEED_DEMO_PASSWORD;
+        if (typeof seedPassword !== 'string' || seedPassword.length < 12 || seedPassword.length > 128) {
+          throw new Error('SEED_DEMO_PASSWORD must be configured with 12-128 characters when SEED_DEMO_USERS=true.');
         }
-      ];
 
-      for (const u of defaultUsers) {
-        await client.query(
-          `INSERT INTO users (id, email, password_hash, name, role, tenant_id, provider_id) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7) 
-           ON CONFLICT (id) DO UPDATE SET 
-             email = EXCLUDED.email, 
-             password_hash = EXCLUDED.password_hash, 
-             name = EXCLUDED.name, 
-             role = EXCLUDED.role, 
-             tenant_id = EXCLUDED.tenant_id, 
-             provider_id = EXCLUDED.provider_id`,
-          [u.id, u.email, passwordHash, u.name, u.role, u.tenantId, u.providerId]
-        );
+        console.log('Seeding demo users only because SEED_DEMO_USERS=true...');
+        const passwordHash = await bcrypt.hash(seedPassword, 12);
+        const defaultUsers = [
+          {
+            id: 'user-1',
+            email: 'carlos@imperial.com',
+            name: 'Carlos Barber',
+            role: 'provider',
+            tenantId: 'tenant-1',
+            providerId: 'provider-1'
+          },
+          {
+            id: 'user-2',
+            email: 'lucas@imperial.com',
+            name: 'Lucas Faccini',
+            role: 'provider',
+            tenantId: 'tenant-1',
+            providerId: 'provider-2'
+          },
+          {
+            id: 'user-3',
+            email: 'heloisa@aura.com',
+            name: 'Dra. Heloísa Barros',
+            role: 'provider',
+            tenantId: 'tenant-2',
+            providerId: 'provider-3'
+          }
+        ];
+
+        for (const u of defaultUsers) {
+          await client.query(
+            `INSERT INTO users (id, email, password_hash, name, role, tenant_id, provider_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (id) DO NOTHING`,
+            [u.id, u.email, passwordHash, u.name, u.role, u.tenantId, u.providerId]
+          );
+        }
+      } else {
+        console.log('Skipping demo-user seeding; set SEED_DEMO_USERS=true and SEED_DEMO_PASSWORD explicitly to opt in.');
       }
 
       // Seed services
@@ -233,13 +225,7 @@ async function runMigration() {
         await client.query(
           `INSERT INTO services (id, provider_id, name, description, duration_minutes, buffer_minutes, price) 
            VALUES ($1, $2, $3, $4, $5, $6, $7) 
-           ON CONFLICT (id) DO UPDATE SET 
-             provider_id = EXCLUDED.provider_id, 
-             name = EXCLUDED.name, 
-             description = EXCLUDED.description, 
-             duration_minutes = EXCLUDED.duration_minutes, 
-             buffer_minutes = EXCLUDED.buffer_minutes, 
-             price = EXCLUDED.price`,
+           ON CONFLICT (id) DO NOTHING`,
           [service.id, service.providerId, service.name, service.description, service.durationMinutes, service.bufferMinutes, service.price]
         );
       }
@@ -250,11 +236,7 @@ async function runMigration() {
         await client.query(
           `INSERT INTO availability_rules (id, provider_id, day_of_week, start_time, end_time) 
            VALUES ($1, $2, $3, $4, $5) 
-           ON CONFLICT (id) DO UPDATE SET 
-             provider_id = EXCLUDED.provider_id, 
-             day_of_week = EXCLUDED.day_of_week, 
-             start_time = EXCLUDED.start_time, 
-             end_time = EXCLUDED.end_time`,
+           ON CONFLICT (id) DO NOTHING`,
           [rule.id, rule.providerId, rule.dayOfWeek, rule.startTime, rule.endTime]
         );
       }
@@ -265,12 +247,7 @@ async function runMigration() {
         await client.query(
           `INSERT INTO availability_exceptions (id, provider_id, date, is_blocked, start_time, end_time) 
            VALUES ($1, $2, $3, $4, $5, $6) 
-           ON CONFLICT (id) DO UPDATE SET 
-             provider_id = EXCLUDED.provider_id, 
-             date = EXCLUDED.date, 
-             is_blocked = EXCLUDED.is_blocked, 
-             start_time = EXCLUDED.start_time, 
-             end_time = EXCLUDED.end_time`,
+           ON CONFLICT (id) DO NOTHING`,
           [exc.id, exc.providerId, exc.date, exc.isBlocked, exc.startTime || null, exc.endTime || null]
         );
       }
@@ -281,16 +258,7 @@ async function runMigration() {
         await client.query(
           `INSERT INTO bookings (id, provider_id, service_id, starts_at, ends_at, client_name, client_email, client_phone, status, notes) 
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
-           ON CONFLICT (id) DO UPDATE SET 
-             provider_id = EXCLUDED.provider_id, 
-             service_id = EXCLUDED.service_id, 
-             starts_at = EXCLUDED.starts_at, 
-             ends_at = EXCLUDED.ends_at, 
-             client_name = EXCLUDED.client_name, 
-             client_email = EXCLUDED.client_email, 
-             client_phone = EXCLUDED.client_phone, 
-             status = EXCLUDED.status, 
-             notes = EXCLUDED.notes`,
+           ON CONFLICT (id) DO NOTHING`,
           [booking.id, booking.providerId, booking.serviceId, booking.startsAt, booking.endsAt, booking.clientName, booking.clientEmail, booking.clientPhone, booking.status, booking.notes || null]
         );
       }
