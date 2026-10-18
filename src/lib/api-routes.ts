@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { Router } from 'express';
 import { query, pool } from './db.js';
 import jwt from 'jsonwebtoken';
@@ -400,9 +401,25 @@ router.get('/services', async (req, res) => {
 router.post('/services', authMiddleware, async (req: AuthenticatedRequest, res) => {
   const user = req.user;
   if (!user || user.role !== 'provider' || !user.providerId) return res.status(403).json({ error: "Apenas o profissional responsável pode criar serviços." });
-  const newServiceId = "service-" + Date.now();
   const { name, description, durationMinutes, bufferMinutes, price } = req.body;
   const providerId = user.providerId;
+  const parsedDuration = durationMinutes === undefined ? 30 : Number(durationMinutes);
+  const parsedBuffer = bufferMinutes === undefined ? 0 : Number(bufferMinutes);
+  const parsedPrice = price === undefined ? 0 : Number(price);
+
+  if (typeof name !== 'string' || !name.trim() || name.length > 120) {
+    return res.status(400).json({ error: "Nome do serviço inválido." });
+  }
+  if (description !== undefined && (typeof description !== 'string' || description.length > 2000)) {
+    return res.status(400).json({ error: "Descrição do serviço inválida." });
+  }
+  if (!Number.isFinite(parsedDuration) || parsedDuration < 1 || parsedDuration > 1440 ||
+      !Number.isFinite(parsedBuffer) || parsedBuffer < 0 || parsedBuffer > 1440 ||
+      !Number.isFinite(parsedPrice) || parsedPrice < 0) {
+    return res.status(400).json({ error: "Duração, intervalo ou preço inválido." });
+  }
+
+  const newServiceId = "service-" + crypto.randomUUID();
   try {
     const rows = await query<Service>(
       `INSERT INTO services (id, provider_id, name, description, duration_minutes, buffer_minutes, price) 
@@ -411,11 +428,11 @@ router.post('/services', authMiddleware, async (req: AuthenticatedRequest, res) 
       [
         newServiceId,
         providerId,
-        name,
+        name.trim(),
         description || "",
-        Number(durationMinutes) || 30,
-        Number(bufferMinutes) || 0,
-        Number(price) || 0
+        parsedDuration,
+        parsedBuffer,
+        parsedPrice
       ]
     );
     const created = { ...rows[0], price: Number(rows[0].price) };
