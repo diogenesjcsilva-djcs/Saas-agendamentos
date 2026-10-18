@@ -27,7 +27,26 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, getJwtSecret()) as any;
-    req.user = decoded;
+    // Treat a valid signature as necessary but not sufficient: enforce the
+    // claim shape and supported roles before making the identity available.
+    if (
+      !decoded ||
+      typeof decoded.userId !== 'string' ||
+      typeof decoded.email !== 'string' ||
+      typeof decoded.name !== 'string' ||
+      !['client', 'provider'].includes(decoded.role) ||
+      (decoded.role === 'provider' && (typeof decoded.providerId !== 'string' || !decoded.providerId))
+    ) {
+      return res.status(403).json({ error: "Token inválido ou com permissões incompatíveis." });
+    }
+    req.user = {
+      userId: decoded.userId,
+      email: decoded.email,
+      name: decoded.name,
+      role: decoded.role,
+      tenantId: typeof decoded.tenantId === 'string' ? decoded.tenantId : undefined,
+      providerId: typeof decoded.providerId === 'string' ? decoded.providerId : undefined
+    };
     next();
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("JWT_SECRET must be configured")) {
