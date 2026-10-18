@@ -687,6 +687,36 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Oferta de lançamento — teste grátis por 30 dias */}
+                <section
+                  aria-labelledby="trial-offer-title"
+                  className="relative overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-6 sm:p-10 shadow-lg shadow-indigo-600/5"
+                >
+                  <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-indigo-200/30 blur-3xl" aria-hidden="true" />
+                  <div className="relative mx-auto max-w-3xl text-center space-y-5">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white px-3 py-1.5 text-xs font-bold text-indigo-700">
+                      🎁 Oferta especial de lançamento
+                    </span>
+                    <h2 id="trial-offer-title" className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
+                      Experimente o UseAgendeAI <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">grátis por 30 dias</span>
+                    </h2>
+                    <p className="mx-auto max-w-2xl text-sm sm:text-base leading-relaxed text-slate-600">
+                      Organize os agendamentos do seu negócio, conheça a plataforma na prática e descubra como ela pode ajudar na sua rotina. Comece seu cadastro e dê o primeiro passo para uma agenda mais organizada.
+                    </p>
+                    <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+                      <Button
+                        variant="none"
+                        size="lg"
+                        onClick={() => navigateTo("/cadastrar")}
+                        className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white shadow-lg shadow-indigo-600/20 hover:-translate-y-0.5"
+                      >
+                        Quero testar grátis por 30 dias
+                      </Button>
+                      <span className="text-xs text-slate-500">Cadastro online · Para profissionais de serviços</span>
+                    </div>
+                  </div>
+                </section>
+
                 {/* Grid of existing tenants */}
                 <div className="space-y-6">
                   <div className="flex items-center justify-between border-b border-gray-100 pb-3">
