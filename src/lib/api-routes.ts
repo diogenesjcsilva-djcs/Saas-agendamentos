@@ -130,7 +130,7 @@ router.post('/tenants', tenantRateLimiter, async (req, res) => {
     const tenantId = `tenant-${randomUUID()}`;
     const providerId = `provider-${randomUUID()}`;
     const userId = `user-${randomUUID()}`;
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
 
     const client = await pool.connect();
     let tenant: Tenant;
@@ -1242,6 +1242,12 @@ router.post('/auth/login', authRateLimiter, async (req, res) => {
     const match = await bcrypt.compare(password, user.passwordHash);
     if (!match) {
       return res.status(401).json({ error: "Credenciais inválidas." });
+    }
+
+    // Never issue tokens for unsupported database roles or incomplete provider identities.
+    if (!['client', 'provider'].includes(user.role) ||
+        (user.role === 'provider' && (typeof user.providerId !== 'string' || !user.providerId))) {
+      return res.status(403).json({ error: "Conta sem configuração de acesso válida. Contate o suporte." });
     }
 
     const secret = getJwtSecret();
