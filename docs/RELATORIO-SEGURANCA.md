@@ -303,3 +303,28 @@ A rota agora limita a lista a 50 regras, valida dia da semana entre 0 e 6, exige
 **Impacto e trade-off:** cada requisição protegida passa a depender de uma consulta ao PostgreSQL. Isso permite refletir alterações e remoções de conta sem aguardar a expiração do JWT, mas aumenta latência/carga e faz com que indisponibilidade do banco impeça o acesso às rotas protegidas. Não foi adicionado cache, para evitar manter dados de autorização desatualizados.
 
 **Validação pendente:** alteração revisada estaticamente contra o esquema definido em `src/scripts/migrate.ts` (`users`, `providers`, `tenant_id` e `provider_id`). Não executei TypeScript/build, testes HTTP, nem testes com PostgreSQL. Antes de merge, validar cadastro e login de clientes/profissionais, sessão após alteração de papel/vínculo, usuário removido, tenant inconsistente e indisponibilidade do banco. Também confirmar que não existem outras formas válidas de conta `provider` sem tenant; o middleware rejeita essa condição deliberadamente.
+
+
+## 36. Ordem de bloqueios no reagendamento — risco de deadlock reduzido
+
+**Arquivo:** `src/lib/api-routes.ts`, rota `PATCH /bookings/:id/reschedule`.
+
+**Achado:** a rota bloqueava a linha do agendamento (`SELECT ... FOR UPDATE`) antes de adquirir o bloqueio transacional por profissional (`pg_advisory_xact_lock`). A criação de agendamentos adquire o bloqueio por profissional antes de bloquear/consultar reservas. Operações concorrentes podiam, portanto, adquirir os mesmos recursos em ordem inversa e entrar em deadlock.
+
+**Correção aplicada:** o reagendamento primeiro lê os dados mínimos sem bloqueio, verifica a autorização do solicitante e adquire o bloqueio advisory do profissional. Só depois bloqueia a linha do agendamento e confirma que o profissional associado não mudou. A verificação de autorização e de estado continua sendo feita antes da atualização condicional; a operação mantém transação e rollback em caso de falha.
+
+**Validação pendente:** revisão estática da ordem dos bloqueios. Não executei testes concorrentes com PostgreSQL; reproduzir criação e reagendamento simultâneos continua necessário para confirmar ausência de deadlock no ambiente real.
+
+## 37. Substituição atômica de exceções de disponibilidade
+
+**Arquivo:** `src/lib/api-routes.ts`, rota `POST /exceptions`.
+
+**Achado:** a rota apagava a exceção existente e depois inseria a nova em operações separadas. Uma falha entre as duas operações podia remover a exceção anterior sem criar a substituta. O ID baseado em `Date.now()` também podia colidir em requisições simultâneas.
+
+**Correção aplicada:**
+- Exclusão e inserção agora acontecem na mesma transação, com rollback se qualquer etapa falhar.
+- O ID usa `randomUUID()`.
+- A rota valida data no formato `YYYY-MM-DD` e rejeita datas inexistentes, exige booleano explícito para `isBlocked` e valida início/fim em formato `HH:MM` para exceções parciais.
+- Exceções de dia inteiro armazenam os horários como nulos.
+
+**Limitação/validação:** a validação e a transação foram inspecionadas estaticamente. Não foram executados testes HTTP, concorrência nem integração PostgreSQL. Requisições simultâneas para o mesmo profissional/data ainda devem ser testadas para avaliar a consistência da substituição.
