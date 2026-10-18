@@ -556,7 +556,7 @@ router.put('/availability-rules', authMiddleware, async (req: AuthenticatedReque
   }
 
   // Validate the entire schedule before deleting existing rules.
-  const timePattern = /^(?:[01]\\d|2[0-3]):[0-5]\\d$/;
+  const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
   for (const rule of rules) {
     if (!rule || !Number.isInteger(rule.dayOfWeek) || rule.dayOfWeek < 0 || rule.dayOfWeek > 6 ||
         typeof rule.startTime !== 'string' || !timePattern.test(rule.startTime) ||
