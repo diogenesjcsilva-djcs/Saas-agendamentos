@@ -95,7 +95,7 @@ Foram aplicadas correções em uma branch separada, sem alterar diretamente a br
 
 1. **Isolamento multi-tenant completo:** as correções cobrem rotas específicas, mas é necessário revisar todas as consultas/tabelas e relações entre `users`, `providers`, `services` e `tenants`. Não declarar isolamento completo sem essa revisão.
 2. **Transições de estado:** a lista de status é validada, mas as transições permitidas (por exemplo, de `cancelled` para `completed`) ainda precisam de uma máquina de estados explícita.
-3. **Reagendamento e concorrência:** testar autorização, fuso horário, regras de intervalo e corrida entre reservas simultâneas; a validação estática não substitui teste com banco.
+3. **Reagendamento e concorrência:** a criação de agendamentos agora usa `pg_advisory_xact_lock` por profissional/dia dentro da transação, pois `FOR UPDATE` não protege quando a consulta retorna zero linhas. Ainda é necessário aplicar/validar sincronização equivalente no reagendamento, testar fuso horário e regras de intervalo e executar testes concorrentes contra PostgreSQL; a validação estática não substitui teste com banco.
 4. **Validação de entrada global:** revisar limites numéricos, duração/preço negativos, limites de tamanho e validação de datas em todos os endpoints.
 5. **Rate limiting em produção:** o limitador permanece em memória local; usar armazenamento compartilhado quando houver múltiplas réplicas e configurar proxy confiável corretamente.
 6. **Configuração e gestão de segredo:** definir `JWT_SECRET` forte no ambiente de deployment, usar secret manager e planejar rotação. A rota de criação de tenant agora valida o segredo antes de gravar no banco.
